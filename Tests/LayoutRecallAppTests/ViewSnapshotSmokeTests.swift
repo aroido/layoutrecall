@@ -41,12 +41,12 @@ func renderMenuAndSettingsSnapshots() async throws {
     let menuURL = outputDirectory.appendingPathComponent("menu.png", isDirectory: false)
     let settingsURL = outputDirectory.appendingPathComponent("settings.png", isDirectory: false)
 
-    try render(
+    let menuLayoutSize = try render(
         view: MenuContentView(model: model),
         to: menuURL,
         minimumSize: CGSize(width: 320, height: 300)
     )
-    try render(
+    let settingsLayoutSize = try render(
         view: SettingsView(model: model),
         to: settingsURL,
         minimumSize: CGSize(width: 560, height: 520)
@@ -55,16 +55,20 @@ func renderMenuAndSettingsSnapshots() async throws {
     #expect(FileManager.default.fileExists(atPath: menuURL.path()))
     #expect(FileManager.default.fileExists(atPath: settingsURL.path()))
 
-    let menuSize = try imageSize(at: menuURL)
-    let settingsSize = try imageSize(at: settingsURL)
+    let menuImageSize = try imageSize(at: menuURL)
+    let settingsImageSize = try imageSize(at: settingsURL)
 
-    #expect(menuSize.width >= 320)
-    #expect(menuSize.height >= 280)
-    #expect(menuSize.width <= 720)
-    #expect(menuSize.height <= 840)
-    #expect(settingsSize.width >= 1500)
-    #expect(settingsSize.height >= 520)
-    #expect(settingsSize.width <= 1600)
+    #expect(menuLayoutSize.width >= 320)
+    #expect(menuLayoutSize.height >= 280)
+    #expect(menuLayoutSize.width <= 720)
+    #expect(menuLayoutSize.height <= 840)
+    #expect(settingsLayoutSize.width >= 760)
+    #expect(settingsLayoutSize.height >= 520)
+    #expect(settingsLayoutSize.width <= 900)
+    #expect(menuImageSize.width >= menuLayoutSize.width)
+    #expect(menuImageSize.height >= menuLayoutSize.height)
+    #expect(settingsImageSize.width >= settingsLayoutSize.width)
+    #expect(settingsImageSize.height >= settingsLayoutSize.height)
 }
 
 @MainActor
@@ -72,7 +76,7 @@ private func render<Content: View>(
     view: Content,
     to url: URL,
     minimumSize: CGSize
-) throws {
+) throws -> CGSize {
     let hostingView = NSHostingView(rootView: view)
     let contentSize = CGSize(
         width: max(minimumSize.width, hostingView.fittingSize.width),
@@ -96,24 +100,25 @@ private func render<Content: View>(
     guard let contentView = window.contentView else {
         Issue.record("Failed to get the window content view for snapshot rendering.")
         window.close()
-        return
+        return contentSize
     }
 
     guard let representation = contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds) else {
         Issue.record("Failed to create a bitmap representation for the SwiftUI view.")
         window.close()
-        return
+        return contentSize
     }
 
     contentView.cacheDisplay(in: contentView.bounds, to: representation)
     guard let pngData = representation.representation(using: .png, properties: [:]) else {
         Issue.record("Failed to encode the rendered snapshot as PNG data.")
         window.close()
-        return
+        return contentSize
     }
 
     try pngData.write(to: url, options: .atomic)
     window.close()
+    return contentSize
 }
 
 private func imageSize(at url: URL) throws -> CGSize {
