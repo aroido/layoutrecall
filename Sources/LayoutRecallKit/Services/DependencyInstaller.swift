@@ -19,7 +19,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                     outcome: .alreadyInstalled,
                     dependency: "displayplacer",
                     location: location,
-                    details: "displayplacer is already installed at \(location)."
+                    details: L10n.t("dependencyInstaller.alreadyInstalled", location)
                 )
             }
 
@@ -35,7 +35,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                         outcome: .failed,
                         dependency: "displayplacer",
                         details: [
-                            "Homebrew could not be installed automatically.",
+                            L10n.t("dependencyInstaller.homebrewFailed"),
                             bootstrap.summary
                         ]
                         .filter { !$0.isEmpty }
@@ -50,7 +50,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                 return DependencyInstallResult(
                     outcome: .failed,
                     dependency: "displayplacer",
-                    details: "Homebrew installation finished but brew could not be found on disk."
+                    details: L10n.t("dependencyInstaller.brewNotFound")
                 )
             }
 
@@ -64,7 +64,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                     outcome: .failed,
                     dependency: "displayplacer",
                     details: [
-                        "displayplacer could not be installed automatically.",
+                        L10n.t("dependencyInstaller.displayplacerFailed"),
                         install.summary
                     ]
                     .filter { !$0.isEmpty }
@@ -76,7 +76,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                 return DependencyInstallResult(
                     outcome: .failed,
                     dependency: "displayplacer",
-                    details: "displayplacer was installed but could not be resolved on PATH."
+                    details: L10n.t("dependencyInstaller.resolvedFailed")
                 )
             }
 
@@ -84,7 +84,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                 outcome: .installed,
                 dependency: "displayplacer",
                 location: displayplacerPath,
-                details: "displayplacer was installed automatically at \(displayplacerPath)."
+                details: L10n.t("dependencyInstaller.installed", displayplacerPath)
             )
         }.value
     }
@@ -145,7 +145,7 @@ public struct DisplayplacerInstaller: DependencyInstalling {
                 stdout: dataString(from: stdoutPipe),
                 stderr: dataString(from: stderrPipe),
                 duration: Date().timeIntervalSince(startDate),
-                summary: "Command timed out after \(Int(timeout)) seconds."
+                summary: L10n.t("shell.timedOut", Int(timeout))
             )
         }
 

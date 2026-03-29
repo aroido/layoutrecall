@@ -2,203 +2,150 @@ import AppKit
 import LayoutRecallKit
 import SwiftUI
 
+private struct MenuActionItem: Identifiable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+}
+
 struct MenuContentView: View {
     @ObservedObject var model: AppModel
-    @State private var showsLastCommand = false
 
-    private var autoRestoreBinding: Binding<Bool> {
-        Binding(
-            get: { model.autoRestoreEnabled },
-            set: { newValue in
-                model.setAutoRestore(newValue)
-            }
-        )
+    private var primaryAction: MenuActionItem? {
+        switch model.menuPrimaryState {
+        case .noProfiles:
+            return MenuActionItem(
+                id: "save",
+                title: L10n.t("action.save"),
+                systemImage: "square.and.arrow.down",
+                action: model.saveCurrentLayout
+            )
+        case .dependencyMissing:
+            return MenuActionItem(
+                id: "install",
+                title: model.installationInProgress
+                    ? L10n.t("dependency.installingDisplayplacer")
+                    : L10n.t("dependency.installDisplayplacer"),
+                systemImage: model.installationInProgress ? "hourglass" : "arrow.down.circle.fill",
+                action: model.installDisplayplacer
+            )
+        case .manualRecovery:
+            return MenuActionItem(
+                id: "fix-now",
+                title: L10n.t("action.fixNow"),
+                systemImage: "bolt.fill",
+                action: model.fixNow
+            )
+        case .healthy:
+            return nil
+        }
     }
 
-    private var profileSummary: String {
-        "\(model.profiles.count) Profile" + (model.profiles.count == 1 ? "" : "s")
-    }
+    private var secondaryActions: [MenuActionItem] {
+        var actions: [MenuActionItem] = []
 
-    private var autoRestoreSummary: String {
-        model.autoRestoreEnabled ? "Automatic" : "Manual"
-    }
-
-    private var dependencySummary: String {
-        if model.installationInProgress {
-            return "Installing"
+        if model.menuPrimaryState == .healthy {
+            actions.append(
+                MenuActionItem(
+                    id: "fix-now-secondary",
+                    title: L10n.t("action.fixNow"),
+                    systemImage: "bolt.fill",
+                    action: model.fixNow
+                )
+            )
         }
 
-        return model.dependencyAvailable ? "Ready" : "Install"
-    }
+        actions.append(
+            MenuActionItem(
+                id: "save-secondary",
+                title: L10n.t("action.save"),
+                systemImage: "square.and.arrow.down",
+                action: model.saveCurrentLayout
+            )
+        )
+        actions.append(
+            MenuActionItem(
+                id: "swap-secondary",
+                title: L10n.t("action.swap"),
+                systemImage: "arrow.left.and.right.square",
+                action: model.swapLeftRight
+            )
+        )
 
-    private var latestProfile: DisplayProfile? {
-        model.profiles.first
+        return actions
     }
 
     var body: some View {
         ZStack {
             AppChromeBackground()
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 14) {
                 header
-                badges
-                actionsCard
+                statusBlock
 
-                if latestProfile != nil || model.diagnostics.first != nil {
-                    statusCard
+                if let primaryAction {
+                    Button(action: primaryAction.action) {
+                        Label(primaryAction.title, systemImage: primaryAction.systemImage)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .primary))
+                    .disabled(model.installationInProgress)
                 }
 
-                if !model.lastCommand.isEmpty {
-                    commandCard
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8)
+                    ],
+                    spacing: 8
+                ) {
+                    ForEach(secondaryActions) { action in
+                        Button(action: action.action) {
+                            Label(action.title, systemImage: action.systemImage)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                    }
                 }
+
+                Divider()
 
                 footer
             }
             .padding(16)
         }
-        .frame(width: 356)
+        .frame(width: 320)
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("LayoutRecall")
-                    .font(.title3.weight(.semibold))
-
-                Text(model.statusLine)
-                    .font(.subheadline)
-
-                Text(model.decisionLine)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        HStack(spacing: 12) {
+            Text(L10n.t("app.name"))
+                .font(.headline.weight(.semibold))
 
             Spacer(minLength: 0)
 
-            Image(systemName: "display.2")
-                .font(.title3)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .frame(width: 32, height: 32)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            LayoutRecallHeaderIcon(dimension: 28)
         }
     }
 
-    private var badges: some View {
-        HStack(spacing: 8) {
-            StatusPill(text: autoRestoreSummary, systemImage: model.autoRestoreEnabled ? "bolt.fill" : "hand.raised.fill", emphasis: model.autoRestoreEnabled)
-            StatusPill(text: profileSummary, systemImage: "square.stack.3d.up")
-            StatusPill(text: dependencySummary, systemImage: model.dependencyAvailable ? "checkmark.circle.fill" : "arrow.down.circle", emphasis: model.installationInProgress)
-        }
-    }
-
-    private var actionsCard: some View {
+    private var statusBlock: some View {
         GlassCard(padding: 14) {
-            SectionHeading(title: "Actions", systemImage: "wand.and.stars")
+            VStack(alignment: .leading, spacing: 6) {
+                Text(model.menuStatusTitle)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 12) {
-                Text("Automatic restore")
+                Text(model.menuStatusSubtitle)
                     .font(.subheadline)
-                Spacer()
-                Toggle("", isOn: autoRestoreBinding)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(model.menuMetadataLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Text(model.dependencyLine)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !model.dependencyAvailable {
-                Button(action: model.installDisplayplacer) {
-                    Label(
-                        model.installationInProgress ? "Installing displayplacer" : "Install displayplacer",
-                        systemImage: model.installationInProgress ? "hourglass" : "arrow.down.circle.fill"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(ActionButtonStyle(role: .secondary))
-                .disabled(model.installationInProgress)
-            }
-
-            Button(action: model.fixNow) {
-                Label("Fix Now", systemImage: "bolt.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ActionButtonStyle(role: .primary))
-
-            HStack(spacing: 10) {
-                Button(action: model.saveCurrentLayout) {
-                    Label("Save", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(ActionButtonStyle(role: .secondary))
-
-                Button(action: model.swapLeftRight) {
-                    Label("Swap", systemImage: "arrow.left.and.right.square")
-                }
-                .buttonStyle(ActionButtonStyle(role: .secondary))
-            }
-        }
-    }
-
-    private var statusCard: some View {
-        GlassCard(padding: 14) {
-            SectionHeading(title: "Status", systemImage: "checkmark.seal")
-
-            if let latestProfile {
-                VStack(alignment: .leading, spacing: 8) {
-                    KeyValueRow(label: "Profile", value: latestProfile.name)
-                    KeyValueRow(label: "Displays", value: "\(latestProfile.displaySet.count)")
-                    KeyValueRow(label: "Threshold", value: "\(latestProfile.settings.confidenceThreshold)")
-                }
-            }
-
-            if let latestDiagnostic = model.diagnostics.first {
-                if latestProfile != nil {
-                    Divider()
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(latestDiagnostic.displayTitle)
-                            .font(.subheadline.weight(.semibold))
-
-                        if let score = latestDiagnostic.score {
-                            DiagnosticBadge(text: "Score \(score)")
-                        }
-                    }
-
-                    DiagnosticBadge(
-                        text: latestDiagnostic.outcomeSummary,
-                        tone: latestDiagnostic.outcomeTone
-                    )
-
-                    Text(latestDiagnostic.details)
-                        .font(.caption)
-                        .lineLimit(2)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
-    private var commandCard: some View {
-        GlassCard(padding: 14) {
-            DisclosureGroup("Last Command", isExpanded: $showsLastCommand) {
-                ScrollView(.horizontal) {
-                    Text(model.lastCommand)
-                        .font(.system(size: 11, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(.top, 6)
-                }
-                .scrollIndicators(.visible)
-                .frame(height: 44)
-            }
-            .font(.caption.weight(.semibold))
         }
     }
 
@@ -207,7 +154,7 @@ struct MenuContentView: View {
             Button {
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             } label: {
-                Label("Settings", systemImage: "gearshape")
+                Label(L10n.t("action.settings"), systemImage: "gearshape")
             }
             .buttonStyle(ActionButtonStyle(role: .quiet))
 
@@ -216,7 +163,7 @@ struct MenuContentView: View {
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
-                Label("Quit", systemImage: "xmark.circle")
+                Label(L10n.t("action.quit"), systemImage: "xmark.circle")
             }
             .buttonStyle(ActionButtonStyle(role: .quiet))
         }

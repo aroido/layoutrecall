@@ -10,8 +10,10 @@ struct LayoutRecallApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("LayoutRecall", systemImage: "display.2") {
+        MenuBarExtra {
             MenuContentView(model: model)
+        } label: {
+            LayoutRecallMenuBarIcon()
         }
         .menuBarExtraStyle(.window)
 

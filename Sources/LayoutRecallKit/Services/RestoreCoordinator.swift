@@ -34,13 +34,13 @@ public struct RestoreCoordinator: Sendable {
         dependencyAvailable: Bool = true
     ) -> RestoreDecision {
         guard !currentDisplays.isEmpty else {
-            return RestoreDecision(action: .idle, reason: "No displays detected.")
+            return RestoreDecision(action: .idle, reason: L10n.t("restoreDecision.noDisplaysDetected"))
         }
 
         guard let match = matcher.bestMatch(for: currentDisplays, among: profiles) else {
             return RestoreDecision(
                 action: profiles.isEmpty ? .saveNewProfile : .offerManualFix,
-                reason: profiles.isEmpty ? "No saved profile exists yet." : "No confident profile match was found."
+                reason: profiles.isEmpty ? L10n.t("restoreDecision.noSavedProfile") : L10n.t("restoreDecision.noConfidentProfileMatch")
             )
         }
 
@@ -51,7 +51,7 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: "Best profile is below the restore confidence threshold."
+                reason: L10n.t("restoreDecision.belowThreshold")
             )
         }
 
@@ -60,7 +60,7 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: "The matched profile has auto restore disabled."
+                reason: L10n.t("restoreDecision.autoRestoreDisabled")
             )
         }
 
@@ -69,7 +69,7 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: "displayplacer is not installed, so automatic restore is blocked."
+                reason: L10n.t("restoreDecision.dependencyBlocked")
             )
         }
 
@@ -77,7 +77,7 @@ public struct RestoreCoordinator: Sendable {
             action: .autoRestore(command: match.profile.layout.engine.command),
             profileName: match.profile.name,
             score: match.score,
-            reason: "The current display set confidently matches a saved profile."
+            reason: L10n.t("restoreDecision.confidentMatch")
         )
     }
 }

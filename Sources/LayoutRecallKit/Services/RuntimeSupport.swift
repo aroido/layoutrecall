@@ -128,7 +128,7 @@ public struct RestoreVerificationResult: Equatable, Sendable {
     public static let skipped = RestoreVerificationResult(
         outcome: .skipped,
         attempts: 0,
-        details: "Verification was skipped."
+        details: L10n.t("verify.skipped")
     )
 }
 
@@ -155,11 +155,11 @@ public enum LaunchAtLoginState: Equatable, Sendable {
     public var description: String {
         switch self {
         case .enabled:
-            return "Launch at login is enabled."
+            return L10n.t("launchAtLogin.enabled")
         case .disabled:
-            return "Launch at login is disabled."
+            return L10n.t("launchAtLogin.disabled")
         case .requiresApproval:
-            return "Launch at login requires user approval in System Settings."
+            return L10n.t("launchAtLogin.requiresApproval")
         case .unsupported(let details):
             return details
         }
@@ -181,15 +181,15 @@ public enum LayoutRecallRuntimeError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .noDisplaysDetected:
-            return "No connected displays were detected."
+            return L10n.t("runtime.noDisplays")
         case .swapRequiresExactlyTwoDisplays:
-            return "Swap Left / Right requires exactly two connected displays."
+            return L10n.t("runtime.swapRequiresTwo")
         case .invalidDisplayIdentifier(let identifier):
-            return "The display identifier \(identifier) cannot be used to build a restore command."
+            return L10n.t("runtime.invalidDisplayIdentifier", identifier)
         case .noCompatibleProfile:
-            return "No compatible saved profile was found for the current display set."
+            return L10n.t("runtime.noCompatibleProfile")
         case .emptyCommand:
-            return "The restore command is empty."
+            return L10n.t("runtime.emptyCommand")
         }
     }
 }

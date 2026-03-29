@@ -9,22 +9,22 @@ public enum ShortcutAction: String, Codable, CaseIterable, Sendable {
     public var title: String {
         switch self {
         case .fixNow:
-            return "Fix Now"
+            return L10n.t("shortcut.fixNow.title")
         case .saveCurrentLayout:
-            return "Save Current Layout"
+            return L10n.t("shortcut.saveCurrentLayout.title")
         case .swapLeftRight:
-            return "Swap Left / Right"
+            return L10n.t("shortcut.swapLeftRight.title")
         }
     }
 
     public var detail: String {
         switch self {
         case .fixNow:
-            return "Run the best matching saved profile immediately."
+            return L10n.t("shortcut.fixNow.detail")
         case .saveCurrentLayout:
-            return "Capture the current display arrangement as a saved profile."
+            return L10n.t("shortcut.saveCurrentLayout.detail")
         case .swapLeftRight:
-            return "Swap the current two-display layout."
+            return L10n.t("shortcut.swapLeftRight.detail")
         }
     }
 }

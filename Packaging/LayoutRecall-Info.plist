@@ -8,10 +8,17 @@
 	<string>LayoutRecall</string>
 	<key>CFBundleExecutable</key>
 	<string>LayoutRecallApp</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.aroido.layoutrecall</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ko</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>LayoutRecall</string>
 	<key>CFBundlePackageType</key>

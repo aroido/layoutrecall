@@ -6,7 +6,7 @@ public final class AppLoginItemManager: LoginItemManaging, @unchecked Sendable {
 
     public func currentState() async -> LaunchAtLoginState {
         guard #available(macOS 13, *) else {
-            return .unsupported("Launch at login requires macOS 13 or newer.")
+            return .unsupported(L10n.t("launchAtLogin.unsupported.macos"))
         }
 
         return map(service.status)
@@ -14,7 +14,7 @@ public final class AppLoginItemManager: LoginItemManaging, @unchecked Sendable {
 
     public func setEnabled(_ enabled: Bool) async throws -> LaunchAtLoginState {
         guard #available(macOS 13, *) else {
-            return .unsupported("Launch at login requires macOS 13 or newer.")
+            return .unsupported(L10n.t("launchAtLogin.unsupported.macos"))
         }
 
         if enabled {
@@ -41,9 +41,9 @@ public final class AppLoginItemManager: LoginItemManaging, @unchecked Sendable {
         case .requiresApproval:
             return .requiresApproval
         case .notFound:
-            return .unsupported("Launch at login is unavailable for this app bundle.")
+            return .unsupported(L10n.t("launchAtLogin.unsupported.bundle"))
         @unknown default:
-            return .unsupported("Launch at login returned an unknown system status.")
+            return .unsupported(L10n.t("launchAtLogin.unsupported.unknown"))
         }
     }
 }

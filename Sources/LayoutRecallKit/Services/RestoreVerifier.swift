@@ -12,7 +12,7 @@ public struct RestoreVerifier: RestoreVerifying {
             return RestoreVerificationResult(
                 outcome: .unverified,
                 attempts: 0,
-                details: "No expected display origins were provided for verification."
+                details: L10n.t("verify.noExpectedOrigins")
             )
         }
 
@@ -27,7 +27,7 @@ public struct RestoreVerifier: RestoreVerifying {
                     return RestoreVerificationResult(
                         outcome: .success,
                         attempts: index + 1,
-                        details: "Display layout matches the expected saved origins."
+                        details: L10n.t("verify.match")
                     )
                 }
 
@@ -39,7 +39,7 @@ public struct RestoreVerifier: RestoreVerifying {
                         outcome: .failed,
                         attempts: retryDelays.count,
                         details: mismatchDetails.isEmpty
-                            ? "Display layout does not match the expected saved origins."
+                            ? L10n.t("verify.mismatchGeneric")
                             : mismatchDetails
                     )
                 }
@@ -48,7 +48,7 @@ public struct RestoreVerifier: RestoreVerifying {
                     return RestoreVerificationResult(
                         outcome: .unverified,
                         attempts: retryDelays.count,
-                        details: "Verification failed because the current display set could not be read: \(error.localizedDescription)"
+                        details: L10n.t("verify.readFailed", error.localizedDescription)
                     )
                 }
             }
@@ -57,18 +57,18 @@ public struct RestoreVerifier: RestoreVerifying {
         return RestoreVerificationResult(
             outcome: .unverified,
             attempts: retryDelays.count,
-            details: "Verification ended without a final display comparison."
+            details: L10n.t("verify.noFinalComparison")
         )
     }
 
     private func mismatches(for currentDisplays: [DisplaySnapshot], expectedOrigins: [DisplayOrigin]) -> [String] {
         expectedOrigins.compactMap { expected in
             guard let current = currentDisplays.first(where: { $0.matches(storedKey: expected.key) }) else {
-                return "Missing display for key \(expected.key)."
+                return L10n.t("verify.missingDisplay", expected.key)
             }
 
             guard current.bounds.x == expected.x, current.bounds.y == expected.y else {
-                return "Display \(expected.key) expected origin (\(expected.x),\(expected.y)) but was (\(current.bounds.x),\(current.bounds.y))."
+                return L10n.t("verify.wrongOrigin", expected.key, expected.x, expected.y, current.bounds.x, current.bounds.y)
             }
 
             return nil

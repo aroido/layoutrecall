@@ -8,7 +8,7 @@ public enum DisplaySnapshotReaderError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .onlineDisplayListFailed(let error):
-            return "Failed to query online displays: \(error.rawValue)"
+            return L10n.t("displayReader.queryFailed", Int(error.rawValue))
         }
     }
 }

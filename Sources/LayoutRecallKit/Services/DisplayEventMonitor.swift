@@ -48,7 +48,7 @@ private let displayRestoreReconfigurationCallback: CGDisplayReconfigurationCallB
     }
 
     let monitor = Unmanaged<CGDisplayEventMonitor>.fromOpaque(userInfo).takeUnretainedValue()
-    monitor.emit(type: .reconfigured, details: "CoreGraphics display reconfiguration callback fired.")
+    monitor.emit(type: .reconfigured, details: L10n.t("monitor.displayReconfigured"))
 }
 
 public final class CGDisplayEventMonitor: DisplayEventMonitoring, @unchecked Sendable {
@@ -77,7 +77,7 @@ public final class CGDisplayEventMonitor: DisplayEventMonitoring, @unchecked Sen
             object: nil,
             queue: nil
         ) { [weak self] _ in
-            self?.emit(type: .wake, details: "macOS wake notification fired.")
+            self?.emit(type: .wake, details: L10n.t("monitor.wakeNotification"))
         }
     }
 

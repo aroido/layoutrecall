@@ -1,8 +1,37 @@
 import LayoutRecallKit
 import SwiftUI
 
+private struct PaneHeader: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.title2.weight(.semibold))
+
+            Text(subtitle)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct FormHint: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var model: AppModel
+    @State private var selectedPane: SettingsPane = .restore
 
     private var autoRestoreBinding: Binding<Bool> {
         Binding(
@@ -23,159 +52,211 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        ZStack {
-            AppChromeBackground()
+        HStack(spacing: 0) {
+            List(SettingsPane.allCases, selection: $selectedPane) { pane in
+                Label(pane.title, systemImage: pane.systemImage)
+                    .tag(pane)
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background(Color(nsColor: .underPageBackgroundColor))
+            .frame(width: 220)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    header
-                    overviewSection
-                    shortcutsCard
-                    profilesSection
-                    diagnosticsCard
-                    runtimeCard
+            Divider()
+
+            detailPane(for: selectedPane)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .frame(width: 760, height: 560)
+    }
+
+    @ViewBuilder
+    private func detailPane(for pane: SettingsPane) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                PaneHeader(title: pane.title, subtitle: pane.subtitle)
+
+                switch pane {
+                case .restore:
+                    restorePane
+                case .profiles:
+                    profilesPane
+                case .shortcuts:
+                    shortcutsPane
+                case .diagnostics:
+                    diagnosticsPane
+                case .general:
+                    generalPane
                 }
-                .padding(24)
-                .frame(maxWidth: 760, alignment: .leading)
             }
-        }
-        .frame(width: 680, height: 640)
-    }
-
-    private var overviewSection: some View {
-        HStack(alignment: .top, spacing: 18) {
-            generalCard
-                .frame(width: 220, alignment: .leading)
-
-            restoreCard
+            .padding(24)
+            .frame(maxWidth: 720, alignment: .leading)
         }
     }
 
-    private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("LayoutRecall")
-                    .font(.largeTitle.weight(.semibold))
+    private var restorePane: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.menuStatusTitle)
+                        .font(.headline)
 
-                Text("Keep saved monitor layouts ready, restore conservatively, and fall back to manual recovery when confidence is low.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                    Text(model.menuStatusSubtitle)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-            Spacer(minLength: 0)
-
-            Image(systemName: "display.2")
-                .font(.system(size: 24, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .frame(width: 44, height: 44)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-    }
-
-    private var generalCard: some View {
-        GlassCard {
-            SectionHeading(title: "General", systemImage: "switch.2")
-
-            Toggle("Launch at login", isOn: launchAtLoginBinding)
-                .toggleStyle(.switch)
-
-            Text(model.loginItemLine)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var restoreCard: some View {
-        GlassCard {
-            SectionHeading(title: "Restore", systemImage: "sparkles.rectangle.stack")
-
-            HStack(spacing: 8) {
-                StatusPill(text: model.autoRestoreEnabled ? "Automatic" : "Manual only", systemImage: model.autoRestoreEnabled ? "bolt.fill" : "hand.raised.fill", emphasis: model.autoRestoreEnabled)
-                StatusPill(text: "\(model.profiles.count) profile" + (model.profiles.count == 1 ? "" : "s"), systemImage: "square.stack.3d.up")
-                StatusPill(
-                    text: model.installationInProgress ? "Installing" : (model.dependencyAvailable ? "Ready" : "Install"),
-                    systemImage: model.dependencyAvailable ? "checkmark.circle.fill" : "arrow.down.circle",
-                    emphasis: model.installationInProgress
-                )
-            }
-
-            Toggle("Enable automatic restore", isOn: autoRestoreBinding)
-                .toggleStyle(.switch)
-
-            Text(model.decisionLine)
-                .font(.body)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(model.dependencyLine)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !model.dependencyAvailable {
-                Button(action: model.installDisplayplacer) {
-                    Label(
-                        model.installationInProgress ? "Installing displayplacer" : "Install displayplacer",
-                        systemImage: model.installationInProgress ? "hourglass" : "arrow.down.circle.fill"
-                    )
-                }
-                .buttonStyle(ActionButtonStyle(role: .secondary))
-                .disabled(model.installationInProgress)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var profilesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if model.profiles.isEmpty {
-                GlassCard {
-                    SectionHeading(title: "Profiles", systemImage: "square.stack.3d.up.fill")
-                    Text("Save the current layout to create your first profile.")
+                    Text(model.menuMetadataLine)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                ForEach(model.profiles) { profile in
-                    GlassCard {
-                        SectionHeading(title: profile.name, systemImage: "display")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("settings.currentState"), systemImage: "checkmark.circle")
+            }
 
-                        TextField(
-                            "Profile name",
-                            text: Binding(
-                                get: { profile.name },
-                                set: { model.renameProfile(profile.id, to: $0) }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L10n.t("toggle.enableAutomaticRestore"), isOn: autoRestoreBinding)
+                        .toggleStyle(.switch)
 
-                        Stepper(
-                            value: Binding(
-                                get: { profile.settings.confidenceThreshold },
-                                set: { model.setConfidenceThreshold(profile.id, to: $0) }
-                            ),
-                            in: 50...100
-                        ) {
-                            Text("Confidence threshold: \(profile.settings.confidenceThreshold)")
-                        }
-
-                        Text("\(profile.displaySet.count) displays in this layout")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    FormHint(text: model.dependencyLine)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("menu.automaticRestore"), systemImage: "sparkles")
+            }
+
+            GroupBox {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !model.dependencyAvailable || model.installationInProgress {
+                        Button(action: model.installDisplayplacer) {
+                            Label(
+                                model.installationInProgress
+                                    ? L10n.t("dependency.installingDisplayplacer")
+                                    : L10n.t("dependency.installDisplayplacer"),
+                                systemImage: model.installationInProgress ? "hourglass" : "arrow.down.circle.fill"
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                        .disabled(model.installationInProgress)
+                    }
+
+                    HStack(spacing: 10) {
+                        Button(action: model.fixNow) {
+                            Label(L10n.t("action.fixNow"), systemImage: "bolt.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .primary))
+
+                        Button(action: model.saveCurrentLayout) {
+                            Label(L10n.t("action.save"), systemImage: "square.and.arrow.down")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                    }
+
+                    Button(action: model.swapLeftRight) {
+                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
+                }
+            } label: {
+                Label(L10n.t("settings.actions"), systemImage: "bolt.badge.clock")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var shortcutsCard: some View {
-        GlassCard {
-            SectionHeading(title: "Shortcuts", systemImage: "command")
+    private var profilesPane: some View {
+        GroupBox {
+            if model.profiles.isEmpty {
+                Text(L10n.t("profiles.empty"))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(Array(model.profiles.enumerated()), id: \.element.id) { index, profile in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .center, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label(profile.name, systemImage: "display")
+                                        .font(.headline)
 
-            VStack(alignment: .leading, spacing: 14) {
+                                    Text(L10n.t("settings.profileDisplaySummary", profile.displaySet.count))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: 6) {
+                                    Text(L10n.t("settings.profileAutoRestore"))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    Toggle(
+                                        "",
+                                        isOn: Binding(
+                                            get: { profile.settings.autoRestore },
+                                            set: { model.setProfileAutoRestore(profile.id, to: $0) }
+                                        )
+                                    )
+                                    .labelsHidden()
+                                    .toggleStyle(.switch)
+                                }
+                            }
+
+                            TextField(
+                                L10n.t("field.profileName"),
+                                text: Binding(
+                                    get: { profile.name },
+                                    set: { model.renameProfile(profile.id, to: $0) }
+                                )
+                            )
+                            .textFieldStyle(.roundedBorder)
+
+                            HStack(alignment: .center, spacing: 12) {
+                                Stepper(
+                                    value: Binding(
+                                        get: { profile.settings.confidenceThreshold },
+                                        set: { model.setConfidenceThreshold(profile.id, to: $0) }
+                                    ),
+                                    in: 50...100
+                                ) {
+                                    Text(L10n.confidenceThreshold(profile.settings.confidenceThreshold))
+                                }
+
+                                Spacer()
+
+                                if profile.settings.autoRestore {
+                                    Text(L10n.t("restore.automatic"))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(L10n.t("restore.manualOnly"))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+
+                        if index < model.profiles.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } label: {
+            Label(L10n.t("section.profiles"), systemImage: "square.stack.3d.up.fill")
+        }
+    }
+
+    private var shortcutsPane: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
                 ForEach(ShortcutAction.allCases, id: \.rawValue) { action in
                     ShortcutRecorderRow(
                         title: action.title,
@@ -185,81 +266,118 @@ struct SettingsView: View {
                     )
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label(L10n.t("section.shortcuts"), systemImage: "command")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var diagnosticsCard: some View {
-        GlassCard {
-            SectionHeading(title: "Diagnostics", systemImage: "stethoscope")
+    private var diagnosticsPane: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(model.dependencyLine)
+                        .fixedSize(horizontal: false, vertical: true)
 
-            if model.diagnostics.isEmpty {
-                Text("No diagnostics have been recorded yet.")
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(Array(model.diagnostics.prefix(8).enumerated()), id: \.element.id) { index, entry in
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(entry.timestamp.formatted(date: .abbreviated, time: .standard))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Text(model.statusLine)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text(entry.displayTitle)
-                                    .font(.subheadline.weight(.semibold))
-
-                                if let score = entry.score {
-                                    DiagnosticBadge(text: "Score \(score)")
-                                }
+                    if !model.lastCommand.isEmpty {
+                        DisclosureGroup(L10n.t("section.lastCommand")) {
+                            ScrollView(.horizontal) {
+                                Text(model.lastCommand)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .textSelection(.enabled)
+                                    .padding(.top, 6)
                             }
-
-                            HStack(spacing: 8) {
-                                DiagnosticBadge(
-                                    text: entry.outcomeSummary,
-                                    tone: entry.outcomeTone
-                                )
-
-                                if let profileName = entry.profileName {
-                                    DiagnosticBadge(text: profileName)
-                                }
-                            }
-
-                            Text(entry.details)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                            .frame(height: 44)
                         }
-
-                        if index < min(model.diagnostics.count, 8) - 1 {
-                            Divider()
-                        }
+                        .font(.caption.weight(.semibold))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("settings.runtimeInfo"), systemImage: "terminal")
+            }
+
+            GroupBox {
+                if model.diagnostics.isEmpty {
+                    Text(L10n.t("diagnostics.empty"))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(model.diagnostics.prefix(5).enumerated()), id: \.element.id) { index, entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text(entry.displayTitle)
+                                        .font(.headline)
+
+                                    if let score = entry.score {
+                                        Text(L10n.score(score))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                HStack(spacing: 8) {
+                                    DiagnosticBadge(
+                                        text: entry.outcomeSummary,
+                                        tone: entry.outcomeTone
+                                    )
+
+                                    if let profileName = entry.profileName {
+                                        DiagnosticBadge(text: profileName)
+                                    }
+                                }
+
+                                Text(entry.details)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            if index < min(model.diagnostics.count, 5) - 1 {
+                                Divider()
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } label: {
+                Label(L10n.t("section.diagnostics"), systemImage: "stethoscope")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var runtimeCard: some View {
-        GlassCard {
-            SectionHeading(title: "Runtime", systemImage: "terminal")
+    private var generalPane: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L10n.t("toggle.launchAtLogin"), isOn: launchAtLoginBinding)
+                        .toggleStyle(.switch)
 
-            Text(model.statusLine)
-                .font(.body)
-
-            if !model.lastCommand.isEmpty {
-                ScrollView(.horizontal) {
-                    Text(model.lastCommand)
-                        .font(.system(size: 11, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    FormHint(text: model.loginItemLine)
                 }
-                .scrollIndicators(.visible)
-                .frame(height: 58)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("toggle.launchAtLogin"), systemImage: "switch.2")
+            }
+
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.appVersionDescription)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("settings.appInfo"), systemImage: "info.circle")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

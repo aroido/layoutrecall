@@ -16,7 +16,7 @@ enum ShortcutManagerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .registrationFailed(let action, let status):
-            return "Failed to register the \(action.title) shortcut. OSStatus: \(status)"
+            return L10n.t("shortcut.registrationFailed", action.title, status)
         }
     }
 }

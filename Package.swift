@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "LayoutRecall",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
@@ -33,6 +34,9 @@ let package = Package(
         ),
         .target(
             name: "LayoutRecallKit",
+            resources: [
+                .process("Resources")
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("ColorSync"),

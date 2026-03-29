@@ -5,34 +5,17 @@ import SwiftUI
 struct AppChromeBackground: View {
     var body: some View {
         ZStack {
+            Color(nsColor: .windowBackgroundColor)
+
             LinearGradient(
                 colors: [
-                    Color(nsColor: .windowBackgroundColor),
-                    Color(nsColor: .underPageBackgroundColor)
+                    Color.accentColor.opacity(0.08),
+                    .clear
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            RadialGradient(
-                colors: [
-                    Color.accentColor.opacity(0.14),
-                    .clear
-                ],
-                center: .topLeading,
-                startRadius: 24,
-                endRadius: 360
-            )
-
-            RadialGradient(
-                colors: [
-                    Color.white.opacity(0.08),
-                    .clear
-                ],
-                center: .bottomTrailing,
-                startRadius: 16,
-                endRadius: 320
-            )
+            .frame(maxHeight: 220, alignment: .top)
         }
         .ignoresSafeArea()
     }
@@ -48,14 +31,13 @@ struct GlassCard<Content: View>: View {
         }
         .padding(padding)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.thinMaterial)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.38), lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.08), radius: 20, y: 10)
     }
 }
 
@@ -70,18 +52,29 @@ struct StatusPill: View {
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: true)
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(
                 Capsule(style: .continuous)
-                    .fill(emphasis ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.06))
+                    .fill(emphasis ? Color.accentColor.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
                     .overlay(
                         Capsule(style: .continuous)
                             .strokeBorder(
-                                emphasis ? Color.accentColor.opacity(0.22) : Color.white.opacity(0.12),
+                                emphasis ? Color.accentColor.opacity(0.18) : Color(nsColor: .separatorColor).opacity(0.30),
                                 lineWidth: 1
                             )
                     )
             )
+    }
+}
+
+struct AdaptiveGroup<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8, content: content)
+            VStack(alignment: .leading, spacing: 8, content: content)
+        }
     }
 }
 
@@ -91,7 +84,7 @@ struct SectionHeading: View {
 
     var body: some View {
         Label(title, systemImage: systemImage)
-            .font(.headline)
+            .font(.headline.weight(.semibold))
             .symbolRenderingMode(.hierarchical)
     }
 }
@@ -125,7 +118,7 @@ struct DiagnosticBadge: View {
             case .negative:
                 return .red.opacity(0.28)
             case .neutral:
-                return Color.white.opacity(0.12)
+                return Color(nsColor: .separatorColor).opacity(0.24)
             }
         }
     }
@@ -158,8 +151,8 @@ struct KeyValueRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .font(.caption)
+            .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .font(.caption.weight(.semibold))
@@ -172,23 +165,23 @@ extension DiagnosticsEntry {
     var displayTitle: String {
         switch actionTaken {
         case "auto-restore":
-            return "Automatic Restore"
+            return L10n.t("diagnostic.title.autoRestore")
         case "manual-fix":
-            return "Fix Now"
+            return L10n.t("diagnostic.title.fixNow")
         case "manual-recovery":
-            return "Manual Recovery"
+            return L10n.t("diagnostic.title.manualRecovery")
         case "save-profile":
-            return "Saved Current Layout"
+            return L10n.t("diagnostic.title.savedCurrentLayout")
         case "save-new-profile":
-            return "Save New Profile"
+            return L10n.t("diagnostic.title.saveNewProfile")
         case "swap-left-right":
-            return "Swapped Left / Right"
+            return L10n.t("diagnostic.title.swappedLeftRight")
         case "bootstrap-install":
-            return "Dependency Setup"
+            return L10n.t("diagnostic.title.dependencySetup")
         case "snapshot-read":
-            return "Display Read Failed"
+            return L10n.t("diagnostic.title.displayReadFailed")
         case "idle":
-            return "Monitoring"
+            return L10n.t("diagnostic.title.monitoring")
         default:
             return actionTaken
                 .replacingOccurrences(of: "-", with: " ")
@@ -199,35 +192,35 @@ extension DiagnosticsEntry {
     var outcomeSummary: String {
         switch (executionResult, verificationResult) {
         case (RestoreExecutionOutcome.success.rawValue, RestoreVerificationOutcome.success.rawValue):
-            return "Applied and verified"
+            return L10n.t("diagnostic.outcome.appliedVerified")
         case (RestoreExecutionOutcome.success.rawValue, RestoreVerificationOutcome.failed.rawValue):
-            return "Applied, verification failed"
+            return L10n.t("diagnostic.outcome.appliedVerificationFailed")
         case (RestoreExecutionOutcome.success.rawValue, RestoreVerificationOutcome.unverified.rawValue):
-            return "Applied, verification incomplete"
+            return L10n.t("diagnostic.outcome.appliedVerificationIncomplete")
         case (RestoreExecutionOutcome.success.rawValue, RestoreVerificationOutcome.skipped.rawValue):
             switch actionTaken {
             case "save-profile":
-                return "Saved successfully"
+                return L10n.t("diagnostic.outcome.savedSuccessfully")
             case "bootstrap-install":
-                return "Dependency ready"
+                return L10n.t("diagnostic.outcome.dependencyReady")
             default:
-                return "Completed successfully"
+                return L10n.t("diagnostic.outcome.completedSuccessfully")
             }
         case (RestoreExecutionOutcome.dependencyMissing.rawValue, _):
-            return "displayplacer needed"
+            return L10n.t("diagnostic.outcome.dependencyNeeded")
         case (RestoreExecutionOutcome.timedOut.rawValue, _):
-            return "Timed out"
+            return L10n.t("diagnostic.outcome.timedOut")
         case (RestoreExecutionOutcome.failure.rawValue, _):
-            return "Action failed"
+            return L10n.t("diagnostic.outcome.actionFailed")
         case (DependencyInstallOutcome.installed.rawValue, _),
              (DependencyInstallOutcome.alreadyInstalled.rawValue, _):
-            return "Dependency ready"
+            return L10n.t("diagnostic.outcome.dependencyReady")
         case (DependencyInstallOutcome.failed.rawValue, _):
-            return "Install failed"
+            return L10n.t("diagnostic.outcome.installFailed")
         case (RestoreVerificationOutcome.skipped.rawValue, RestoreVerificationOutcome.skipped.rawValue):
-            return "Monitoring only"
+            return L10n.t("diagnostic.outcome.monitoringOnly")
         default:
-            return "Status updated"
+            return L10n.t("diagnostic.outcome.statusUpdated")
         }
     }
 
@@ -265,11 +258,11 @@ struct ActionButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
             .padding(.horizontal, role == .quiet ? 0 : 14)
-            .padding(.vertical, role == .quiet ? 0 : 10)
+            .padding(.vertical, role == .quiet ? 0 : 9)
             .frame(maxWidth: role == .primary ? .infinity : nil)
             .foregroundStyle(role == .primary ? Color.white : Color.primary)
             .background(background(isPressed: configuration.isPressed))
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
@@ -278,18 +271,18 @@ struct ActionButtonStyle: ButtonStyle {
     private func background(isPressed: Bool) -> some View {
         switch role {
         case .primary:
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.accentColor.opacity(isPressed ? 0.8 : 0.92))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.accentColor.opacity(isPressed ? 0.82 : 0.92))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.16), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
                 )
         case .secondary:
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(isPressed ? 0.92 : 0.80))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.34), lineWidth: 1)
                 )
         case .quiet:
             Color.clear

@@ -6,13 +6,17 @@ import Foundation
 final class AppModel: ObservableObject {
     @Published private(set) var profiles: [DisplayProfile] = []
     @Published private(set) var diagnostics: [DiagnosticsEntry] = []
-    @Published private(set) var statusLine = "Starting LayoutRecall."
-    @Published private(set) var decisionLine = "Waiting for a saved profile."
-    @Published private(set) var dependencyLine = "Checking displayplacer availability."
+    @Published private(set) var statusLine = L10n.t("status.starting")
+    @Published private(set) var decisionLine = L10n.t("status.waitingSavedProfile")
+    @Published private(set) var dependencyLine = L10n.t("status.checkingDependency")
     @Published private(set) var dependencyAvailable = false
     @Published private(set) var installationInProgress = false
-    @Published private(set) var loginItemLine = "Checking launch at login status."
+    @Published private(set) var loginItemLine = L10n.t("status.checkingLoginItem")
     @Published private(set) var lastCommand = ""
+    @Published private(set) var detectedDisplayCount = 0
+    @Published private(set) var latestDecision: RestoreDecision?
+    @Published private(set) var latestMatchedProfileName: String?
+    @Published private(set) var latestMatchScore: Int?
     @Published var autoRestoreEnabled = true
     @Published var launchAtLoginEnabled = false
     @Published private(set) var shortcuts = ShortcutSettings()
@@ -85,7 +89,7 @@ final class AppModel: ObservableObject {
         await refreshLoginItemState()
         startMonitoring()
         await refreshCurrentState(
-            trigger: DisplayEvent(type: .manual, details: "Application bootstrap completed."),
+            trigger: DisplayEvent(type: .manual, details: L10n.t("event.bootstrapCompleted")),
             allowAutomaticRestore: false,
             shouldRecordDecision: false
         )
@@ -150,7 +154,7 @@ final class AppModel: ObservableObject {
         Task {
             await persistProfiles()
             await refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: "Auto restore preference changed."),
+                trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
             )
@@ -172,13 +176,13 @@ final class AppModel: ObservableObject {
                 await MainActor.run {
                     self.loginItemLine = state.description
                     self.statusLine = enabled
-                        ? "Launch at login preference saved."
-                        : "Launch at login preference cleared."
+                        ? L10n.t("status.launchAtLoginSaved")
+                        : L10n.t("status.launchAtLoginCleared")
                 }
             } catch {
                 await MainActor.run {
-                    self.loginItemLine = "Launch at login could not be updated."
-                    self.statusLine = "Failed to update launch at login: \(error.localizedDescription)"
+                    self.loginItemLine = L10n.t("status.launchAtLoginUpdateFailed")
+                    self.statusLine = L10n.t("status.failedUpdateLaunchAtLogin", error.localizedDescription)
                 }
             }
         }
@@ -206,7 +210,25 @@ final class AppModel: ObservableObject {
         Task {
             await persistProfiles()
             await refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: "Confidence threshold changed."),
+                trigger: DisplayEvent(type: .manual, details: L10n.t("event.confidenceThresholdChanged")),
+                allowAutomaticRestore: false,
+                shouldRecordDecision: false
+            )
+        }
+    }
+
+    func setProfileAutoRestore(_ profileID: UUID, to enabled: Bool) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
+            return
+        }
+
+        profiles[index].settings.autoRestore = enabled
+        autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
+
+        Task {
+            await persistProfiles()
+            await refreshCurrentState(
+                trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
             )
@@ -223,12 +245,12 @@ final class AppModel: ObservableObject {
 
     private func handleDisplayEvent(_ event: DisplayEvent) {
         if let restoreCooldownUntil, restoreCooldownUntil > Date() {
-            statusLine = "Ignoring \(event.type.rawValue) during restore cooldown."
+            statusLine = L10n.t("status.ignoringEventCooldown", L10n.eventTypeName(event.type.rawValue))
             return
         }
 
-        statusLine = "Detected a \(event.type.rawValue) event. Waiting for displays to settle."
-        decisionLine = event.details ?? "Preparing to evaluate the current display layout."
+        statusLine = L10n.t("status.detectedEvent", L10n.eventTypeName(event.type.rawValue))
+        decisionLine = event.details ?? L10n.t("status.preparingCurrentLayout")
 
         debounceTask?.cancel()
         debounceTask = Task { [weak self] in
@@ -260,13 +282,12 @@ final class AppModel: ObservableObject {
                 return match?.profile.layout.engine.command ?? ""
             }()
 
-            if let match {
-                decisionLine = "\(decision.reason) Score: \(match.score)."
-            } else {
-                decisionLine = decision.reason
-            }
-
-            statusLine = "Detected \(currentDisplays.count) connected display\(currentDisplays.count == 1 ? "" : "s")."
+            detectedDisplayCount = currentDisplays.count
+            latestDecision = decision
+            latestMatchedProfileName = match?.profile.name
+            latestMatchScore = match?.score
+            decisionLine = decision.reason
+            statusLine = L10n.connectedDisplayCount(currentDisplays.count)
 
             if allowAutomaticRestore,
                case .autoRestore(let command) = decision.action,
@@ -299,7 +320,11 @@ final class AppModel: ObservableObject {
             }
         } catch {
             lastCommand = ""
-            statusLine = "Failed to read the current display set."
+            detectedDisplayCount = 0
+            latestDecision = nil
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
+            statusLine = L10n.t("status.failedReadCurrentDisplaySet")
             decisionLine = error.localizedDescription
 
             if shouldRecordDecision {
@@ -322,8 +347,14 @@ final class AppModel: ObservableObject {
             let result = await installDependency(trigger: "manual-install", automatic: false)
 
             guard result.outcome == .installed || result.outcome == .alreadyInstalled else {
+                latestDecision = RestoreDecision(
+                    action: .offerManualFix,
+                    reason: L10n.t("decision.manualRestoreRequiresDependency")
+                )
+                latestMatchedProfileName = nil
+                latestMatchScore = nil
                 statusLine = dependency.details
-                decisionLine = "displayplacer is required before manual restore can run."
+                decisionLine = L10n.t("decision.manualRestoreRequiresDependency")
                 await recordDiagnostic(
                     eventType: DisplayEventType.manual.rawValue,
                     profileName: nil,
@@ -342,10 +373,17 @@ final class AppModel: ObservableObject {
 
         do {
             let currentDisplays = try await snapshotReader.currentDisplays()
+            detectedDisplayCount = currentDisplays.count
 
             guard let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles) else {
-                statusLine = "No compatible saved profile was found."
-                decisionLine = "Save a profile before trying manual restore."
+                latestDecision = RestoreDecision(
+                    action: .offerManualFix,
+                    reason: L10n.t("decision.saveProfileBeforeManualRestore")
+                )
+                latestMatchedProfileName = nil
+                latestMatchScore = nil
+                statusLine = L10n.t("status.noCompatibleSavedProfile")
+                decisionLine = L10n.t("decision.saveProfileBeforeManualRestore")
                 await recordDiagnostic(
                     eventType: DisplayEventType.manual.rawValue,
                     profileName: nil,
@@ -358,6 +396,14 @@ final class AppModel: ObservableObject {
                 return
             }
 
+            latestDecision = RestoreDecision(
+                action: .offerManualFix,
+                profileName: match.profile.name,
+                score: match.score,
+                reason: L10n.t("details.userRequestedManualRestore")
+            )
+            latestMatchedProfileName = match.profile.name
+            latestMatchScore = match.score
             await executeRestore(
                 command: match.profile.layout.engine.command,
                 expectedOrigins: match.profile.layout.expectedOrigins,
@@ -365,10 +411,13 @@ final class AppModel: ObservableObject {
                 actionTaken: "manual-fix",
                 profileName: match.profile.name,
                 score: match.score,
-                details: "User requested manual restore."
+                details: L10n.t("details.userRequestedManualRestore")
             )
         } catch {
-            statusLine = "Failed to read the current display set for manual restore."
+            latestDecision = nil
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
+            statusLine = L10n.t("status.failedReadCurrentDisplaySetManual")
             decisionLine = error.localizedDescription
             await recordDiagnostic(
                 eventType: DisplayEventType.manual.rawValue,
@@ -388,19 +437,27 @@ final class AppModel: ObservableObject {
             let layoutPlan = try commandBuilder.restorePlan(for: currentDisplays)
             let nextIndex = profiles.count + 1
             let profile = DisplayProfile.draft(
-                name: "Workspace \(nextIndex)",
+                name: L10n.workspaceName(nextIndex),
                 displays: currentDisplays,
                 layoutPlan: layoutPlan
             )
 
             profiles.append(profile)
             autoRestoreEnabled = profiles.allSatisfy(\.settings.autoRestore)
+            detectedDisplayCount = currentDisplays.count
+            latestDecision = RestoreDecision(
+                action: .autoRestore(command: profile.layout.engine.command),
+                profileName: profile.name,
+                reason: L10n.t("decision.savedProfileReady")
+            )
+            latestMatchedProfileName = profile.name
+            latestMatchScore = nil
             lastCommand = profile.layout.engine.command
 
             await persistProfiles()
 
-            statusLine = "Captured the current layout as \(profile.name)."
-            decisionLine = "The saved profile is ready for future display restore events."
+            statusLine = L10n.t("status.capturedLayout", profile.name)
+            decisionLine = L10n.t("decision.savedProfileReady")
 
             await recordDiagnostic(
                 eventType: DisplayEventType.manual.rawValue,
@@ -409,10 +466,10 @@ final class AppModel: ObservableObject {
                 actionTaken: "save-profile",
                 executionResult: RestoreVerificationOutcome.skipped.rawValue,
                 verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: "Saved the current live display layout as a profile."
+                details: L10n.t("details.savedCurrentLayout")
             )
         } catch {
-            statusLine = "Failed to capture the current layout."
+            statusLine = L10n.t("status.failedCaptureLayout")
             decisionLine = error.localizedDescription
         }
     }
@@ -421,6 +478,13 @@ final class AppModel: ObservableObject {
         do {
             let currentDisplays = try await snapshotReader.currentDisplays()
             let layoutPlan = try commandBuilder.swapLeftRightPlan(for: currentDisplays)
+            detectedDisplayCount = currentDisplays.count
+            latestDecision = RestoreDecision(
+                action: .offerManualFix,
+                reason: L10n.t("details.userRequestedSwap")
+            )
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
 
             await executeRestore(
                 command: layoutPlan.command,
@@ -429,10 +493,13 @@ final class AppModel: ObservableObject {
                 actionTaken: "swap-left-right",
                 profileName: nil,
                 score: nil,
-                details: "User requested the current two displays be swapped."
+                details: L10n.t("details.userRequestedSwap")
             )
         } catch {
-            statusLine = "Swap Left / Right is unavailable."
+            latestDecision = nil
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
+            statusLine = L10n.t("status.swapUnavailable")
             decisionLine = error.localizedDescription
             await recordDiagnostic(
                 eventType: DisplayEventType.manual.rawValue,
@@ -456,7 +523,7 @@ final class AppModel: ObservableObject {
         details: String
     ) async {
         lastCommand = command
-        statusLine = "Running restore command."
+        statusLine = L10n.t("status.runningRestoreCommand")
         decisionLine = details
 
         let executionResult = await executor.execute(command: command)
@@ -472,6 +539,23 @@ final class AppModel: ObservableObject {
 
         let executionSummary = executionResult.outcome.rawValue
         let verificationSummary = verificationResult.outcome.rawValue
+        if executionResult.outcome == .success {
+            latestDecision = RestoreDecision(
+                action: .autoRestore(command: command),
+                profileName: profileName,
+                score: score,
+                reason: verificationResult.details
+            )
+        } else {
+            latestDecision = RestoreDecision(
+                action: .offerManualFix,
+                profileName: profileName,
+                score: score,
+                reason: executionResult.details
+            )
+        }
+        latestMatchedProfileName = profileName
+        latestMatchScore = score
         statusLine = executionResult.details
         decisionLine = verificationResult.details
 
@@ -516,7 +600,7 @@ final class AppModel: ObservableObject {
                 try await store.saveProfiles(normalizedProfiles)
             }
         } catch {
-            statusLine = "Failed to load saved profiles."
+            statusLine = L10n.t("status.failedLoadProfiles")
             decisionLine = error.localizedDescription
         }
     }
@@ -544,7 +628,7 @@ final class AppModel: ObservableObject {
         do {
             diagnostics = try await diagnosticsStore.recentEntries()
         } catch {
-            statusLine = "Failed to load diagnostics history."
+            statusLine = L10n.t("status.failedLoadDiagnostics")
             decisionLine = error.localizedDescription
         }
     }
@@ -555,7 +639,7 @@ final class AppModel: ObservableObject {
             launchAtLoginEnabled = settings.launchAtLogin
             shortcuts = settings.shortcuts
         } catch {
-            statusLine = "Failed to load app settings."
+            statusLine = L10n.t("status.failedLoadSettings")
             decisionLine = error.localizedDescription
         }
     }
@@ -564,7 +648,7 @@ final class AppModel: ObservableObject {
         do {
             try await store.saveProfiles(profiles)
         } catch {
-            statusLine = "Failed to save profiles."
+            statusLine = L10n.t("status.failedSaveProfiles")
             decisionLine = error.localizedDescription
         }
     }
@@ -578,7 +662,7 @@ final class AppModel: ObservableObject {
                 )
             )
         } catch {
-            statusLine = "Failed to save app settings."
+            statusLine = L10n.t("status.failedSaveSettings")
             decisionLine = error.localizedDescription
         }
     }
@@ -591,7 +675,7 @@ final class AppModel: ObservableObject {
                 }
             }
         } catch {
-            statusLine = "Failed to configure keyboard shortcuts."
+            statusLine = L10n.t("status.failedConfigureShortcuts")
             decisionLine = error.localizedDescription
         }
     }
@@ -647,10 +731,10 @@ final class AppModel: ObservableObject {
     @discardableResult
     private func runDependencyInstall(trigger: String, automatic: Bool) async -> DependencyInstallResult {
         installationInProgress = true
-        statusLine = automatic ? "Installing displayplacer automatically." : "Installing displayplacer."
+        statusLine = automatic ? L10n.t("status.installingDisplayplacerAuto") : L10n.t("status.installingDisplayplacer")
         decisionLine = automatic
-            ? "LayoutRecall is setting up its restore dependency in the background."
-            : "LayoutRecall is trying to install displayplacer now."
+            ? L10n.t("decision.backgroundDependencySetup")
+            : L10n.t("decision.tryingInstallDependency")
 
         let result = await dependencyInstaller.installDisplayplacerIfNeeded()
         installationInProgress = false
@@ -662,12 +746,12 @@ final class AppModel: ObservableObject {
 
         if result.outcome == .installed || result.outcome == .alreadyInstalled {
             decisionLine = automatic
-                ? "displayplacer is ready for future restore events."
-                : "displayplacer is ready. Retry the action or wait for the next restore event."
+                ? L10n.t("decision.dependencyReadyAuto")
+                : L10n.t("decision.dependencyReadyManual")
         } else {
             decisionLine = automatic
-                ? "Automatic dependency setup failed. Open Settings to inspect the status."
-                : "displayplacer could not be installed automatically."
+                ? L10n.t("decision.dependencySetupFailedAuto")
+                : L10n.t("decision.dependencyInstallFailed")
         }
 
         await recordDiagnostic(
@@ -711,7 +795,7 @@ final class AppModel: ObservableObject {
             try await diagnosticsStore.append(entry)
             diagnostics = try await diagnosticsStore.recentEntries()
         } catch {
-            statusLine = "Failed to save diagnostics."
+            statusLine = L10n.t("status.failedSaveDiagnostics")
             decisionLine = error.localizedDescription
         }
     }

@@ -14,7 +14,7 @@ public struct DisplayplacerRestoreExecutor: RestoreExecuting {
             guard result.outcome == .success else {
                 return RestoreDependencyStatus(
                     isAvailable: false,
-                    details: "displayplacer was not found on PATH."
+                    details: L10n.t("restoreExecutor.dependencyMissing")
                 )
             }
 
@@ -26,7 +26,7 @@ public struct DisplayplacerRestoreExecutor: RestoreExecuting {
             return RestoreDependencyStatus(
                 isAvailable: location != nil,
                 location: location,
-                details: location.map { "displayplacer available at \($0)." } ?? "displayplacer was not found on PATH."
+                details: location.map { L10n.t("restoreExecutor.availableAt", $0) } ?? L10n.t("restoreExecutor.dependencyMissing")
             )
         }.value
     }
@@ -87,7 +87,7 @@ public struct DisplayplacerRestoreExecutor: RestoreExecuting {
                 stdout: dataString(from: stdoutPipe),
                 stderr: dataString(from: stderrPipe),
                 duration: Date().timeIntervalSince(startDate),
-                details: "Restore command timed out after \(Int(timeout)) seconds."
+                details: L10n.t("restoreExecutor.timedOut", Int(timeout))
             )
         }
 
@@ -103,7 +103,7 @@ public struct DisplayplacerRestoreExecutor: RestoreExecuting {
                 stdout: stdout,
                 stderr: stderr,
                 duration: duration,
-                details: "Restore command finished successfully."
+                details: L10n.t("restoreExecutor.success")
             )
         }
 
@@ -129,9 +129,9 @@ public struct DisplayplacerRestoreExecutor: RestoreExecuting {
             .map { $0.replacingOccurrences(of: "\n", with: " ") }
 
         if let message {
-            return "Restore command failed with exit code \(exitCode): \(message)"
+            return L10n.t("restoreExecutor.failureWithMessage", exitCode, message)
         }
 
-        return "Restore command failed with exit code \(exitCode)."
+        return L10n.t("restoreExecutor.failure", exitCode)
     }
 }

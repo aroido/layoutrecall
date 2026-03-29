@@ -11,9 +11,9 @@ public enum LayoutEngineError: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .unsupportedEngine(let type):
-            return "Unsupported layout engine: \(type)"
+            return L10n.t("layoutEngine.unsupported", type)
         case .missingCommand:
-            return "The profile does not include a restore command."
+            return L10n.t("runtime.emptyCommand")
         }
     }
 }
@@ -33,4 +33,3 @@ public struct DisplayplacerLayoutEngine: LayoutEngine, Sendable {
         return profile.layout.engine.command
     }
 }
-

@@ -24,7 +24,7 @@ func renderMenuAndSettingsSnapshots() async throws {
                 actionTaken: "auto-restore",
                 executionResult: RestoreExecutionOutcome.success.rawValue,
                 verificationResult: RestoreVerificationOutcome.success.rawValue,
-                details: "A saved profile matched and the restore command completed successfully."
+                details: L10n.t("restoreDecision.confidentMatch")
             )
         ]),
         snapshotReader: SnapshotReader(displays: [DisplaySnapshot.sampleLeft, DisplaySnapshot.sampleRight]),
@@ -59,12 +59,12 @@ func renderMenuAndSettingsSnapshots() async throws {
     let settingsSize = try imageSize(at: settingsURL)
 
     #expect(menuSize.width >= 320)
-    #expect(menuSize.height >= 300)
+    #expect(menuSize.height >= 280)
     #expect(menuSize.width <= 720)
-    #expect(menuSize.height <= 1360)
-    #expect(settingsSize.width >= 560)
+    #expect(menuSize.height <= 840)
+    #expect(settingsSize.width >= 1500)
     #expect(settingsSize.height >= 520)
-    #expect(settingsSize.width <= 1360)
+    #expect(settingsSize.width <= 1600)
 }
 
 @MainActor
@@ -212,7 +212,7 @@ private actor SnapshotExecutor: RestoreExecuting {
         RestoreDependencyStatus(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: "displayplacer available at /usr/local/bin/displayplacer."
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
         )
     }
 
@@ -221,7 +221,7 @@ private actor SnapshotExecutor: RestoreExecuting {
             outcome: .success,
             command: command,
             exitCode: 0,
-            details: "Restore command finished successfully."
+            details: L10n.t("restoreExecutor.success")
         )
     }
 }
@@ -231,7 +231,7 @@ private actor SnapshotVerifier: RestoreVerifying {
         RestoreVerificationResult(
             outcome: .success,
             attempts: 1,
-            details: "Display layout matches the expected saved origins."
+            details: L10n.t("verify.match")
         )
     }
 }

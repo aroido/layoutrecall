@@ -12,32 +12,17 @@ struct ShortcutRecorderRow: View {
     @State private var eventMonitor: Any?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 14) {
+                details
+                Spacer(minLength: 12)
+                controls
             }
 
-            Spacer(minLength: 12)
-
-            Button(action: toggleRecording) {
-                Text(isRecording ? "Press shortcut" : (binding?.displayString ?? "Record Shortcut"))
-                    .font(.system(.body, design: .rounded).weight(.medium))
-                    .frame(minWidth: 160, alignment: .center)
+            VStack(alignment: .leading, spacing: 10) {
+                details
+                controls
             }
-            .buttonStyle(ActionButtonStyle(role: isRecording ? .primary : .secondary))
-
-            Button("Clear") {
-                onChange(nil)
-            }
-            .buttonStyle(ActionButtonStyle(role: .quiet))
-            .opacity(binding == nil ? 0 : 1)
-            .disabled(binding == nil)
         }
         .onChange(of: isRecording) { newValue in
             if newValue {
@@ -48,6 +33,38 @@ struct ShortcutRecorderRow: View {
         }
         .onDisappear {
             removeMonitor()
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var controls: some View {
+        HStack(spacing: 10) {
+            Button(action: toggleRecording) {
+                Text(isRecording ? L10n.t("shortcut.press") : (binding?.displayString ?? L10n.t("shortcut.record")))
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .frame(minWidth: 140, alignment: .center)
+            }
+            .buttonStyle(ActionButtonStyle(role: isRecording ? .primary : .secondary))
+
+            Button(L10n.t("action.clear")) {
+                onChange(nil)
+            }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .opacity(binding == nil ? 0 : 1)
+            .disabled(binding == nil)
         }
     }
 
@@ -97,20 +114,20 @@ struct ShortcutRecorderRow: View {
             return characters.uppercased()
         }
 
-        return "Key \(event.keyCode)"
+        return L10n.t("shortcut.key.default", Int(event.keyCode))
     }
 
     private var specialKeyNames: [UInt16: String] {
         [
-            36: "Return",
-            48: "Tab",
-            49: "Space",
-            51: "Delete",
-            53: "Esc",
-            123: "Left",
-            124: "Right",
-            125: "Down",
-            126: "Up"
+            36: L10n.t("shortcut.key.return"),
+            48: L10n.t("shortcut.key.tab"),
+            49: L10n.t("shortcut.key.space"),
+            51: L10n.t("shortcut.key.delete"),
+            53: L10n.t("shortcut.key.esc"),
+            123: L10n.t("shortcut.key.left"),
+            124: L10n.t("shortcut.key.right"),
+            125: L10n.t("shortcut.key.down"),
+            126: L10n.t("shortcut.key.up")
         ]
     }
 }

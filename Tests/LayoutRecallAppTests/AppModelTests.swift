@@ -30,13 +30,13 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
         dependency: .init(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: "displayplacer available at /usr/local/bin/displayplacer."
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
         ),
         executionResult: .init(
             outcome: .success,
             command: DisplayProfile.officeDock.layout.engine.command,
             exitCode: 0,
-            details: "Restore command finished successfully."
+            details: L10n.t("restoreExecutor.success")
         )
     )
     let verifier = RestoreVerifierStub(result: .skipped)
@@ -65,8 +65,12 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
     #expect(model.diagnostics.count == 1)
     #expect(model.launchAtLoginEnabled == true)
     #expect(model.loginItemLine == LaunchAtLoginState.enabled.description)
-    #expect(model.dependencyLine.contains("displayplacer available"))
+    #expect(model.dependencyLine == L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer"))
     #expect(model.lastCommand == DisplayProfile.officeDock.layout.engine.command)
+    #expect(model.menuPrimaryState == .healthy)
+    #expect(model.menuStatusTitle == L10n.t("menu.state.readyProfile", "Office Dock"))
+    #expect(model.menuStatusSubtitle == L10n.t("restoreDecision.confidentMatch"))
+    #expect(model.menuMetadataLine.contains(L10n.t("confidence.high")))
     #expect(eventMonitor.startCallCount == 1)
 }
 
@@ -136,10 +140,10 @@ func saveCurrentLayoutCreatesAProfileAndDiagnostic() async {
         model.profiles.count == 1 && model.diagnostics.first?.actionTaken == "save-profile"
     }
 
-    #expect(model.profiles.first?.name == "Workspace 1")
+    #expect(model.profiles.first?.name == L10n.workspaceName(1))
     #expect(model.lastCommand == plan.command)
-    #expect(model.statusLine.contains("Captured the current layout"))
-    #expect(model.diagnostics.first?.profileName == "Workspace 1")
+    #expect(model.statusLine == L10n.t("status.capturedLayout", L10n.workspaceName(1)))
+    #expect(model.diagnostics.first?.profileName == L10n.workspaceName(1))
     #expect(await profileStore.currentProfiles().count == 1)
 }
 
@@ -189,6 +193,16 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
     #expect(model.profiles.first?.settings.confidenceThreshold == 85)
     #expect(model.profiles.first?.settings.autoRestore == false)
     #expect(model.autoRestoreEnabled == false)
+
+    model.setProfileAutoRestore(profileID, to: true)
+
+    await waitUntil {
+        let persisted = await profileStore.currentProfiles()
+        return persisted.first?.settings.autoRestore == true
+    }
+
+    #expect(model.profiles.first?.settings.autoRestore == true)
+    #expect(model.autoRestoreEnabled == true)
 }
 
 @MainActor
@@ -225,7 +239,7 @@ func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
     }
 
     #expect(model.launchAtLoginEnabled == true)
-    #expect(model.statusLine == "Launch at login preference saved.")
+    #expect(model.statusLine == L10n.t("status.launchAtLoginSaved"))
     #expect(await loginItemManager.requests() == [true])
 }
 
@@ -285,13 +299,13 @@ func shortcutTriggerRunsItsMappedAction() async {
         dependency: .init(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: "displayplacer available at /usr/local/bin/displayplacer."
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
         ),
         executionResult: .init(
             outcome: .success,
             command: restorePlan.command,
             exitCode: 0,
-            details: "Restore command finished successfully."
+            details: L10n.t("restoreExecutor.success")
         )
     )
     let model = AppModel(
@@ -334,11 +348,11 @@ func shortcutTriggerRunsItsMappedAction() async {
 @Test
 func manualFixStopsWhenDisplayplacerIsMissingAndRecordsWhy() async {
     let diagnosticsStore = DiagnosticsStoreStub()
-    let dependency = RestoreDependencyStatus(isAvailable: false, details: "displayplacer was not found on PATH.")
+    let dependency = RestoreDependencyStatus(isAvailable: false, details: L10n.t("restoreExecutor.dependencyMissing"))
     let installer = DependencyInstallerStub(result: .init(
         outcome: .failed,
         dependency: "displayplacer",
-        details: "displayplacer could not be installed automatically."
+        details: L10n.t("dependencyInstaller.displayplacerFailed")
     ))
     let model = AppModel(
         store: ProfileStoreStub(profiles: [.officeDock]),
@@ -367,7 +381,7 @@ func manualFixStopsWhenDisplayplacerIsMissingAndRecordsWhy() async {
     }
 
     #expect(model.statusLine == dependency.details)
-    #expect(model.decisionLine == "displayplacer is required before manual restore can run.")
+    #expect(model.decisionLine == L10n.t("decision.manualRestoreRequiresDependency"))
     #expect(model.diagnostics.first?.executionResult == RestoreExecutionOutcome.dependencyMissing.rawValue)
 }
 
@@ -381,20 +395,20 @@ func displayEventsTriggerDebouncedAutomaticRestore() async {
         dependency: .init(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: "displayplacer available at /usr/local/bin/displayplacer."
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
         ),
         executionResult: .init(
             outcome: .success,
             command: restorePlan.command,
             exitCode: 0,
-            details: "Restore command finished successfully."
+            details: L10n.t("restoreExecutor.success")
         )
     )
     let verifier = RestoreVerifierStub(
         result: .init(
             outcome: .success,
             attempts: 1,
-            details: "Display layout matches the expected saved origins."
+            details: L10n.t("verify.match")
         )
     )
     let installer = DependencyInstallerStub()
@@ -435,21 +449,21 @@ func displayEventsTriggerDebouncedAutomaticRestore() async {
 @Test
 func bootstrapAutoInstallsDisplayplacerWhenMissing() async {
     let executor = RestoreExecutorStub(
-        dependency: .init(isAvailable: false, details: "displayplacer was not found on PATH.")
+        dependency: .init(isAvailable: false, details: L10n.t("restoreExecutor.dependencyMissing"))
     )
     let installer = DependencyInstallerStub(
         result: .init(
             outcome: .installed,
             dependency: "displayplacer",
             location: "/opt/homebrew/bin/displayplacer",
-            details: "displayplacer was installed automatically at /opt/homebrew/bin/displayplacer."
+            details: L10n.t("dependencyInstaller.installed", "/opt/homebrew/bin/displayplacer")
         ),
         onInstall: {
             await executor.setDependency(
                 .init(
                     isAvailable: true,
                     location: "/opt/homebrew/bin/displayplacer",
-                    details: "displayplacer available at /opt/homebrew/bin/displayplacer."
+                    details: L10n.t("restoreExecutor.availableAt", "/opt/homebrew/bin/displayplacer")
                 )
             )
         }
@@ -669,13 +683,13 @@ private actor RestoreExecutorStub: RestoreExecuting {
         dependency: RestoreDependencyStatus = .init(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: "displayplacer available at /usr/local/bin/displayplacer."
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
         ),
         executionResult: RestoreExecutionResult = .init(
             outcome: .success,
             command: "",
             exitCode: 0,
-            details: "Restore command finished successfully."
+            details: L10n.t("restoreExecutor.success")
         )
     ) {
         self.dependency = dependency
