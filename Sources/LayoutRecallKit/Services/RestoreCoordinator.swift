@@ -12,7 +12,9 @@ public enum RestoreDecisionContext: Equatable, Sendable {
     case noSavedProfile
     case noConfidentMatch
     case belowThreshold
-    case autoRestoreDisabled
+    case automaticRestoreDisabled
+    case profileAutoRestoreDisabled
+    case manualLayoutOverride
     case dependencyBlocked
     case ready
     case savedProfileReady
@@ -53,6 +55,7 @@ public struct RestoreCoordinator: Sendable {
     public func decide(
         for currentDisplays: [DisplaySnapshot],
         profiles: [DisplayProfile],
+        automaticRestoreEnabled: Bool = true,
         dependencyAvailable: Bool = true
     ) -> RestoreDecision {
         guard !currentDisplays.isEmpty else {
@@ -83,13 +86,23 @@ public struct RestoreCoordinator: Sendable {
             )
         }
 
+        guard automaticRestoreEnabled else {
+            return RestoreDecision(
+                action: .offerManualFix,
+                profileName: match.profile.name,
+                score: match.score,
+                reason: L10n.t("restoreDecision.globalAutoRestoreDisabled"),
+                context: .automaticRestoreDisabled
+            )
+        }
+
         guard match.profile.settings.autoRestore else {
             return RestoreDecision(
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: L10n.t("restoreDecision.autoRestoreDisabled"),
-                context: .autoRestoreDisabled
+                reason: L10n.t("restoreDecision.profileAutoRestoreDisabled"),
+                context: .profileAutoRestoreDisabled
             )
         }
 

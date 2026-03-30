@@ -361,6 +361,8 @@ extension DiagnosticsEntry {
             return L10n.t("diagnostic.title.fixNow")
         case "manual-recovery":
             return L10n.t("diagnostic.title.manualRecovery")
+        case "manual-layout-override":
+            return L10n.t("diagnostic.title.manualLayoutOverride")
         case "save-profile":
             return L10n.t("diagnostic.title.saveNewProfile")
         case "save-new-profile":

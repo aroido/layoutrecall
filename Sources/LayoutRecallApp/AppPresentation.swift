@@ -9,6 +9,7 @@ enum MenuPrimaryState: Equatable {
     case noMatch
     case lowConfidence
     case autoRestoreDisabled
+    case manualLayoutOverride
     case manualRecovery
     case healthy
 }
@@ -20,6 +21,7 @@ enum MenuStatePresentation: Equatable {
     case noMatch
     case lowConfidence
     case autoRestoreDisabled
+    case manualLayoutOverride
     case manualRecovery
     case healthy
 
@@ -37,6 +39,8 @@ enum MenuStatePresentation: Equatable {
             return L10n.t("menu.state.badge.lowConfidence")
         case .autoRestoreDisabled:
             return L10n.t("menu.state.badge.autoRestoreDisabled")
+        case .manualLayoutOverride:
+            return L10n.t("menu.state.badge.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.state.badge.manualRecovery")
         case .healthy:
@@ -58,6 +62,8 @@ enum MenuStatePresentation: Equatable {
             return "checkmark.seal"
         case .autoRestoreDisabled:
             return "sparkles.slash"
+        case .manualLayoutOverride:
+            return "arrow.left.and.right.square"
         case .manualRecovery:
             return "bolt.badge.clock"
         case .healthy:
@@ -205,6 +211,59 @@ extension AppModel {
         dependencyAvailable && !installationInProgress && !profiles.isEmpty
     }
 
+    var autoRestoreDisabledContext: RestoreDecisionContext? {
+        switch latestDecision?.context {
+        case .automaticRestoreDisabled, .profileAutoRestoreDisabled:
+            return latestDecision?.context
+        default:
+            return nil
+        }
+    }
+
+    var canEnableAutomaticRestoreAction: Bool {
+        switch autoRestoreDisabledContext {
+        case .profileAutoRestoreDisabled:
+            return referenceProfile != nil
+        case .automaticRestoreDisabled:
+            return !autoRestoreEnabled
+        default:
+            return !autoRestoreEnabled && !profiles.isEmpty
+        }
+    }
+
+    private var autoRestoreStatusTitleKey: String {
+        switch autoRestoreDisabledContext {
+        case .automaticRestoreDisabled:
+            return "menu.state.globalAutoRestoreDisabled"
+        case .profileAutoRestoreDisabled:
+            return "menu.state.profileAutoRestoreDisabled"
+        default:
+            return "menu.state.autoRestoreDisabled"
+        }
+    }
+
+    private var autoRestoreStatusSubtitleKey: String {
+        switch autoRestoreDisabledContext {
+        case .automaticRestoreDisabled:
+            return "menu.subtitle.globalAutoRestoreDisabled"
+        case .profileAutoRestoreDisabled:
+            return "menu.subtitle.profileAutoRestoreDisabled"
+        default:
+            return "menu.subtitle.autoRestoreDisabled"
+        }
+    }
+
+    private var autoRestoreHintKey: String {
+        switch autoRestoreDisabledContext {
+        case .automaticRestoreDisabled:
+            return "settings.restore.globalAutoRestoreDisabledHint"
+        case .profileAutoRestoreDisabled:
+            return "settings.restore.profileAutoRestoreDisabledHint"
+        default:
+            return "settings.restore.autoRestoreDisabledHint"
+        }
+    }
+
     var menuStatePresentation: MenuStatePresentation {
         switch menuPrimaryState {
         case .noProfiles:
@@ -219,6 +278,8 @@ extension AppModel {
             return .lowConfidence
         case .autoRestoreDisabled:
             return .autoRestoreDisabled
+        case .manualLayoutOverride:
+            return .manualLayoutOverride
         case .manualRecovery:
             return .manualRecovery
         case .healthy:
@@ -338,7 +399,7 @@ extension AppModel {
     }
 
     var restoreModeLine: String {
-        autoRestoreEnabled
+        (autoRestoreDisabledContext == .profileAutoRestoreDisabled ? false : autoRestoreEnabled)
             ? L10n.t("restore.automatic")
             : L10n.t("restore.manualOnly")
     }
@@ -424,7 +485,13 @@ extension AppModel {
         case .fixNow:
             fixNow()
         case .enableAutoRestore:
-            setAutoRestore(true)
+            if autoRestoreDisabledContext == .profileAutoRestoreDisabled,
+               let profileID = referenceProfile?.id
+            {
+                setProfileAutoRestore(profileID, to: true)
+            } else {
+                setAutoRestore(true)
+            }
         case .saveNewProfile:
             saveCurrentLayout()
         }
@@ -457,8 +524,10 @@ extension AppModel {
             return .noMatch
         case .belowThreshold:
             return .lowConfidence
-        case .autoRestoreDisabled:
+        case .automaticRestoreDisabled, .profileAutoRestoreDisabled:
             return .autoRestoreDisabled
+        case .manualLayoutOverride:
+            return .manualLayoutOverride
         case .dependencyBlocked:
             return .dependencyMissing
         case .ready, .savedProfileReady:
@@ -488,6 +557,8 @@ extension AppModel {
             return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
+        case .manualLayoutOverride:
+            return nil
         case .manualRecovery:
             return .fixNow
         case .healthy:
@@ -497,7 +568,7 @@ extension AppModel {
 
     var menuQuickActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .healthy, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .installingDependency, .dependencyMissing:
+        case .healthy, .lowConfidence, .autoRestoreDisabled, .manualLayoutOverride, .manualRecovery, .installingDependency, .dependencyMissing:
             return [.saveNewProfile]
         case .noProfiles, .noMatch:
             return []
@@ -518,6 +589,8 @@ extension AppModel {
             return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
+        case .manualLayoutOverride:
+            return nil
         case .manualRecovery:
             return .fixNow
         case .healthy:
@@ -527,7 +600,7 @@ extension AppModel {
 
     var restoreSecondaryActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .lowConfidence, .manualRecovery:
+        case .lowConfidence, .manualLayoutOverride, .manualRecovery:
             return [.saveNewProfile]
         case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .autoRestoreDisabled, .healthy:
             return []
@@ -547,7 +620,9 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("settings.restore.lowConfidenceHint")
         case .autoRestoreDisabled:
-            return L10n.t("settings.restore.autoRestoreDisabledHint")
+            return L10n.t(autoRestoreHintKey)
+        case .manualLayoutOverride:
+            return L10n.t("settings.restore.manualLayoutOverrideHint")
         case .manualRecovery:
             return L10n.t("settings.restore.manualHint")
         case .healthy:
@@ -598,7 +673,9 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("menu.state.lowConfidence")
         case .autoRestoreDisabled:
-            return L10n.t("menu.state.autoRestoreDisabled")
+            return L10n.t(autoRestoreStatusTitleKey)
+        case .manualLayoutOverride:
+            return L10n.t("menu.state.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.state.manualRecovery")
         case .healthy:
@@ -623,7 +700,9 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("menu.subtitle.lowConfidence")
         case .autoRestoreDisabled:
-            return L10n.t("menu.subtitle.autoRestoreDisabled")
+            return L10n.t(autoRestoreStatusSubtitleKey)
+        case .manualLayoutOverride:
+            return L10n.t("menu.subtitle.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.subtitle.manualRecovery")
         case .healthy:
@@ -663,7 +742,7 @@ extension AppModel {
             switch menuPrimaryState {
             case .noProfiles:
                 return L10n.t("menu.action.saveFirstBaseline")
-            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .healthy:
+            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .autoRestoreDisabled, .manualLayoutOverride, .manualRecovery, .healthy:
                 return L10n.t("menu.action.saveAnotherBaseline")
             }
         }

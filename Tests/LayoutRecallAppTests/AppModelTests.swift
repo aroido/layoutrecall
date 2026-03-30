@@ -227,7 +227,7 @@ func presentationActionsReflectLowConfidenceMatch() async {
 
 @MainActor
 @Test
-func presentationActionsReflectAutoRestoreDisabledWithoutLeakingDependencyPath() async {
+func presentationActionsReflectProfileAutoRestoreDisabledWithoutLeakingDependencyPath() async {
     var profile = DisplayProfile.officeDock
     profile.settings.autoRestore = false
 
@@ -265,9 +265,57 @@ func presentationActionsReflectAutoRestoreDisabledWithoutLeakingDependencyPath()
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == .enableAutoRestore)
     #expect(model.restoreSecondaryActions.isEmpty)
-    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.autoRestoreDisabled"))
+    #expect(model.menuStatusTitle == L10n.t("menu.state.profileAutoRestoreDisabled"))
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.profileAutoRestoreDisabled"))
+    #expect(model.restoreActionHint == L10n.t("settings.restore.profileAutoRestoreDisabledHint"))
     #expect(model.dependencyLine == dependencyDetails)
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.ready"))
+    #expect(model.canEnableAutomaticRestoreAction)
+}
+
+@MainActor
+@Test
+func presentationActionsReflectGlobalAutoRestoreDisabledWithoutMutatingProfileState() async {
+    let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+    let settingsStore = AppSettingsStoreStub(
+        settings: AppSettings(automaticRestoreEnabled: false)
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: settingsStore,
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(
+            dependency: .init(
+                isAvailable: true,
+                location: "/usr/local/bin/displayplacer",
+                details: dependencyDetails
+            )
+        ),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    #expect(model.autoRestoreEnabled == false)
+    #expect(model.profiles.first?.settings.autoRestore == true)
+    #expect(model.menuPrimaryState == .autoRestoreDisabled)
+    #expect(model.menuPrimaryAction == .enableAutoRestore)
+    #expect(model.restorePrimaryAction == .enableAutoRestore)
+    #expect(model.menuStatusTitle == L10n.t("menu.state.globalAutoRestoreDisabled"))
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.globalAutoRestoreDisabled"))
+    #expect(model.restoreActionHint == L10n.t("settings.restore.globalAutoRestoreDisabledHint"))
+    #expect(model.canEnableAutomaticRestoreAction)
 }
 
 @MainActor
@@ -500,10 +548,11 @@ func saveCurrentLayoutSkipsDuplicateBaseline() async {
 @Test
 func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
     let profileStore = ProfileStoreStub(profiles: [.officeDock])
+    let settingsStore = AppSettingsStoreStub()
     let installer = DependencyInstallerStub()
     let model = AppModel(
         store: profileStore,
-        settingsStore: AppSettingsStoreStub(),
+        settingsStore: settingsStore,
         diagnosticsStore: DiagnosticsStoreStub(),
         snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
         eventMonitor: EventMonitorStub(),
@@ -533,15 +582,36 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
 
     await waitUntil {
         let persisted = await profileStore.currentProfiles()
+        let savedSettings = await settingsStore.latestSavedSettings()
         return persisted.first?.name == "Desk Alpha"
             && persisted.first?.settings.confidenceThreshold == 85
-            && persisted.first?.settings.autoRestore == false
+            && savedSettings?.automaticRestoreEnabled == false
     }
 
     #expect(model.profiles.first?.name == "Desk Alpha")
     #expect(model.profiles.first?.settings.confidenceThreshold == 85)
+    #expect(model.profiles.first?.settings.autoRestore == true)
+    #expect(model.autoRestoreEnabled == false)
+    #expect((await settingsStore.latestSavedSettings())?.automaticRestoreEnabled == false)
+
+    model.setProfileAutoRestore(profileID, to: false)
+
+    await waitUntil {
+        let persisted = await profileStore.currentProfiles()
+        return persisted.first?.settings.autoRestore == false
+    }
+
     #expect(model.profiles.first?.settings.autoRestore == false)
     #expect(model.autoRestoreEnabled == false)
+
+    model.setAutoRestore(true)
+
+    await waitUntil {
+        await settingsStore.latestSavedSettings()?.automaticRestoreEnabled == true
+    }
+
+    #expect(model.autoRestoreEnabled == true)
+    #expect(model.profiles.first?.settings.autoRestore == false)
 
     model.setProfileAutoRestore(profileID, to: true)
 
@@ -936,6 +1006,75 @@ func displayEventsTriggerDebouncedAutomaticRestore() async {
 
 @MainActor
 @Test
+func swapLeftRightSuppressesAutomaticReapplyOfMatchedProfile() async {
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let eventMonitor = EventMonitorStub()
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let swapPlan = sampleSwapPlan()
+    let executor = RestoreExecutorStub(
+        dependency: .init(
+            isAvailable: true,
+            location: "/usr/local/bin/displayplacer",
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+        ),
+        executionResult: .init(
+            outcome: .success,
+            command: swapPlan.command,
+            exitCode: 0,
+            details: L10n.t("restoreExecutor.success")
+        )
+    )
+    let verifier = RestoreVerifierStub(
+        result: .init(
+            outcome: .success,
+            attempts: 1,
+            details: L10n.t("verify.match")
+        )
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: eventMonitor,
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: swapPlan
+        ),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: verifier,
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.swapLeftRight()
+
+    await waitUntil {
+        await executor.executedCommands() == [swapPlan.command]
+            && model.diagnostics.first?.actionTaken == "swap-left-right"
+    }
+
+    await snapshotReader.setDisplays(swappedDisplays())
+    eventMonitor.emit(DisplayEvent(type: .reconfigured, details: "Displays swapped"))
+
+    await waitUntil {
+        model.diagnostics.first?.actionTaken == "manual-layout-override"
+    }
+
+    #expect(await executor.executedCommands() == [swapPlan.command])
+    #expect(model.diagnostics.first?.actionTaken == "manual-layout-override")
+    #expect(model.autoRestoreEnabled == true)
+    #expect(model.menuPrimaryState == .manualLayoutOverride)
+    #expect(model.menuStatusTitle == L10n.t("menu.state.manualLayoutOverride"))
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.manualLayoutOverride"))
+}
+
+@MainActor
+@Test
 func bootstrapAutoInstallsDisplayplacerWhenMissing() async {
     let executor = RestoreExecutorStub(
         dependency: .init(isAvailable: false, details: L10n.t("restoreExecutor.dependencyMissing"))
@@ -1194,6 +1333,16 @@ private func weakSignalDisplays() -> [DisplaySnapshot] {
     return [unknownLeft, unknownRight]
 }
 
+private func swappedDisplays() -> [DisplaySnapshot] {
+    var left = DisplaySnapshot.sampleLeft
+    left.bounds.x = 2560
+
+    var right = DisplaySnapshot.sampleRight
+    right.bounds.x = 0
+
+    return [left, right]
+}
+
 private func sampleShortcut(keyCode: UInt16, keyDisplay: String) -> ShortcutBinding {
     ShortcutBinding(
         keyCode: keyCode,
@@ -1391,7 +1540,7 @@ private actor DiagnosticsStoreStub: DiagnosticsStoring {
 }
 
 private actor SnapshotReaderStub: DisplaySnapshotReading {
-    private let displays: [DisplaySnapshot]
+    private var displays: [DisplaySnapshot]
 
     init(displays: [DisplaySnapshot]) {
         self.displays = displays
@@ -1399,6 +1548,10 @@ private actor SnapshotReaderStub: DisplaySnapshotReading {
 
     func currentDisplays() async throws -> [DisplaySnapshot] {
         displays
+    }
+
+    func setDisplays(_ displays: [DisplaySnapshot]) {
+        self.displays = displays
     }
 }
 

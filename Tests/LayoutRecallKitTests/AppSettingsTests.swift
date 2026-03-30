@@ -21,6 +21,7 @@ func appSettingsDecodesLegacyPayloadWithoutUpdateFields() throws {
 
     let settings = try JSONDecoder().decode(AppSettings.self, from: data)
 
+    #expect(settings.automaticRestoreEnabled == true)
     #expect(settings.launchAtLogin == true)
     #expect(settings.shortcuts.fixNow?.keyDisplay == "R")
     #expect(settings.automaticallyCheckForUpdates == true)

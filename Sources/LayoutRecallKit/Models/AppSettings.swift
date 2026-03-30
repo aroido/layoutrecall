@@ -129,6 +129,7 @@ public enum AppLanguageOption: String, CaseIterable, Codable, Sendable, Identifi
 }
 
 public struct AppSettings: Codable, Equatable, Sendable {
+    public var automaticRestoreEnabled: Bool
     public var launchAtLogin: Bool
     public var shortcuts: ShortcutSettings
     public var automaticallyCheckForUpdates: Bool
@@ -136,6 +137,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var preferredLanguageCode: String?
 
     enum CodingKeys: String, CodingKey {
+        case automaticRestoreEnabled
         case launchAtLogin
         case shortcuts
         case automaticallyCheckForUpdates
@@ -144,12 +146,14 @@ public struct AppSettings: Codable, Equatable, Sendable {
     }
 
     public init(
+        automaticRestoreEnabled: Bool = true,
         launchAtLogin: Bool = false,
         shortcuts: ShortcutSettings = ShortcutSettings(),
         automaticallyCheckForUpdates: Bool = true,
         skippedReleaseVersion: String? = nil,
         preferredLanguageCode: String? = nil
     ) {
+        self.automaticRestoreEnabled = automaticRestoreEnabled
         self.launchAtLogin = launchAtLogin
         self.shortcuts = shortcuts
         self.automaticallyCheckForUpdates = automaticallyCheckForUpdates
@@ -159,6 +163,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        automaticRestoreEnabled = try container.decodeIfPresent(Bool.self, forKey: .automaticRestoreEnabled) ?? true
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
         shortcuts = try container.decodeIfPresent(ShortcutSettings.self, forKey: .shortcuts) ?? ShortcutSettings()
         automaticallyCheckForUpdates = try container.decodeIfPresent(Bool.self, forKey: .automaticallyCheckForUpdates) ?? true
@@ -168,6 +173,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(automaticRestoreEnabled, forKey: .automaticRestoreEnabled)
         try container.encode(launchAtLogin, forKey: .launchAtLogin)
         try container.encode(shortcuts, forKey: .shortcuts)
         try container.encode(automaticallyCheckForUpdates, forKey: .automaticallyCheckForUpdates)

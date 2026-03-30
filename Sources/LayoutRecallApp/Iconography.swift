@@ -240,7 +240,7 @@ struct LayoutRecallMenuBarIcon: View {
             return "arrow.down.circle.fill"
         case .noProfiles:
             return "plus.circle.fill"
-        case .noMatch, .lowConfidence, .autoRestoreDisabled, .manualRecovery:
+        case .noMatch, .lowConfidence, .autoRestoreDisabled, .manualLayoutOverride, .manualRecovery:
             return "exclamationmark.circle.fill"
         }
     }

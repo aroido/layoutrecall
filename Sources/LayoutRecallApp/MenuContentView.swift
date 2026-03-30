@@ -291,8 +291,7 @@ struct MenuContentView: View {
     @ViewBuilder
     private func secondaryActionButton(for action: SurfaceAction) -> some View {
         Button(action: { model.perform(action) }) {
-            Label(model.menuTitle(for: action), systemImage: action.systemImage)
-                .frame(maxWidth: .infinity)
+            actionLabel(model.menuTitle(for: action), systemImage: action.systemImage)
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
         .disabled(isDisabled(action))
@@ -316,8 +315,7 @@ struct MenuContentView: View {
         Button {
             model.fixNow()
         } label: {
-            Label(L10n.t("action.fixNow"), systemImage: "bolt.fill")
-                .frame(maxWidth: .infinity)
+            actionLabel(L10n.t("action.fixNow"), systemImage: "bolt.fill")
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
         .disabled(!model.canRestoreSavedProfiles || model.menuPrimaryState == .noMatch)
@@ -330,8 +328,7 @@ struct MenuContentView: View {
                 model.identifyDisplays(for: profile.id)
             }
         } label: {
-            Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
-                .frame(maxWidth: .infinity)
+            actionLabel(L10n.t("action.identifyDisplays"), systemImage: "number.square")
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
         .disabled(model.referenceProfile == nil)
@@ -342,12 +339,18 @@ struct MenuContentView: View {
         Button {
             dangerousRestoreAction = .swapLeftRight
         } label: {
-            Label(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
-                .frame(maxWidth: .infinity)
+            actionLabel(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
         .disabled(!model.canSwapDisplays)
         .accessibilityIdentifier("menu.action.swap")
+    }
+
+    private func actionLabel(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
+            .frame(maxWidth: .infinity)
     }
 
     private var quickSwitchSection: some View {
@@ -496,7 +499,7 @@ struct MenuContentView: View {
         case .fixNow, .saveNewProfile:
             return false
         case .enableAutoRestore:
-            return model.autoRestoreEnabled || model.profiles.isEmpty
+            return !model.canEnableAutomaticRestoreAction
         }
     }
 }

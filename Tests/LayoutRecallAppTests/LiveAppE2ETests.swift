@@ -121,7 +121,7 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
 
         return model.profiles.first?.settings.autoRestore == false
             && persistedProfile.settings.autoRestore == false
-            && model.autoRestoreEnabled == false
+            && model.autoRestoreEnabled == true
     }
 
     model.setProfileAutoRestore(profileID, to: true)
@@ -168,14 +168,24 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
 
     model.setAutoRestore(false)
     await waitForLiveCondition("disable auto restore") {
-        model.autoRestoreEnabled == false
-            && model.profiles.first?.settings.autoRestore == false
+        guard let settings = try? await settingsStore.loadSettings() else {
+            return false
+        }
+
+        return model.autoRestoreEnabled == false
+            && model.profiles.first?.settings.autoRestore == true
+            && settings.automaticRestoreEnabled == false
     }
 
     model.setAutoRestore(true)
     await waitForLiveCondition("enable auto restore") {
-        model.autoRestoreEnabled == true
+        guard let settings = try? await settingsStore.loadSettings() else {
+            return false
+        }
+
+        return model.autoRestoreEnabled == true
             && model.profiles.first?.settings.autoRestore == true
+            && settings.automaticRestoreEnabled == true
     }
 
     model.setShortcut(

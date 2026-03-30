@@ -56,6 +56,8 @@ final class AppModel: ObservableObject {
     private var promptedUpdateVersion: String?
     private var hasBootstrapped = false
     private var pendingTerminationTasks: [UUID: Task<Void, Never>] = [:]
+    private var manualRestoreExpectedOrigins: [DisplayOrigin]?
+    private var manualRestoreActionTaken: String?
 
     init(
         store: any ProfileStoring = ProfileStore(),
@@ -248,18 +250,8 @@ final class AppModel: ObservableObject {
     func setAutoRestore(_ enabled: Bool) {
         autoRestoreEnabled = enabled
 
-        guard !profiles.isEmpty else {
-            return
-        }
-
-        profiles = profiles.map { profile in
-            var updated = profile
-            updated.settings.autoRestore = enabled
-            return updated
-        }
-
         launchTrackedTask {
-            await self.persistProfiles()
+            await self.persistSettings()
             await self.refreshCurrentState(
                 trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
                 allowAutomaticRestore: false,
@@ -350,7 +342,6 @@ final class AppModel: ObservableObject {
         }
 
         profiles[index].settings.autoRestore = enabled
-        autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
 
         launchTrackedTask {
             await self.persistProfiles()
@@ -368,7 +359,6 @@ final class AppModel: ObservableObject {
         }
 
         let deletedProfile = profiles.remove(at: index)
-        autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
 
         if latestMatchedProfileName == deletedProfile.name {
             latestMatchedProfileName = nil
@@ -443,12 +433,41 @@ final class AppModel: ObservableObject {
 
         do {
             let currentDisplays = try await snapshotReader.currentDisplays()
+            if manualLayoutOverrideActive(for: currentDisplays) {
+                currentDisplaySnapshots = currentDisplays
+                detectedDisplayCount = currentDisplays.count
+                latestDecision = RestoreDecision(
+                    action: .idle,
+                    reason: L10n.t("restoreDecision.manualLayoutOverride"),
+                    context: .manualLayoutOverride
+                )
+                latestMatchedProfileName = nil
+                latestMatchScore = nil
+                decisionLine = L10n.t("restoreDecision.manualLayoutOverride")
+                statusLine = L10n.connectedDisplayCount(currentDisplays.count)
+
+                if shouldRecordDecision {
+                    await recordDiagnostic(
+                        eventType: trigger.type.rawValue,
+                        profileName: nil,
+                        score: nil,
+                        actionTaken: "manual-layout-override",
+                        executionResult: RestoreVerificationOutcome.skipped.rawValue,
+                        verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                        details: L10n.t("restoreDecision.manualLayoutOverride")
+                    )
+                }
+                return
+            }
+
             let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
             let decision = coordinator.decide(
                 for: currentDisplays,
                 profiles: profiles,
+                automaticRestoreEnabled: autoRestoreEnabled,
                 dependencyAvailable: dependency.isAvailable
             )
+            let suppressAutomaticRestore = shouldSuppressAutomaticRestore(for: currentDisplays)
 
             lastCommand = {
                 if case .autoRestore(let command) = decision.action {
@@ -469,6 +488,10 @@ final class AppModel: ObservableObject {
                case .autoRestore(let command) = decision.action,
                let match
             {
+                guard !suppressAutomaticRestore else {
+                    return
+                }
+
                 await executeRestore(
                     command: command,
                     expectedOrigins: match.profile.layout.expectedOrigins,
@@ -654,7 +677,6 @@ final class AppModel: ObservableObject {
             )
 
             profiles.append(profile)
-            autoRestoreEnabled = profiles.allSatisfy(\.settings.autoRestore)
             currentDisplaySnapshots = currentDisplays
             detectedDisplayCount = currentDisplays.count
             latestDecision = RestoreDecision(
@@ -712,6 +734,63 @@ final class AppModel: ObservableObject {
             }
 
             return lhs.y < rhs.y
+        }
+    }
+
+    private func expectedOrigins(for displays: [DisplaySnapshot]) -> [DisplayOrigin] {
+        let orderedDisplays = displays.sorted(by: DisplaySnapshot.positionComparator)
+        return orderedDisplays.map { display in
+            DisplayOrigin(
+                key: orderedDisplays.uniqueMatchKey(for: display),
+                x: display.bounds.x,
+                y: display.bounds.y
+            )
+        }
+    }
+
+    private func shouldSuppressAutomaticRestore(for displays: [DisplaySnapshot]) -> Bool {
+        matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
+    }
+
+    private func manualLayoutOverrideActive(for displays: [DisplaySnapshot]) -> Bool {
+        guard manualRestoreActionTaken == "swap-left-right" else {
+            return false
+        }
+
+        return matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
+    }
+
+    private func matchesManualRestoreSuppression(
+        for displays: [DisplaySnapshot],
+        clearWhenMismatch: Bool
+    ) -> Bool {
+        guard let suppressedExpectedOrigins = manualRestoreExpectedOrigins else {
+            return false
+        }
+
+        let currentOrigins = normalizedExpectedOrigins(expectedOrigins(for: displays))
+        let suppressedOrigins = normalizedExpectedOrigins(suppressedExpectedOrigins)
+        let matches = currentOrigins == suppressedOrigins
+
+        if !matches && clearWhenMismatch {
+            self.manualRestoreExpectedOrigins = nil
+            manualRestoreActionTaken = nil
+        }
+
+        return matches
+    }
+
+    private func updateManualRestoreSuppression(
+        for actionTaken: String,
+        expectedOrigins: [DisplayOrigin]
+    ) {
+        switch actionTaken {
+        case "manual-fix", "restore-profile", "swap-left-right":
+            manualRestoreExpectedOrigins = expectedOrigins
+            manualRestoreActionTaken = actionTaken
+        default:
+            manualRestoreExpectedOrigins = nil
+            manualRestoreActionTaken = nil
         }
     }
 
@@ -892,17 +971,27 @@ final class AppModel: ObservableObject {
 
         if executionResult.outcome == .success {
             verificationResult = await verifier.verify(expectedOrigins: expectedOrigins, using: snapshotReader)
+            updateManualRestoreSuppression(
+                for: actionTaken,
+                expectedOrigins: expectedOrigins
+            )
         }
 
         let executionSummary = executionResult.outcome.rawValue
         let verificationSummary = verificationResult.outcome.rawValue
         if executionResult.outcome == .success {
+            let decisionContext: RestoreDecisionContext = actionTaken == "swap-left-right"
+                ? .manualLayoutOverride
+                : .ready
+            let decisionReason = actionTaken == "swap-left-right"
+                ? L10n.t("restoreDecision.manualLayoutOverride")
+                : verificationResult.details
             latestDecision = RestoreDecision(
                 action: .autoRestore(command: command),
                 profileName: profileName,
                 score: score,
-                reason: verificationResult.details,
-                context: .ready
+                reason: decisionReason,
+                context: decisionContext
             )
         } else {
             latestDecision = RestoreDecision(
@@ -916,7 +1005,7 @@ final class AppModel: ObservableObject {
         latestMatchedProfileName = profileName
         latestMatchScore = score
         statusLine = executionResult.details
-        decisionLine = verificationResult.details
+        decisionLine = latestDecision?.reason ?? verificationResult.details
 
         await recordDiagnostic(
             eventType: trigger,
@@ -956,7 +1045,6 @@ final class AppModel: ObservableObject {
             let storedProfiles = try await store.loadProfiles()
             let normalizedProfiles = normalizeProfiles(storedProfiles)
             profiles = normalizedProfiles
-            autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
             await logStartup(
                 "loadProfiles success stored=\(storedProfiles.count) normalized=\(normalizedProfiles.count) names=\(normalizedProfiles.map { $0.name }.joined(separator: ","))"
             )
@@ -1003,6 +1091,7 @@ final class AppModel: ObservableObject {
     private func loadSettings() async {
         do {
             let settings = try await settingsStore.loadSettings()
+            autoRestoreEnabled = settings.automaticRestoreEnabled
             launchAtLoginEnabled = settings.launchAtLogin
             shortcuts = settings.shortcuts
             automaticUpdateChecksEnabled = settings.automaticallyCheckForUpdates
@@ -1038,6 +1127,7 @@ final class AppModel: ObservableObject {
 
     private func currentSettings() -> AppSettings {
         AppSettings(
+            automaticRestoreEnabled: autoRestoreEnabled,
             launchAtLogin: launchAtLoginEnabled,
             shortcuts: shortcuts,
             automaticallyCheckForUpdates: automaticUpdateChecksEnabled,

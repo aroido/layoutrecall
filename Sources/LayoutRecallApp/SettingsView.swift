@@ -375,6 +375,8 @@ struct SettingsView: View {
                             model.identifyDisplays(for: profile.id)
                         } label: {
                             Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
                         }
                         .buttonStyle(ActionButtonStyle(role: .secondary))
                     }
@@ -634,6 +636,8 @@ struct SettingsView: View {
                 model.identifyDisplays(for: profile.id)
             } label: {
                 Label(L10n.t("action.identifyDisplays"), systemImage: "number.square.fill")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(ActionButtonStyle(role: .secondary))
@@ -1029,6 +1033,8 @@ struct SettingsView: View {
     private func actionButton(for action: SurfaceAction, role: ActionButtonStyle.Role) -> some View {
         Button(action: { model.perform(action) }) {
             Label(title(for: action), systemImage: systemImage(for: action))
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(ActionButtonStyle(role: role))
@@ -1074,7 +1080,7 @@ struct SettingsView: View {
         case .fixNow, .saveNewProfile:
             return false
         case .enableAutoRestore:
-            return model.autoRestoreEnabled || model.profiles.isEmpty
+            return !model.canEnableAutomaticRestoreAction
         }
     }
 }
