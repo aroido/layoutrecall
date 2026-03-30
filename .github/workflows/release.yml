@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
@@ -86,18 +86,30 @@ jobs:
           fi
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: LayoutRecall ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          prerelease: ${{ steps.release_meta.outputs.prerelease }}
-          files: |
-            dist/releases/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_title="LayoutRecall ${RELEASE_TAG}"
+          prerelease_args=()
+          if [ "${{ steps.release_meta.outputs.prerelease }}" = "true" ]; then
+            prerelease_args+=(--prerelease)
+          fi
+
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" dist/releases/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          else
+            gh release create "${RELEASE_TAG}" dist/releases/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${release_title}" \
+              --target "${GITHUB_SHA}" \
+              --generate-notes \
+              "${prerelease_args[@]}"
+          fi
 
       - name: Upload release assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-assets-${{ env.RELEASE_TAG }}
           path: dist/releases/*
@@ -114,13 +126,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
