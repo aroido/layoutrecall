@@ -208,10 +208,14 @@ enum LayoutRecallStorage {
             return URL(fileURLWithPath: overrideRoot, isDirectory: true)
         }
 
-        let baseDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-
-        return baseDirectory.appendingPathComponent("LayoutRecall", isDirectory: true)
+        // Keep persistence in a deterministic user-scoped location.
+        // Relying on FileManager.applicationSupportDirectory can resolve to
+        // app-specific support roots in some launch contexts, which makes
+        // previously saved profiles appear to disappear after relaunch.
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+            .appendingPathComponent("LayoutRecall", isDirectory: true)
     }
 
     static func fileURL(named name: String) -> URL {
