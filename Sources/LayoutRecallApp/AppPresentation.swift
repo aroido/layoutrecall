@@ -4,7 +4,11 @@ import Foundation
 
 enum MenuPrimaryState: Equatable {
     case noProfiles
+    case installingDependency
     case dependencyMissing
+    case noMatch
+    case lowConfidence
+    case autoRestoreDisabled
     case manualRecovery
     case healthy
 }
@@ -13,6 +17,9 @@ enum MenuStatePresentation: Equatable {
     case noProfiles
     case installing
     case dependencyMissing
+    case noMatch
+    case lowConfidence
+    case autoRestoreDisabled
     case manualRecovery
     case healthy
 
@@ -24,6 +31,12 @@ enum MenuStatePresentation: Equatable {
             return L10n.t("menu.state.badge.installing")
         case .dependencyMissing:
             return L10n.t("menu.state.badge.dependencyMissing")
+        case .noMatch:
+            return L10n.t("menu.state.badge.noMatch")
+        case .lowConfidence:
+            return L10n.t("menu.state.badge.lowConfidence")
+        case .autoRestoreDisabled:
+            return L10n.t("menu.state.badge.autoRestoreDisabled")
         case .manualRecovery:
             return L10n.t("menu.state.badge.manualRecovery")
         case .healthy:
@@ -39,6 +52,12 @@ enum MenuStatePresentation: Equatable {
             return "hourglass"
         case .dependencyMissing:
             return "shippingbox"
+        case .noMatch:
+            return "questionmark.folder"
+        case .lowConfidence:
+            return "checkmark.seal"
+        case .autoRestoreDisabled:
+            return "sparkles.slash"
         case .manualRecovery:
             return "bolt.badge.clock"
         case .healthy:
@@ -67,6 +86,7 @@ enum ConfidencePresentation: Equatable {
 enum SurfaceAction: String, CaseIterable, Identifiable {
     case installDependency
     case fixNow
+    case enableAutoRestore
     case saveNewProfile
 
     var id: Self { self }
@@ -77,6 +97,8 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
             return L10n.t("dependency.installDisplayplacer")
         case .fixNow:
             return L10n.t("action.fixNow")
+        case .enableAutoRestore:
+            return L10n.t("action.enableAutoRestore")
         case .saveNewProfile:
             return L10n.t("action.save")
         }
@@ -88,6 +110,8 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
             return "arrow.down.circle.fill"
         case .fixNow:
             return "bolt.fill"
+        case .enableAutoRestore:
+            return "sparkles"
         case .saveNewProfile:
             return "square.and.arrow.down"
         }
@@ -185,8 +209,16 @@ extension AppModel {
         switch menuPrimaryState {
         case .noProfiles:
             return .noProfiles
+        case .installingDependency:
+            return .installing
         case .dependencyMissing:
-            return installationInProgress ? .installing : .dependencyMissing
+            return .dependencyMissing
+        case .noMatch:
+            return .noMatch
+        case .lowConfidence:
+            return .lowConfidence
+        case .autoRestoreDisabled:
+            return .autoRestoreDisabled
         case .manualRecovery:
             return .manualRecovery
         case .healthy:
@@ -195,13 +227,13 @@ extension AppModel {
     }
 
     var referenceProfile: DisplayProfile? {
-        if let profileName = latestMatchedProfileName ?? latestDecision?.profileName,
+        if let profileName = latestDecision?.profileName ?? latestMatchedProfileName,
            let matchedProfile = profiles.first(where: { $0.name == profileName })
         {
             return matchedProfile
         }
 
-        return profiles.first
+        return nil
     }
 
     var currentProfileName: String? {
@@ -230,7 +262,15 @@ extension AppModel {
     }
 
     var referencePrimaryDisplayKey: String? {
-        referenceProfile?.layout.primaryDisplayKey
+        referenceProfile.flatMap(primaryDisplayKey(for:))
+    }
+
+    func primaryDisplayKey(for profile: DisplayProfile) -> String? {
+        DisplayPresentationBuilder.resolvedPrimaryDisplayKey(
+            for: profile.displaySet.displays,
+            storedPrimaryDisplayKey: profile.layout.primaryDisplayKey,
+            currentDisplays: currentDisplaySnapshots
+        )
     }
 
     var activeDisplayCount: Int {
@@ -275,13 +315,21 @@ extension AppModel {
 
     var referenceProfileLine: String {
         guard let currentProfileName else {
-            return L10n.t("settings.referenceProfileMissing")
+            return profiles.isEmpty
+                ? L10n.t("settings.referenceProfileMissing")
+                : L10n.t("settings.referenceProfileUnmatched")
         }
 
         return currentProfileName
     }
 
     var referenceConfidenceLine: String {
+        guard currentProfileName != nil else {
+            return profiles.isEmpty
+                ? L10n.t("settings.referenceConfidenceUnavailable")
+                : L10n.t("settings.referenceConfidenceUnmatched")
+        }
+
         guard let confidencePresentation else {
             return L10n.t("settings.referenceConfidenceUnavailable")
         }
@@ -319,12 +367,64 @@ extension AppModel {
         )
     }
 
+    var menuShowsRecentActivity: Bool {
+        menuPrimaryState != .healthy
+    }
+
+    var menuShowsDependencyBadge: Bool {
+        installationInProgress || !dependencyAvailable
+    }
+
+    var menuShowsDisplayBadge: Bool {
+        menuPrimaryState != .healthy
+    }
+
+    var menuConfidenceBadgeTextForMenu: String? {
+        guard let confidencePresentation else {
+            return nil
+        }
+
+        guard menuPrimaryState != .healthy || confidencePresentation != .high else {
+            return nil
+        }
+
+        return confidencePresentation.label
+    }
+
+    var menuShouldShowEvidencePills: Bool {
+        menuShowsDependencyBadge
+            || menuShowsDisplayBadge
+            || menuConfidenceBadgeTextForMenu != nil
+    }
+
+    var menuReferenceMetadataLine: String? {
+        var components: [String] = []
+
+        if profiles.count > 1 {
+            components.append(L10n.t("menu.meta.profileCount", profiles.count))
+        }
+
+        if installationInProgress {
+            components.append(L10n.t("menu.meta.dependencyInstalling"))
+        } else if !dependencyAvailable {
+            components.append(L10n.t("menu.meta.dependencyMissing"))
+        }
+
+        if let confidenceLabel = menuConfidenceBadgeTextForMenu {
+            components.append(confidenceLabel)
+        }
+
+        return components.isEmpty ? nil : components.joined(separator: " · ")
+    }
+
     func perform(_ action: SurfaceAction) {
         switch action {
         case .installDependency:
             installDisplayplacer()
         case .fixNow:
             fixNow()
+        case .enableAutoRestore:
+            setAutoRestore(true)
         case .saveNewProfile:
             saveCurrentLayout()
         }
@@ -342,8 +442,29 @@ extension AppModel {
             return .noProfiles
         }
 
-        if installationInProgress || !dependencyAvailable {
+        if installationInProgress {
+            return .installingDependency
+        }
+
+        if !dependencyAvailable {
             return .dependencyMissing
+        }
+
+        switch latestDecision?.context {
+        case .noSavedProfile:
+            return .noProfiles
+        case .noConfidentMatch:
+            return .noMatch
+        case .belowThreshold:
+            return .lowConfidence
+        case .autoRestoreDisabled:
+            return .autoRestoreDisabled
+        case .dependencyBlocked:
+            return .dependencyMissing
+        case .ready, .savedProfileReady:
+            return .healthy
+        case .noDisplays, .manualRestoreRequested, .profileRestoreRequested, .restoreFailed, .none:
+            break
         }
 
         if case .autoRestore = latestDecision?.action {
@@ -357,8 +478,16 @@ extension AppModel {
         switch menuPrimaryState {
         case .noProfiles:
             return .saveNewProfile
+        case .installingDependency:
+            return .installDependency
         case .dependencyMissing:
             return .installDependency
+        case .noMatch:
+            return .saveNewProfile
+        case .lowConfidence:
+            return .fixNow
+        case .autoRestoreDisabled:
+            return .enableAutoRestore
         case .manualRecovery:
             return .fixNow
         case .healthy:
@@ -368,22 +497,39 @@ extension AppModel {
 
     var menuQuickActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .healthy, .manualRecovery, .dependencyMissing:
+        case .healthy, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .installingDependency, .dependencyMissing:
             return [.saveNewProfile]
-        case .noProfiles:
+        case .noProfiles, .noMatch:
             return []
         }
     }
 
     var restorePrimaryAction: SurfaceAction? {
-        menuPrimaryAction
+        switch menuPrimaryState {
+        case .noProfiles:
+            return .saveNewProfile
+        case .installingDependency:
+            return .installDependency
+        case .dependencyMissing:
+            return .installDependency
+        case .noMatch:
+            return .saveNewProfile
+        case .lowConfidence:
+            return .fixNow
+        case .autoRestoreDisabled:
+            return .enableAutoRestore
+        case .manualRecovery:
+            return .fixNow
+        case .healthy:
+            return nil
+        }
     }
 
     var restoreSecondaryActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .healthy, .manualRecovery, .dependencyMissing:
+        case .lowConfidence, .manualRecovery:
             return [.saveNewProfile]
-        case .noProfiles:
+        case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .autoRestoreDisabled, .healthy:
             return []
         }
     }
@@ -392,10 +538,16 @@ extension AppModel {
         switch menuPrimaryState {
         case .noProfiles:
             return L10n.t("settings.restore.noProfileHint")
+        case .installingDependency:
+            return L10n.t("settings.restore.installingHint")
         case .dependencyMissing:
-            return installationInProgress
-                ? L10n.t("settings.restore.installingHint")
-                : L10n.t("settings.restore.dependencyHint")
+            return L10n.t("settings.restore.dependencyHint")
+        case .noMatch:
+            return L10n.t("settings.restore.noMatchHint")
+        case .lowConfidence:
+            return L10n.t("settings.restore.lowConfidenceHint")
+        case .autoRestoreDisabled:
+            return L10n.t("settings.restore.autoRestoreDisabledHint")
         case .manualRecovery:
             return L10n.t("settings.restore.manualHint")
         case .healthy:
@@ -437,12 +589,16 @@ extension AppModel {
         switch menuPrimaryState {
         case .noProfiles:
             return L10n.t("menu.state.noProfiles")
+        case .installingDependency:
+            return L10n.t("menu.state.installingDependency")
         case .dependencyMissing:
-            if installationInProgress {
-                return L10n.t("menu.state.installingDependency")
-            }
-
             return L10n.t("menu.state.dependencyRequired")
+        case .noMatch:
+            return L10n.t("menu.state.noMatch")
+        case .lowConfidence:
+            return L10n.t("menu.state.lowConfidence")
+        case .autoRestoreDisabled:
+            return L10n.t("menu.state.autoRestoreDisabled")
         case .manualRecovery:
             return L10n.t("menu.state.manualRecovery")
         case .healthy:
@@ -458,10 +614,16 @@ extension AppModel {
         switch menuPrimaryState {
         case .noProfiles:
             return L10n.t("menu.subtitle.noProfiles")
+        case .installingDependency:
+            return L10n.t("menu.subtitle.installingDependency")
         case .dependencyMissing:
-            return installationInProgress
-                ? L10n.t("menu.subtitle.installingDependency")
-                : L10n.t("menu.subtitle.dependencyMissing")
+            return L10n.t("menu.subtitle.dependencyMissing")
+        case .noMatch:
+            return L10n.t("menu.subtitle.noMatch")
+        case .lowConfidence:
+            return L10n.t("menu.subtitle.lowConfidence")
+        case .autoRestoreDisabled:
+            return L10n.t("menu.subtitle.autoRestoreDisabled")
         case .manualRecovery:
             return L10n.t("menu.subtitle.manualRecovery")
         case .healthy:
@@ -495,13 +657,13 @@ extension AppModel {
             return installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow:
+        case .fixNow, .enableAutoRestore:
             return action.title
         case .saveNewProfile:
             switch menuPrimaryState {
             case .noProfiles:
                 return L10n.t("menu.action.saveFirstBaseline")
-            case .dependencyMissing, .manualRecovery, .healthy:
+            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .healthy:
                 return L10n.t("menu.action.saveAnotherBaseline")
             }
         }

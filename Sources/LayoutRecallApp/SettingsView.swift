@@ -77,9 +77,9 @@ private struct SidebarPaneButton: View {
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
-    @State private var advancedActionsExpanded = false
     @State private var dangerousRestoreAction: DangerousRestoreAction?
     @State private var profilePendingDeletion: DisplayProfile?
+    @State private var expandedProfileIDs: Set<UUID> = []
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
         self.model = model
@@ -109,6 +109,15 @@ struct SettingsView: View {
             get: { model.automaticUpdateChecksEnabled },
             set: { newValue in
                 model.setAutomaticUpdateChecks(newValue)
+            }
+        )
+    }
+
+    private var preferredLanguageBinding: Binding<AppLanguageOption> {
+        Binding(
+            get: { model.preferredLanguageOption },
+            set: { newValue in
+                model.setPreferredLanguage(newValue)
             }
         )
     }
@@ -192,70 +201,93 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 18) {
             restoreOverviewCard
 
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(L10n.t("toggle.enableAutomaticRestore"), isOn: autoRestoreBinding)
-                        .toggleStyle(.switch)
-                        .accessibilityIdentifier("settings.restore.autoRestore")
+            restoreControlCards
+        }
+    }
 
-                    FormHint(text: model.dependencySummaryLine)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } label: {
-                Label(L10n.t("menu.automaticRestore"), systemImage: "sparkles")
+    private var restoreControlCards: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 16) {
+                autoRestoreCard
+                recommendedActionsCard
             }
 
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(model.restoreActionHint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 16) {
+                autoRestoreCard
+                recommendedActionsCard
+            }
+        }
+    }
 
-                    if let action = model.restorePrimaryAction {
-                        actionButton(for: action, role: .primary)
-                    }
+    private var autoRestoreCard: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeading(
+                    title: L10n.t("menu.automaticRestore"),
+                    systemImage: "sparkles"
+                )
 
-                    if !model.restoreSecondaryActions.isEmpty {
+                Text(model.dependencySummaryLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Toggle(L10n.t("toggle.enableAutomaticRestore"), isOn: autoRestoreBinding)
+                    .toggleStyle(.switch)
+                    .accessibilityIdentifier("settings.restore.autoRestore")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private var recommendedActionsCard: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeading(
+                    title: L10n.t("settings.recommendedActions"),
+                    systemImage: "sparkles.rectangle.stack"
+                )
+
+                Text(model.restoreActionHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let action = model.restorePrimaryAction {
+                    actionButton(for: action, role: .primary)
+                }
+
+                if !model.restoreSecondaryActions.isEmpty {
+                    ViewThatFits(in: .horizontal) {
                         HStack(spacing: 10) {
+                            ForEach(model.restoreSecondaryActions) { action in
+                                actionButton(for: action, role: .secondary)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 10) {
                             ForEach(model.restoreSecondaryActions) { action in
                                 actionButton(for: action, role: .secondary)
                             }
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } label: {
-                Label(L10n.t("settings.recommendedActions"), systemImage: "sparkles.rectangle.stack")
-            }
 
-            DisclosureGroup(
-                isExpanded: $advancedActionsExpanded,
-                content: {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(model.swapAvailabilityLine)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button {
-                            dangerousRestoreAction = .swapLeftRight
-                        } label: {
-                            Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(ActionButtonStyle(role: .secondary))
-                        .disabled(!model.canSwapDisplays)
-                        .accessibilityIdentifier("settings.restore.swap")
+                if model.canSwapDisplays {
+                    Button {
+                        dangerousRestoreAction = .swapLeftRight
+                    } label: {
+                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                            .frame(maxWidth: .infinity)
                     }
-                    .padding(.top, 8)
-                },
-                label: {
-                    Label(L10n.t("settings.advancedActions"), systemImage: "slider.horizontal.3")
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .accessibilityIdentifier("settings.restore.swap")
                 }
-            )
-            .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var restoreOverviewCard: some View {
@@ -269,7 +301,7 @@ struct SettingsView: View {
                             displays: model.referenceDisplays,
                             primaryDisplayKey: model.referencePrimaryDisplayKey
                         )
-                        .frame(width: 184, height: 116)
+                        .frame(width: 160, height: 100)
                     }
                 }
 
@@ -281,7 +313,7 @@ struct SettingsView: View {
                             displays: model.referenceDisplays,
                             primaryDisplayKey: model.referencePrimaryDisplayKey
                         )
-                        .frame(height: 126)
+                        .frame(height: 112)
                     }
                 }
             }
@@ -332,19 +364,93 @@ struct SettingsView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                KeyValueRow(label: L10n.t("settings.referenceProfile"), value: model.referenceProfileLine)
-                KeyValueRow(label: L10n.t("settings.referenceDisplays"), value: model.activeDisplayCountLine)
-                KeyValueRow(label: L10n.t("settings.referenceMode"), value: model.restoreModeLine)
-                KeyValueRow(label: L10n.t("settings.referenceConfidence"), value: model.referenceConfidenceLine)
-                KeyValueRow(label: L10n.t("settings.referenceDependency"), value: model.dependencyBadgeText)
+            if let profile = model.referenceProfile {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 12) {
+                        restoreMatchedBaselineSummary(profile: profile)
+
+                        Spacer(minLength: 0)
+
+                        Button {
+                            model.identifyDisplays(for: profile.id)
+                        } label: {
+                            Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.t("settings.referenceProfile"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(model.referenceProfileLine)
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(model.referenceConfidenceLine)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func restoreMatchedBaselineSummary(profile: DisplayProfile) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.t("settings.referenceProfile"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(profile.name)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Text(model.activeDisplayCountLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("·")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+
+                Text(model.referenceConfidenceLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var profilesPane: some View {
         VStack(alignment: .leading, spacing: 16) {
+            GlassCard(padding: 18) {
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeading(
+                        title: L10n.t("action.save"),
+                        systemImage: "square.and.arrow.down"
+                    )
+
+                    Text(L10n.t("profiles.save.hint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button {
+                        model.saveCurrentLayout()
+                    } label: {
+                        Label(L10n.t("action.save"), systemImage: "square.and.arrow.down")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .primary))
+                    .accessibilityIdentifier("settings.profiles.save")
+                }
+            }
+
             if model.profiles.isEmpty {
                 GroupBox {
                     Text(L10n.t("profiles.empty"))
@@ -359,10 +465,12 @@ struct SettingsView: View {
                 }
             }
         }
+        .onAppear(perform: primeExpandedProfilesIfNeeded)
     }
 
     private func profileCard(for profile: DisplayProfile) -> some View {
         let isReferenceProfile = model.referenceProfile?.id == profile.id
+        let sortedDisplays = profile.displaySet.displays.sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:))
 
         return GlassCard(padding: 18) {
             VStack(alignment: .leading, spacing: 16) {
@@ -416,27 +524,40 @@ struct SettingsView: View {
                     )
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 18) {
-                        DisplayLayoutPreview(
-                            displays: profile.displaySet.displays.sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:)),
-                            primaryDisplayKey: profile.layout.primaryDisplayKey
-                        )
-                        .frame(width: 214, height: 132)
+                DisclosureGroup(
+                    isExpanded: profileExpansionBinding(for: profile),
+                    content: {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: 18) {
+                                DisplayLayoutPreview(
+                                    displays: sortedDisplays,
+                                    primaryDisplayKey: model.primaryDisplayKey(for: profile)
+                                )
+                                .frame(width: 214, height: 132)
 
-                        profileControls(for: profile)
+                                profileLayoutDetails(for: profile, displays: sortedDisplays)
+                            }
+
+                            VStack(alignment: .leading, spacing: 16) {
+                                DisplayLayoutPreview(
+                                    displays: sortedDisplays,
+                                    primaryDisplayKey: model.primaryDisplayKey(for: profile)
+                                )
+                                .frame(height: 132)
+
+                                profileLayoutDetails(for: profile, displays: sortedDisplays)
+                            }
+                        }
+                        .padding(.top, 8)
+                    },
+                    label: {
+                        Label(L10n.t("profiles.details"), systemImage: "rectangle.3.group")
                     }
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        DisplayLayoutPreview(
-                            displays: profile.displaySet.displays.sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:)),
-                            primaryDisplayKey: profile.layout.primaryDisplayKey
-                        )
-                        .frame(height: 132)
-
-                        profileControls(for: profile)
-                    }
-                }
+                )
+                .font(.subheadline.weight(.semibold))
+                .tint(Color.primary)
+                .contentShape(Rectangle())
+                .accessibilityIdentifier("settings.profile.disclosure.\(profile.id.uuidString)")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -449,6 +570,50 @@ struct SettingsView: View {
                     lineWidth: 1
                 )
         )
+    }
+
+    private func primeExpandedProfilesIfNeeded() {
+        guard expandedProfileIDs.isEmpty else { return }
+
+        if model.profiles.count == 1, let onlyProfile = model.profiles.first {
+            expandedProfileIDs.insert(onlyProfile.id)
+        }
+
+        if let referenceProfile = model.referenceProfile {
+            expandedProfileIDs.insert(referenceProfile.id)
+        }
+    }
+
+    private func profileExpansionBinding(for profile: DisplayProfile) -> Binding<Bool> {
+        Binding(
+            get: { expandedProfileIDs.contains(profile.id) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedProfileIDs.insert(profile.id)
+                } else {
+                    expandedProfileIDs.remove(profile.id)
+                }
+            }
+        )
+    }
+
+    private func profileLayoutDetails(
+        for profile: DisplayProfile,
+        displays: [DisplaySnapshot]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                FormHint(text: L10n.t("profiles.preview.hint"))
+
+                DisplayLegendList(
+                    displays: displays,
+                    primaryDisplayKey: model.primaryDisplayKey(for: profile)
+                )
+            }
+
+            profileControls(for: profile)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func profileNameField(for profile: DisplayProfile) -> some View {
@@ -465,6 +630,15 @@ struct SettingsView: View {
 
     private func profileControls(for profile: DisplayProfile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
+            Button {
+                model.identifyDisplays(for: profile.id)
+            } label: {
+                Label(L10n.t("action.identifyDisplays"), systemImage: "number.square.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(ActionButtonStyle(role: .secondary))
+            .disabled(profile.displaySet.displays.isEmpty)
+
             Toggle(
                 L10n.t("profiles.autoRestore.toggle"),
                 isOn: Binding(
@@ -743,6 +917,25 @@ struct SettingsView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
+                    Picker(L10n.t("settings.language.label"), selection: preferredLanguageBinding) {
+                        Text(L10n.t("settings.language.system"))
+                            .tag(AppLanguageOption.system)
+                        Text(L10n.t("settings.language.korean"))
+                            .tag(AppLanguageOption.korean)
+                        Text(L10n.t("settings.language.english"))
+                            .tag(AppLanguageOption.english)
+                    }
+                    .pickerStyle(.segmented)
+
+                    FormHint(text: L10n.t("settings.language.hint"))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("settings.language.title"), systemImage: "globe")
+            }
+
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
                     Toggle(L10n.t("toggle.automaticUpdates"), isOn: automaticUpdateChecksBinding)
                         .toggleStyle(.switch)
                         .accessibilityIdentifier("settings.general.automaticUpdates")
@@ -768,36 +961,13 @@ struct SettingsView: View {
                         }
                     }
 
-                    HStack(spacing: 10) {
-                        Button(L10n.t("update.action.checkNow")) {
-                            model.checkForUpdatesNow()
-                        }
-                        .buttonStyle(ActionButtonStyle(role: .secondary))
-                        .disabled(model.updateState.isBusy)
-                        .accessibilityIdentifier("settings.general.checkUpdates")
-
-                        if model.canInstallAvailableUpdate {
-                            Button(L10n.t("update.action.install")) {
-                                model.installAvailableUpdate()
-                            }
-                            .buttonStyle(ActionButtonStyle(role: .primary))
-                            .accessibilityIdentifier("settings.general.installUpdate")
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            updateActionButtons
                         }
 
-                        if model.availableUpdate != nil {
-                            Button(L10n.t("update.action.skipVersion")) {
-                                model.skipAvailableUpdateVersion()
-                            }
-                            .buttonStyle(ActionButtonStyle(role: .secondary))
-                            .disabled(model.updateState.isBusy)
-                            .accessibilityIdentifier("settings.general.skipVersion")
-                        } else if model.skippedReleaseVersion != nil {
-                            Button(L10n.t("update.action.clearSkip")) {
-                                model.clearSkippedUpdateVersion()
-                            }
-                            .buttonStyle(ActionButtonStyle(role: .secondary))
-                            .disabled(model.updateState.isBusy)
-                            .accessibilityIdentifier("settings.general.clearSkip")
+                        VStack(alignment: .leading, spacing: 10) {
+                            updateActionButtons
                         }
                     }
                 }
@@ -818,6 +988,40 @@ struct SettingsView: View {
             } label: {
                 Label(L10n.t("toggle.launchAtLogin"), systemImage: "switch.2")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var updateActionButtons: some View {
+        Button(L10n.t("update.action.checkNow")) {
+            model.checkForUpdatesNow()
+        }
+        .buttonStyle(ActionButtonStyle(role: .secondary))
+        .disabled(model.updateState.isBusy)
+        .accessibilityIdentifier("settings.general.checkUpdates")
+
+        if model.canInstallAvailableUpdate {
+            Button(L10n.t("update.action.install")) {
+                model.installAvailableUpdate()
+            }
+            .buttonStyle(ActionButtonStyle(role: .primary))
+            .accessibilityIdentifier("settings.general.installUpdate")
+        }
+
+        if model.availableUpdate != nil {
+            Button(L10n.t("update.action.skipVersion")) {
+                model.skipAvailableUpdateVersion()
+            }
+            .buttonStyle(ActionButtonStyle(role: .secondary))
+            .disabled(model.updateState.isBusy)
+            .accessibilityIdentifier("settings.general.skipVersion")
+        } else if model.skippedReleaseVersion != nil {
+            Button(L10n.t("update.action.clearSkip")) {
+                model.clearSkippedUpdateVersion()
+            }
+            .buttonStyle(ActionButtonStyle(role: .secondary))
+            .disabled(model.updateState.isBusy)
+            .accessibilityIdentifier("settings.general.clearSkip")
         }
     }
 
@@ -849,7 +1053,7 @@ struct SettingsView: View {
             return model.installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow, .saveNewProfile:
+        case .fixNow, .enableAutoRestore, .saveNewProfile:
             return action.title
         }
     }
@@ -858,7 +1062,7 @@ struct SettingsView: View {
         switch action {
         case .installDependency:
             return model.installationInProgress ? "hourglass" : action.systemImage
-        case .fixNow, .saveNewProfile:
+        case .fixNow, .enableAutoRestore, .saveNewProfile:
             return action.systemImage
         }
     }
@@ -869,6 +1073,8 @@ struct SettingsView: View {
             return model.installationInProgress
         case .fixNow, .saveNewProfile:
             return false
+        case .enableAutoRestore:
+            return model.autoRestoreEnabled || model.profiles.isEmpty
         }
     }
 }

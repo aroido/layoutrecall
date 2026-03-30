@@ -175,6 +175,13 @@ struct DisplayLayoutPreview: View {
     var body: some View {
         GeometryReader { proxy in
             let normalizedDisplays = normalizedDisplays(in: proxy.size)
+            let descriptorsByID = Dictionary(
+                uniqueKeysWithValues: DisplayPresentationBuilder.descriptors(
+                    for: displays,
+                    primaryDisplayKey: primaryDisplayKey
+                )
+                .map { ($0.id, $0) }
+            )
 
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -206,11 +213,40 @@ struct DisplayLayoutPreview: View {
                             y: display.frame.midY
                         )
                         .overlay(
-                            Text("\(display.index)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(display.isPrimary ? Color.white : Color.secondary)
-                                .padding(5),
-                            alignment: .topLeading
+                            VStack {
+                                HStack(alignment: .top) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(display.isPrimary ? Color.accentColor : Color.primary.opacity(0.14))
+
+                                        Text("\(display.index)")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(display.isPrimary ? Color.white : Color.primary)
+                                    }
+                                    .frame(width: 22, height: 22)
+
+                                    Spacer(minLength: 0)
+                                }
+
+                                Spacer(minLength: 0)
+
+                                if let descriptor = descriptorsByID[display.id], descriptor.isPrimary {
+                                    HStack {
+                                        Spacer(minLength: 0)
+
+                                        Text(L10n.t("display.preview.primary.short"))
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                Capsule(style: .continuous)
+                                                    .fill(Color.accentColor.opacity(0.88))
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(8)
                         )
                 }
             }
@@ -264,6 +300,42 @@ struct DisplayLayoutPreview: View {
     }
 }
 
+struct DisplayLegendList: View {
+    let displays: [DisplaySnapshot]
+    let primaryDisplayKey: String?
+
+    private var descriptors: [DisplayPresentationDescriptor] {
+        DisplayPresentationBuilder.descriptors(
+            for: displays,
+            primaryDisplayKey: primaryDisplayKey
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(descriptors) { descriptor in
+                HStack(alignment: .top, spacing: 10) {
+                    DiagnosticBadge(
+                        text: L10n.t("display.preview.number", descriptor.index),
+                        tone: descriptor.isPrimary ? .positive : .neutral
+                    )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(descriptor.title)
+                            .font(.caption.weight(.semibold))
+
+                        Text(descriptor.detail)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+    }
+}
+
 extension DiagnosticsEntry {
     var confidenceSummary: String? {
         guard let score else {
@@ -295,6 +367,8 @@ extension DiagnosticsEntry {
             return L10n.t("diagnostic.title.saveNewProfile")
         case "restore-profile":
             return L10n.t("diagnostic.title.profileRestore")
+        case "identify-displays":
+            return L10n.t("diagnostic.title.identifyDisplays")
         case "swap-left-right":
             return L10n.t("diagnostic.title.swappedLeftRight")
         case "bootstrap-install":
@@ -339,7 +413,9 @@ extension DiagnosticsEntry {
         case (DependencyInstallOutcome.failed.rawValue, _):
             return L10n.t("diagnostic.outcome.installFailed")
         case (RestoreVerificationOutcome.skipped.rawValue, RestoreVerificationOutcome.skipped.rawValue):
-            return L10n.t("diagnostic.outcome.monitoringOnly")
+            return actionTaken == "identify-displays"
+                ? L10n.t("diagnostic.outcome.completedSuccessfully")
+                : L10n.t("diagnostic.outcome.monitoringOnly")
         default:
             return L10n.t("diagnostic.outcome.statusUpdated")
         }
@@ -356,6 +432,9 @@ extension DiagnosticsEntry {
              (RestoreExecutionOutcome.dependencyMissing.rawValue, _),
              (RestoreExecutionOutcome.timedOut.rawValue, _):
             return .caution
+        case (RestoreVerificationOutcome.skipped.rawValue, RestoreVerificationOutcome.skipped.rawValue)
+            where actionTaken == "identify-displays":
+            return .positive
         case (RestoreExecutionOutcome.failure.rawValue, _),
              (DependencyInstallOutcome.failed.rawValue, _),
              (RestoreExecutionOutcome.success.rawValue, RestoreVerificationOutcome.failed.rawValue):

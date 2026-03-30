@@ -14,6 +14,7 @@ func restorePlanBuildsAStableDisplayplacerCommand() throws {
     #expect(plan.command.contains("id:persistent-right enabled:true"))
     #expect(plan.command.contains("origin:(2560,0)"))
     #expect(plan.expectedOrigins.count == 2)
+    #expect(plan.primaryDisplayKey == DisplaySnapshot.sampleLeft.preferredMatchKey)
 }
 
 @Test
@@ -57,4 +58,41 @@ func restorePlanUsesLogicalResolutionForScaledDisplays() throws {
     #expect(plan.command.contains("id:4E747025-110E-4DCD-BD2F-CD0F28D043D5"))
     #expect(plan.command.contains("res:1920x1080"))
     #expect(plan.command.contains("enabled:true"))
+}
+
+@Test
+func restorePlanPrefersTheActualMainDisplayKey() throws {
+    let builder = DisplayplacerCommandBuilder()
+    let leftDisplay = DisplaySnapshot(
+        id: DisplaySnapshot.sampleLeft.id,
+        vendorID: DisplaySnapshot.sampleLeft.vendorID,
+        productID: DisplaySnapshot.sampleLeft.productID,
+        serialNumber: DisplaySnapshot.sampleLeft.serialNumber,
+        alphaSerialNumber: DisplaySnapshot.sampleLeft.alphaSerialNumber,
+        persistentID: DisplaySnapshot.sampleLeft.persistentID,
+        contextualID: DisplaySnapshot.sampleLeft.contextualID,
+        isMain: false,
+        resolution: DisplaySnapshot.sampleLeft.resolution,
+        refreshRate: DisplaySnapshot.sampleLeft.refreshRate,
+        scale: DisplaySnapshot.sampleLeft.scale,
+        bounds: DisplaySnapshot.sampleLeft.bounds
+    )
+    let rightDisplay = DisplaySnapshot(
+        id: DisplaySnapshot.sampleRight.id,
+        vendorID: DisplaySnapshot.sampleRight.vendorID,
+        productID: DisplaySnapshot.sampleRight.productID,
+        serialNumber: DisplaySnapshot.sampleRight.serialNumber,
+        alphaSerialNumber: DisplaySnapshot.sampleRight.alphaSerialNumber,
+        persistentID: DisplaySnapshot.sampleRight.persistentID,
+        contextualID: DisplaySnapshot.sampleRight.contextualID,
+        isMain: true,
+        resolution: DisplaySnapshot.sampleRight.resolution,
+        refreshRate: DisplaySnapshot.sampleRight.refreshRate,
+        scale: DisplaySnapshot.sampleRight.scale,
+        bounds: DisplaySnapshot.sampleRight.bounds
+    )
+
+    let plan = try builder.restorePlan(for: [leftDisplay, rightDisplay])
+
+    #expect(plan.primaryDisplayKey == DisplaySnapshot.sampleRight.preferredMatchKey)
 }

@@ -54,6 +54,7 @@ public struct DisplaySnapshotReader: DisplaySnapshotReading {
             alphaSerialNumber: nil,
             persistentID: persistentID,
             contextualID: nonZeroString(CGDisplayUnitNumber(displayID)),
+            isMain: displayID == CGMainDisplayID(),
             resolution: DisplayResolution(width: pixelWidth, height: pixelHeight),
             refreshRate: refreshRate,
             scale: scale,

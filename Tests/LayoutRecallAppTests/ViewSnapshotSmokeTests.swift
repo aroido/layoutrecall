@@ -46,7 +46,7 @@ func renderMenuAndSettingsSnapshots() async throws {
     let generalURL = outputDirectory.appendingPathComponent("settings-general.png", isDirectory: false)
 
     let menuLayoutSize = try render(
-        view: MenuContentView(model: model, openSettings: {}),
+        view: MenuContentView(model: model, openSettings: { _ in }),
         to: menuURL,
         minimumSize: CGSize(width: 300, height: 260)
     )

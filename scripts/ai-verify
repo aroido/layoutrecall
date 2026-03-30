@@ -47,4 +47,5 @@ if [[ "${LAYOUTRECALL_RUN_LIVE_UI_TESTS:-}" == "1" ]]; then
     export LAYOUTRECALL_UI_APP_BUNDLE_PATH="$UI_TEST_INSTALL_DIR/LayoutRecall.app"
 fi
 
-run_live_test_if_requested "LAYOUTRECALL_RUN_LIVE_UI_TESTS" "liveUIHarnessClicksPersistExpectedState"
+run_live_test_if_requested "LAYOUTRECALL_RUN_LIVE_UI_TESTS" "liveUIHarnessShowsMenuWindow"
+run_live_test_if_requested "LAYOUTRECALL_RUN_LIVE_UI_TESTS" "liveUIHarnessOpensSettingsWindowOnLaunch"

@@ -29,7 +29,7 @@ The initial scope follows the product draft:
 ## Local development
 
 ```bash
-git clone https://github.com/aroido-bigcat/layoutrecall.git
+git clone https://github.com/aroido/layoutrecall.git
 cd layoutrecall
 make build
 make test
@@ -47,15 +47,16 @@ Open `Package.swift` in Xcode if you want an IDE workflow. The current app targe
 
 ## Release updates
 
-- The app checks GitHub Releases for `aroido-bigcat/layoutrecall` and can prompt the user to update or skip a specific version.
+- The app checks GitHub Releases for `aroido/layoutrecall` and can prompt the user to update or skip a specific version.
 - Automatic checks can be turned off from `General > Updates`.
-- To build a release archive for GitHub Releases, run:
+- To build signed ZIP + DMG release assets for GitHub Releases, run:
 
 ```bash
-./scripts/build-release-archive VERSION=0.1.0
+VERSION=0.1.0 ./scripts/build-release-archive
 ```
 
-- Upload the generated ZIP asset from `dist/releases/` to the matching GitHub Release so in-app updates can download it.
+- The release workflow publishes `dist/releases/` artifacts to GitHub Releases and syncs the Homebrew tap at `aroido/homebrew-layoutrecall`.
+- In-app updates still download the ZIP asset from the matching GitHub Release.
 
 ## License
 

@@ -22,7 +22,9 @@ public struct DisplayplacerCommandBuilder: DisplayCommandBuilding {
                     y: display.bounds.y
                 )
             },
-            primaryDisplayKey: orderedDisplays.first.map { orderedDisplays.uniqueMatchKey(for: $0) } ?? "primary"
+            primaryDisplayKey: orderedDisplays.mainDisplayKey
+                ?? orderedDisplays.first.map { orderedDisplays.uniqueMatchKey(for: $0) }
+                ?? "primary"
         )
     }
 
@@ -54,7 +56,8 @@ public struct DisplayplacerCommandBuilder: DisplayCommandBuilding {
         return GeneratedLayoutPlan(
             command: "displayplacer " + segments.joined(separator: " "),
             expectedOrigins: swappedOrigins,
-            primaryDisplayKey: orderedDisplays.uniqueMatchKey(for: orderedDisplays[0])
+            primaryDisplayKey: orderedDisplays.mainDisplayKey
+                ?? orderedDisplays.uniqueMatchKey(for: orderedDisplays[0])
         )
     }
 

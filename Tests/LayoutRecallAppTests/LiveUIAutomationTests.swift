@@ -5,46 +5,14 @@ import Foundation
 import Testing
 
 @Test
-func liveUIHarnessClicksPersistExpectedState() async throws {
-    guard ProcessInfo.processInfo.environment["LAYOUTRECALL_RUN_LIVE_UI_TESTS"] == "1" else {
+func liveUIHarnessShowsMenuWindow() async throws {
+    guard let appBundlePath = configuredLiveUIAppBundlePath() else {
         return
     }
 
-    guard AXIsProcessTrusted() else {
-        Issue.record("Accessibility access is required for live UI automation tests.")
-        return
-    }
-
-    let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-    try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
-    defer {
-        try? FileManager.default.removeItem(at: tempRoot)
-    }
-
-    let appBundlePath = NSString(
-        string: ProcessInfo.processInfo.environment["LAYOUTRECALL_UI_APP_BUNDLE_PATH"]
-            ?? "~/Applications/LayoutRecall.app"
-    ).expandingTildeInPath
-
-    let launchStart = Date()
-    let openProcess = Process()
-    openProcess.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    openProcess.arguments = [
-        "-n",
-        appBundlePath,
-        "--args",
-        "--ui-test-harness",
-        "--open-settings-on-launch",
-        "--storage-root",
-        tempRoot.path
-    ]
-
-    try openProcess.run()
-    openProcess.waitUntilExit()
-
-    let runningApp = try await waitForRunningApplication(
-        bundleIdentifier: "com.aroido.layoutrecall",
-        launchedAfter: launchStart
+    let runningApp = try await launchUIHarness(
+        appBundlePath: appBundlePath,
+        openSettingsOnLaunch: false
     )
     defer {
         runningApp.terminate()
@@ -56,6 +24,21 @@ func liveUIHarnessClicksPersistExpectedState() async throws {
     ) { bounds in
         bounds.width >= 280 && bounds.width <= 340 && bounds.height >= 220 && bounds.height <= 400
     }
+}
+
+@Test
+func liveUIHarnessOpensSettingsWindowOnLaunch() async throws {
+    guard let appBundlePath = configuredLiveUIAppBundlePath() else {
+        return
+    }
+
+    let runningApp = try await launchUIHarness(
+        appBundlePath: appBundlePath,
+        openSettingsOnLaunch: true
+    )
+    defer {
+        runningApp.terminate()
+    }
 
     _ = try await waitForWindowBounds(
         ownerPID: runningApp.processIdentifier,
@@ -63,6 +46,82 @@ func liveUIHarnessClicksPersistExpectedState() async throws {
     ) { bounds in
         bounds.width >= 700 && bounds.height >= 500
     }
+}
+
+private final class LiveUIHarnessHandle {
+    let processIdentifier: pid_t
+    private let runningApplication: NSRunningApplication
+    private let temporaryRoot: URL
+
+    init(runningApplication: NSRunningApplication, temporaryRoot: URL) {
+        self.processIdentifier = runningApplication.processIdentifier
+        self.runningApplication = runningApplication
+        self.temporaryRoot = temporaryRoot
+    }
+
+    func terminate() {
+        if !runningApplication.terminate() {
+            runningApplication.forceTerminate()
+        }
+
+        try? FileManager.default.removeItem(at: temporaryRoot)
+    }
+}
+
+private func configuredLiveUIAppBundlePath() -> String? {
+    guard ProcessInfo.processInfo.environment["LAYOUTRECALL_RUN_LIVE_UI_TESTS"] == "1" else {
+        return nil
+    }
+
+    guard AXIsProcessTrusted() else {
+        Issue.record("Accessibility access is required for live UI automation tests.")
+        return nil
+    }
+
+    return NSString(
+        string: ProcessInfo.processInfo.environment["LAYOUTRECALL_UI_APP_BUNDLE_PATH"]
+            ?? "~/Applications/LayoutRecall.app"
+    ).expandingTildeInPath
+}
+
+private func launchUIHarness(
+    appBundlePath: String,
+    openSettingsOnLaunch: Bool
+) async throws -> LiveUIHarnessHandle {
+    let temporaryRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
+
+    let launchStart = Date()
+    let openProcess = Process()
+    openProcess.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    openProcess.arguments = [
+        "-n",
+        appBundlePath,
+        "--args",
+        "--ui-test-harness"
+    ]
+
+    if openSettingsOnLaunch {
+        openProcess.arguments?.append("--open-settings-on-launch")
+    }
+
+    openProcess.arguments?.append(contentsOf: [
+        "--storage-root",
+        temporaryRoot.path
+    ])
+
+    try openProcess.run()
+    openProcess.waitUntilExit()
+
+    let runningApplication = try await waitForRunningApplication(
+        bundleIdentifier: "com.aroido.layoutrecall",
+        launchedAfter: launchStart
+    )
+
+    return LiveUIHarnessHandle(
+        runningApplication: runningApplication,
+        temporaryRoot: temporaryRoot
+    )
 }
 
 private func waitForRunningApplication(

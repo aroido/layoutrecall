@@ -72,7 +72,7 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
     #expect(model.menuPrimaryAction == nil)
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == nil)
-    #expect(model.restoreSecondaryActions == [.saveNewProfile])
+    #expect(model.restoreSecondaryActions.isEmpty)
     #expect(model.menuStatusTitle == L10n.t("menu.state.readyProfile", "Office Dock"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.ready"))
     #expect(model.menuMetadataLine.contains(L10n.t("confidence.high")))
@@ -149,7 +149,7 @@ func presentationActionsReflectMissingDependency() async {
     #expect(model.menuPrimaryAction == .installDependency)
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == .installDependency)
-    #expect(model.restoreSecondaryActions == [.saveNewProfile])
+    #expect(model.restoreSecondaryActions.isEmpty)
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.dependencyMissing"))
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.missing"))
     #expect(model.canSwapDisplays == false)
@@ -158,7 +158,76 @@ func presentationActionsReflectMissingDependency() async {
 
 @MainActor
 @Test
-func presentationActionsReflectManualRecoveryWithoutLeakingDependencyPath() async {
+func presentationActionsReflectNoMatchingBaseline() async {
+    let installer = DependencyInstallerStub()
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: installer,
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    #expect(model.menuPrimaryState == .noMatch)
+    #expect(model.menuPrimaryAction == .saveNewProfile)
+    #expect(model.menuQuickActions.isEmpty)
+    #expect(model.restorePrimaryAction == .saveNewProfile)
+    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.noMatch"))
+    #expect(model.referenceProfile == nil)
+    #expect(model.referenceProfileLine == L10n.t("settings.referenceProfileUnmatched"))
+}
+
+@MainActor
+@Test
+func presentationActionsReflectLowConfidenceMatch() async {
+    let installer = DependencyInstallerStub()
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: weakSignalDisplays()),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: installer,
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    #expect(model.menuPrimaryState == .lowConfidence)
+    #expect(model.menuPrimaryAction == .fixNow)
+    #expect(model.menuQuickActions == [.saveNewProfile])
+    #expect(model.restorePrimaryAction == .fixNow)
+    #expect(model.restoreSecondaryActions == [.saveNewProfile])
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.lowConfidence"))
+    #expect(model.referenceProfile?.name == "Office Dock")
+}
+
+@MainActor
+@Test
+func presentationActionsReflectAutoRestoreDisabledWithoutLeakingDependencyPath() async {
     var profile = DisplayProfile.officeDock
     profile.settings.autoRestore = false
 
@@ -191,12 +260,12 @@ func presentationActionsReflectManualRecoveryWithoutLeakingDependencyPath() asyn
 
     await model.bootstrap()
 
-    #expect(model.menuPrimaryState == .manualRecovery)
-    #expect(model.menuPrimaryAction == .fixNow)
+    #expect(model.menuPrimaryState == .autoRestoreDisabled)
+    #expect(model.menuPrimaryAction == .enableAutoRestore)
     #expect(model.menuQuickActions == [.saveNewProfile])
-    #expect(model.restorePrimaryAction == .fixNow)
-    #expect(model.restoreSecondaryActions == [.saveNewProfile])
-    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.manualRecovery"))
+    #expect(model.restorePrimaryAction == .enableAutoRestore)
+    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.autoRestoreDisabled"))
     #expect(model.dependencyLine == dependencyDetails)
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.ready"))
 }
@@ -271,6 +340,48 @@ func saveCurrentLayoutCreatesAProfileAndDiagnostic() async {
     #expect(model.lastCommand == plan.command)
     #expect(model.statusLine == L10n.t("status.capturedLayout", L10n.workspaceName(1)))
     #expect(model.diagnostics.first?.profileName == L10n.workspaceName(1))
+    #expect(await profileStore.currentProfiles().count == 1)
+}
+
+@MainActor
+@Test
+func saveCurrentLayoutSkipsDuplicateBaseline() async {
+    let profileStore = ProfileStoreStub(profiles: [.officeDock])
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let eventMonitor = EventMonitorStub()
+    let installer = DependencyInstallerStub()
+
+    let model = AppModel(
+        store: profileStore,
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: eventMonitor,
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: installer,
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.saveCurrentLayout()
+
+    await waitUntil {
+        model.diagnostics.first?.actionTaken == "save-profile-duplicate"
+    }
+
+    #expect(model.profiles.count == 1)
+    #expect(model.statusLine == L10n.t("status.layoutAlreadySaved", DisplayProfile.officeDock.name))
+    #expect(model.decisionLine == L10n.t("decision.savedProfileAlreadyExists"))
+    #expect(model.diagnostics.first?.profileName == DisplayProfile.officeDock.name)
     #expect(await profileStore.currentProfiles().count == 1)
 }
 
@@ -391,6 +502,52 @@ func profileDeletionAndDirectRestorePersistExpectedState() async {
 
 @MainActor
 @Test
+func identifyDisplaysUsesSavedProfileOrderingAndRecordsDiagnostic() async {
+    let displayIdentifier = DisplayIdentifierStub()
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        displayIdentifier: displayIdentifier,
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    guard let profileID = model.profiles.first?.id else {
+        Issue.record("Expected a bootstrapped profile to exist.")
+        return
+    }
+
+    model.identifyDisplays(for: profileID)
+
+    await waitUntil {
+        model.diagnostics.first?.actionTaken == "identify-displays"
+            && displayIdentifier.latestMarkers.count == 2
+    }
+
+    #expect(displayIdentifier.latestMarkers.map(\.index) == [1, 2])
+    #expect(displayIdentifier.latestMarkers.map(\.displayID) == [DisplaySnapshot.sampleLeft.id, DisplaySnapshot.sampleRight.id])
+    #expect(displayIdentifier.latestMarkers.first?.title == L10n.t("display.preview.role.primary"))
+    #expect(model.statusLine == L10n.t("status.displayIdentificationShown", DisplayProfile.officeDock.name))
+    #expect(model.diagnostics.first?.profileName == DisplayProfile.officeDock.name)
+}
+
+@MainActor
+@Test
 func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
     let settingsStore = AppSettingsStoreStub()
     let loginItemManager = LoginItemManagerStub(current: .disabled, setResponse: .requiresApproval)
@@ -425,6 +582,43 @@ func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
     #expect(model.launchAtLoginEnabled == true)
     #expect(model.statusLine == L10n.t("status.launchAtLoginSaved"))
     #expect(await loginItemManager.requests() == [true])
+}
+
+@MainActor
+@Test
+func preferredLanguageSelectionPersistsSetting() async {
+    defer {
+        L10n.setPreferredLanguageCodeOverride(nil)
+    }
+
+    let settingsStore = AppSettingsStoreStub()
+    let model = AppModel(
+        store: ProfileStoreStub(),
+        settingsStore: settingsStore,
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.setPreferredLanguage(.english)
+
+    await waitUntil {
+        await settingsStore.latestSavedSettings()?.preferredLanguageCode == "en"
+    }
+
+    #expect(model.preferredLanguageOption == .english)
 }
 
 @MainActor
@@ -871,6 +1065,24 @@ private func sampleSwapPlan() -> GeneratedLayoutPlan {
     )
 }
 
+private func weakSignalDisplays() -> [DisplaySnapshot] {
+    var unknownLeft = DisplaySnapshot.sampleLeft
+    unknownLeft.id = "unknown-left"
+    unknownLeft.serialNumber = nil
+    unknownLeft.alphaSerialNumber = nil
+    unknownLeft.persistentID = nil
+    unknownLeft.contextualID = nil
+
+    var unknownRight = DisplaySnapshot.sampleRight
+    unknownRight.id = "unknown-right"
+    unknownRight.serialNumber = nil
+    unknownRight.alphaSerialNumber = nil
+    unknownRight.persistentID = nil
+    unknownRight.contextualID = nil
+
+    return [unknownLeft, unknownRight]
+}
+
 private func sampleShortcut(keyCode: UInt16, keyDisplay: String) -> ShortcutBinding {
     ShortcutBinding(
         keyCode: keyCode,
@@ -1053,6 +1265,15 @@ private actor SnapshotReaderStub: DisplaySnapshotReading {
 
     func currentDisplays() async throws -> [DisplaySnapshot] {
         displays
+    }
+}
+
+@MainActor
+private final class DisplayIdentifierStub: DisplayIdentifying {
+    private(set) var latestMarkers: [DisplayIdentificationMarker] = []
+
+    func showLabels(_ markers: [DisplayIdentificationMarker]) {
+        latestMarkers = markers
     }
 }
 

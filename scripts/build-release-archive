@@ -10,36 +10,258 @@ BUNDLE_ID="${BUNDLE_ID:-com.aroido.layoutrecall}"
 VERSION="${VERSION:-0.1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
 APP_BUNDLE="$OUTPUT_DIR/$APP_NAME.app"
-ARCHIVE_NAME="${ARCHIVE_NAME:-$APP_NAME-$VERSION-macos.zip}"
-ARCHIVE_PATH="$OUTPUT_DIR/$ARCHIVE_NAME"
+ZIP_NAME="${ZIP_NAME:-$APP_NAME-$VERSION-macos.zip}"
+ZIP_PATH="$OUTPUT_DIR/$ZIP_NAME"
+DMG_NAME="${DMG_NAME:-$APP_NAME-$VERSION.dmg}"
+DMG_PATH="$OUTPUT_DIR/$DMG_NAME"
+SHA256_PATH="$OUTPUT_DIR/SHA256SUMS.txt"
+ALLOW_UNSIGNED="${ALLOW_UNSIGNED:-0}"
 
-mkdir -p "$OUTPUT_DIR"
+CERT_PATH=""
+KEYCHAIN_PATH=""
+KEYCHAIN_PASSWORD=""
+NOTARY_KEY_PATH=""
+SIGNING_IDENTITY=""
+ORIGINAL_DEFAULT_KEYCHAIN=""
+typeset -a ORIGINAL_KEYCHAINS
+ORIGINAL_KEYCHAINS=()
 
-swift build -c release --product "$EXECUTABLE_NAME" --scratch-path "$BUILD_DIR"
+cleanup() {
+  if [[ -n "$ORIGINAL_DEFAULT_KEYCHAIN" ]]; then
+    security default-keychain -d user -s "$ORIGINAL_DEFAULT_KEYCHAIN" >/dev/null 2>&1 || true
+  fi
 
-EXECUTABLE_PATH="$(find "$BUILD_DIR" -path "*/release/$EXECUTABLE_NAME" -type f | head -n 1)"
-if [[ -z "$EXECUTABLE_PATH" ]]; then
-  echo "Failed to locate built executable for $EXECUTABLE_NAME." >&2
-  exit 1
-fi
+  if (( ${#ORIGINAL_KEYCHAINS[@]} > 0 )); then
+    security list-keychains -d user -s "${ORIGINAL_KEYCHAINS[@]}" >/dev/null 2>&1 || true
+  fi
 
-rm -rf "$APP_BUNDLE" "$ARCHIVE_PATH"
-mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
-cp "$REPO_ROOT/Packaging/LayoutRecall-Info.plist" "$APP_BUNDLE/Contents/Info.plist"
-cp "$EXECUTABLE_PATH" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
-chmod +x "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+  if [[ -n "$KEYCHAIN_PATH" ]]; then
+    security delete-keychain "$KEYCHAIN_PATH" >/dev/null 2>&1 || true
+  fi
 
-if [[ -f "$REPO_ROOT/Packaging/AppIcon.icns" ]]; then
-  cp "$REPO_ROOT/Packaging/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-fi
+  if [[ -n "$CERT_PATH" ]]; then
+    rm -f "$CERT_PATH" >/dev/null 2>&1 || true
+  fi
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
+  if [[ -n "$NOTARY_KEY_PATH" ]]; then
+    rm -f "$NOTARY_KEY_PATH" >/dev/null 2>&1 || true
+  fi
+}
 
-codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null
-ditto -c -k --keepParent "$APP_BUNDLE" "$ARCHIVE_PATH"
+trap cleanup EXIT
 
-echo "Archive: $ARCHIVE_PATH"
-echo "Bundle ID: $BUNDLE_ID"
-echo "Version: $VERSION ($BUILD_NUMBER)"
+has_signing_credentials() {
+  [[ -n "${CSC_LINK:-}" && -n "${CSC_KEY_PASSWORD:-}" ]]
+}
+
+has_notarization_credentials() {
+  if [[ -n "${APPLE_API_KEY:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
+    return 0
+  fi
+
+  [[ -n "${APPLE_ID:-}" && -n "${APPLE_ID_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]
+}
+
+build_release_binary() {
+  swift build -c release --product "$EXECUTABLE_NAME" --scratch-path "$BUILD_DIR"
+}
+
+resolve_executable_path() {
+  find "$BUILD_DIR" -path "*/release/$EXECUTABLE_NAME" -type f | head -n 1
+}
+
+build_app_bundle() {
+  local executable_path="$1"
+
+  rm -rf "$APP_BUNDLE" "$ZIP_PATH" "$DMG_PATH" "$SHA256_PATH"
+  mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
+  cp "$REPO_ROOT/Packaging/LayoutRecall-Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+  cp "$executable_path" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+  chmod +x "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+
+  if [[ -f "$REPO_ROOT/Packaging/AppIcon.icns" ]]; then
+    cp "$REPO_ROOT/Packaging/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+  fi
+
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
+}
+
+prepare_signing_keychain() {
+  CERT_PATH="$(mktemp -t layoutrecall-cert.XXXXXX.p12)"
+  KEYCHAIN_PATH="/tmp/layoutrecall-build-$(openssl rand -hex 8).keychain-db"
+  KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+
+  if echo "$CSC_LINK" | base64 --decode > "$CERT_PATH" 2>/dev/null; then
+    :
+  elif [[ "$CSC_LINK" == file://* ]]; then
+    cp "${CSC_LINK#file://}" "$CERT_PATH"
+  elif [[ "$CSC_LINK" =~ ^https?:// ]]; then
+    curl -fsSL "$CSC_LINK" -o "$CERT_PATH"
+  else
+    echo "Unsupported CSC_LINK format" >&2
+    exit 1
+  fi
+
+  ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user | tr -d '"')"
+  while IFS= read -r keychain; do
+    keychain="${keychain//\"/}"
+    [[ -n "$keychain" ]] && ORIGINAL_KEYCHAINS+=("$keychain")
+  done < <(security list-keychains -d user)
+
+  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+  security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+  security list-keychains -d user -s "$KEYCHAIN_PATH"
+  security default-keychain -d user -s "$KEYCHAIN_PATH"
+  security import "$CERT_PATH" \
+    -f pkcs12 \
+    -k "$KEYCHAIN_PATH" \
+    -P "$CSC_KEY_PASSWORD" \
+    -T /usr/bin/codesign \
+    -T /usr/bin/security \
+    -T /usr/bin/productbuild
+  security set-key-partition-list \
+    -S apple-tool:,apple:,codesign: \
+    -s \
+    -k "$KEYCHAIN_PASSWORD" \
+    "$KEYCHAIN_PATH"
+
+  SIGNING_IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+  if [[ -z "$SIGNING_IDENTITY" ]]; then
+    echo "Developer ID Application identity not found" >&2
+    security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+    exit 1
+  fi
+}
+
+sign_app_bundle() {
+  codesign \
+    --force \
+    --deep \
+    --keychain "$KEYCHAIN_PATH" \
+    --options runtime \
+    --timestamp \
+    --sign "$SIGNING_IDENTITY" \
+    "$APP_BUNDLE"
+
+  codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+}
+
+notarytool_args() {
+  if [[ -n "${APPLE_API_KEY:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
+    NOTARY_KEY_PATH="$(mktemp -t layoutrecall-notary.XXXXXX.p8)"
+    printf '%s' "$APPLE_API_KEY" > "$NOTARY_KEY_PATH"
+    printf '%s\n' "--key" "$NOTARY_KEY_PATH" "--key-id" "$APPLE_API_KEY_ID" "--issuer" "$APPLE_API_ISSUER"
+    return 0
+  fi
+
+  printf '%s\n' "--apple-id" "$APPLE_ID" "--password" "$APPLE_ID_PASSWORD" "--team-id" "$APPLE_TEAM_ID"
+}
+
+notarize_archive() {
+  local archive_path="$1"
+  local args=()
+
+  while IFS= read -r line; do
+    args+=("$line")
+  done < <(notarytool_args)
+
+  xcrun notarytool submit "$archive_path" "${args[@]}" --wait
+}
+
+staple_bundle() {
+  local target_path="$1"
+  xcrun stapler staple "$target_path"
+}
+
+create_release_zip() {
+  ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+}
+
+create_release_dmg() {
+  local staging_dir="$OUTPUT_DIR/.dmg-staging"
+
+  rm -rf "$staging_dir"
+  mkdir -p "$staging_dir"
+  ditto "$APP_BUNDLE" "$staging_dir/$APP_NAME.app"
+  ln -s /Applications "$staging_dir/Applications"
+
+  hdiutil create \
+    -quiet \
+    -volname "$APP_NAME" \
+    -srcfolder "$staging_dir" \
+    -ov \
+    -format UDZO \
+    "$DMG_PATH"
+
+  rm -rf "$staging_dir"
+}
+
+sign_dmg() {
+  codesign --force --keychain "$KEYCHAIN_PATH" --timestamp --sign "$SIGNING_IDENTITY" "$DMG_PATH"
+}
+
+verify_notarized_outputs() {
+  xcrun stapler validate "$APP_BUNDLE"
+  xcrun stapler validate "$DMG_PATH"
+  spctl --assess --type execute -vv "$APP_BUNDLE"
+  spctl --assess --type open --context context:primary-signature -vv "$DMG_PATH"
+}
+
+write_checksums() {
+  (
+    cd "$OUTPUT_DIR"
+    shasum -a 256 "$ZIP_NAME" "$DMG_NAME" > "$SHA256_PATH"
+  )
+}
+
+main() {
+  mkdir -p "$OUTPUT_DIR"
+  build_release_binary
+
+  local executable_path
+  executable_path="$(resolve_executable_path)"
+  if [[ -z "$executable_path" ]]; then
+    echo "Failed to locate built executable for $EXECUTABLE_NAME." >&2
+    exit 1
+  fi
+
+  build_app_bundle "$executable_path"
+
+  if has_signing_credentials && has_notarization_credentials; then
+    prepare_signing_keychain
+    sign_app_bundle
+
+    local notarize_zip="$OUTPUT_DIR/.notarize-$ZIP_NAME"
+    ditto -c -k --keepParent "$APP_BUNDLE" "$notarize_zip"
+    notarize_archive "$notarize_zip"
+    staple_bundle "$APP_BUNDLE"
+    rm -f "$notarize_zip"
+
+    create_release_zip
+    create_release_dmg
+    sign_dmg
+    notarize_archive "$DMG_PATH"
+    staple_bundle "$DMG_PATH"
+    verify_notarized_outputs
+  elif [[ "$ALLOW_UNSIGNED" == "1" ]]; then
+    codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null
+    create_release_zip
+    create_release_dmg
+  else
+    echo "Signing and notarization credentials are required. Set ALLOW_UNSIGNED=1 to bypass for local dry runs." >&2
+    exit 1
+  fi
+
+  write_checksums
+
+  echo "ZIP: $ZIP_PATH"
+  echo "DMG: $DMG_PATH"
+  echo "Checksums: $SHA256_PATH"
+  echo "Bundle ID: $BUNDLE_ID"
+  echo "Version: $VERSION ($BUILD_NUMBER)"
+}
+
+main "$@"

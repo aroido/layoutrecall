@@ -32,6 +32,7 @@ public struct DisplaySnapshot: Codable, Equatable, Sendable, Identifiable {
     public var alphaSerialNumber: String?
     public var persistentID: String?
     public var contextualID: String?
+    public var isMain: Bool?
     public var resolution: DisplayResolution
     public var refreshRate: Int?
     public var scale: Double?
@@ -45,6 +46,7 @@ public struct DisplaySnapshot: Codable, Equatable, Sendable, Identifiable {
         alphaSerialNumber: String? = nil,
         persistentID: String? = nil,
         contextualID: String? = nil,
+        isMain: Bool? = nil,
         resolution: DisplayResolution,
         refreshRate: Int? = nil,
         scale: Double? = nil,
@@ -57,6 +59,7 @@ public struct DisplaySnapshot: Codable, Equatable, Sendable, Identifiable {
         self.alphaSerialNumber = alphaSerialNumber
         self.persistentID = persistentID
         self.contextualID = contextualID
+        self.isMain = isMain
         self.resolution = resolution
         self.refreshRate = refreshRate
         self.scale = scale
@@ -115,6 +118,14 @@ public extension Array where Element == DisplaySnapshot {
             .sorted()
             .joined(separator: "|")
     }
+
+    var mainDisplayKey: String? {
+        guard let mainDisplay = first(where: { $0.isMain == true }) else {
+            return nil
+        }
+
+        return uniqueMatchKey(for: mainDisplay)
+    }
 }
 
 public extension DisplaySnapshot {
@@ -126,6 +137,7 @@ public extension DisplaySnapshot {
         alphaSerialNumber: "ULTRA-LEFT-001",
         persistentID: "persistent-left",
         contextualID: "usb-c-left",
+        isMain: true,
         resolution: DisplayResolution(width: 2560, height: 1440),
         refreshRate: 60,
         scale: 1.0,
@@ -140,6 +152,7 @@ public extension DisplaySnapshot {
         alphaSerialNumber: "ULTRA-RIGHT-001",
         persistentID: "persistent-right",
         contextualID: "usb-c-right",
+        isMain: false,
         resolution: DisplayResolution(width: 2560, height: 1440),
         refreshRate: 60,
         scale: 1.0,

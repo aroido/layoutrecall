@@ -28,7 +28,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LayoutRecallGitHubRepository</key>
-	<string>aroido-bigcat/layoutrecall</string>
+	<string>aroido/layoutrecall</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>

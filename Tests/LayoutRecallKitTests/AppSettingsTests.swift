@@ -25,4 +25,5 @@ func appSettingsDecodesLegacyPayloadWithoutUpdateFields() throws {
     #expect(settings.shortcuts.fixNow?.keyDisplay == "R")
     #expect(settings.automaticallyCheckForUpdates == true)
     #expect(settings.skippedReleaseVersion == nil)
+    #expect(settings.preferredLanguageCode == nil)
 }

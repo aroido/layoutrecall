@@ -7,17 +7,39 @@ public enum RestoreAction: Equatable, Sendable {
     case idle
 }
 
+public enum RestoreDecisionContext: Equatable, Sendable {
+    case noDisplays
+    case noSavedProfile
+    case noConfidentMatch
+    case belowThreshold
+    case autoRestoreDisabled
+    case dependencyBlocked
+    case ready
+    case savedProfileReady
+    case manualRestoreRequested
+    case profileRestoreRequested
+    case restoreFailed
+}
+
 public struct RestoreDecision: Equatable, Sendable {
     public var action: RestoreAction
     public var profileName: String?
     public var score: Int?
     public var reason: String
+    public var context: RestoreDecisionContext?
 
-    public init(action: RestoreAction, profileName: String? = nil, score: Int? = nil, reason: String) {
+    public init(
+        action: RestoreAction,
+        profileName: String? = nil,
+        score: Int? = nil,
+        reason: String,
+        context: RestoreDecisionContext? = nil
+    ) {
         self.action = action
         self.profileName = profileName
         self.score = score
         self.reason = reason
+        self.context = context
     }
 }
 
@@ -34,13 +56,18 @@ public struct RestoreCoordinator: Sendable {
         dependencyAvailable: Bool = true
     ) -> RestoreDecision {
         guard !currentDisplays.isEmpty else {
-            return RestoreDecision(action: .idle, reason: L10n.t("restoreDecision.noDisplaysDetected"))
+            return RestoreDecision(
+                action: .idle,
+                reason: L10n.t("restoreDecision.noDisplaysDetected"),
+                context: .noDisplays
+            )
         }
 
         guard let match = matcher.bestMatch(for: currentDisplays, among: profiles) else {
             return RestoreDecision(
                 action: profiles.isEmpty ? .saveNewProfile : .offerManualFix,
-                reason: profiles.isEmpty ? L10n.t("restoreDecision.noSavedProfile") : L10n.t("restoreDecision.noConfidentProfileMatch")
+                reason: profiles.isEmpty ? L10n.t("restoreDecision.noSavedProfile") : L10n.t("restoreDecision.noConfidentProfileMatch"),
+                context: profiles.isEmpty ? .noSavedProfile : .noConfidentMatch
             )
         }
 
@@ -51,7 +78,8 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: L10n.t("restoreDecision.belowThreshold")
+                reason: L10n.t("restoreDecision.belowThreshold"),
+                context: .belowThreshold
             )
         }
 
@@ -60,7 +88,8 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: L10n.t("restoreDecision.autoRestoreDisabled")
+                reason: L10n.t("restoreDecision.autoRestoreDisabled"),
+                context: .autoRestoreDisabled
             )
         }
 
@@ -69,7 +98,8 @@ public struct RestoreCoordinator: Sendable {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: L10n.t("restoreDecision.dependencyBlocked")
+                reason: L10n.t("restoreDecision.dependencyBlocked"),
+                context: .dependencyBlocked
             )
         }
 
@@ -77,7 +107,8 @@ public struct RestoreCoordinator: Sendable {
             action: .autoRestore(command: match.profile.layout.engine.command),
             profileName: match.profile.name,
             score: match.score,
-            reason: L10n.t("restoreDecision.confidentMatch")
+            reason: L10n.t("restoreDecision.confidentMatch"),
+            context: .ready
         )
     }
 }
