@@ -1,4 +1,6 @@
+import AppKit
 import Combine
+import CoreGraphics
 import LayoutRecallKit
 import Foundation
 
@@ -14,12 +16,18 @@ final class AppModel: ObservableObject {
     @Published private(set) var loginItemLine = L10n.t("status.checkingLoginItem")
     @Published private(set) var lastCommand = ""
     @Published private(set) var detectedDisplayCount = 0
+    @Published private(set) var currentDisplaySnapshots: [DisplaySnapshot] = []
     @Published private(set) var latestDecision: RestoreDecision?
     @Published private(set) var latestMatchedProfileName: String?
     @Published private(set) var latestMatchScore: Int?
+    @Published private(set) var updateState: AppUpdateState = .idle
+    @Published private(set) var availableUpdate: AppRelease?
+    @Published var automaticUpdateChecksEnabled = true
     @Published var autoRestoreEnabled = true
     @Published var launchAtLoginEnabled = false
+    @Published var preferredLanguageOption: AppLanguageOption = .system
     @Published private(set) var shortcuts = ShortcutSettings()
+    @Published private(set) var skippedReleaseVersion: String?
 
     private let store: any ProfileStoring
     private let settingsStore: any AppSettingsStoring
@@ -33,6 +41,11 @@ final class AppModel: ObservableObject {
     private let verifier: any RestoreVerifying
     private let loginItemManager: any LoginItemManaging
     private let shortcutManager: any ShortcutManaging
+    private let updateChecker: any AppUpdateChecking
+    private let updateInstaller: any AppUpdateInstalling
+    private let updatePrompt: any AppUpdatePrompting
+    private let displayIdentifier: any DisplayIdentifying
+    private let terminateApplication: @MainActor () -> Void
     private let debounceNanoseconds: UInt64
     private let restoreCooldown: TimeInterval
 
@@ -40,6 +53,7 @@ final class AppModel: ObservableObject {
     private var restoreCooldownUntil: Date?
     private var installationTask: Task<Void, Never>?
     private var automaticInstallAttempted = false
+    private var promptedUpdateVersion: String?
 
     init(
         store: any ProfileStoring = ProfileStore(),
@@ -54,6 +68,11 @@ final class AppModel: ObservableObject {
         verifier: any RestoreVerifying = RestoreVerifier(),
         loginItemManager: any LoginItemManaging = AppLoginItemManager(),
         shortcutManager: any ShortcutManaging = GlobalHotKeyManager(),
+        updateChecker: any AppUpdateChecking = NoopAppUpdateChecker(),
+        updateInstaller: any AppUpdateInstalling = NoopAppUpdateInstaller(),
+        updatePrompt: any AppUpdatePrompting = NoopAppUpdatePrompt(),
+        displayIdentifier: any DisplayIdentifying = DisplayOverlayPresenter(),
+        terminateApplication: @escaping @MainActor () -> Void = { NSApp.terminate(nil) },
         debounceNanoseconds: UInt64 = 2_000_000_000,
         restoreCooldown: TimeInterval = 8,
         autoBootstrap: Bool = true
@@ -70,6 +89,11 @@ final class AppModel: ObservableObject {
         self.verifier = verifier
         self.loginItemManager = loginItemManager
         self.shortcutManager = shortcutManager
+        self.updateChecker = updateChecker
+        self.updateInstaller = updateInstaller
+        self.updatePrompt = updatePrompt
+        self.displayIdentifier = displayIdentifier
+        self.terminateApplication = terminateApplication
         self.debounceNanoseconds = debounceNanoseconds
         self.restoreCooldown = restoreCooldown
 
@@ -93,6 +117,12 @@ final class AppModel: ObservableObject {
             allowAutomaticRestore: false,
             shouldRecordDecision: false
         )
+
+        if automaticUpdateChecksEnabled {
+            Task { @MainActor [weak self] in
+                await self?.checkForUpdates(userInitiated: false, promptIfAvailable: true)
+            }
+        }
     }
 
     func fixNow() {
@@ -116,6 +146,40 @@ final class AppModel: ObservableObject {
     func swapLeftRight() {
         Task {
             await performSwapLeftRight()
+        }
+    }
+
+    func checkForUpdatesNow() {
+        Task {
+            await checkForUpdates(userInitiated: true, promptIfAvailable: false)
+        }
+    }
+
+    func installAvailableUpdate() {
+        guard let availableUpdate else {
+            return
+        }
+
+        Task {
+            await installUpdate(availableUpdate)
+        }
+    }
+
+    func skipAvailableUpdateVersion() {
+        guard let availableUpdate else {
+            return
+        }
+
+        Task {
+            await markSkippedRelease(availableUpdate)
+        }
+    }
+
+    func clearSkippedUpdateVersion() {
+        skippedReleaseVersion = nil
+
+        Task {
+            await persistSettings()
         }
     }
 
@@ -166,12 +230,7 @@ final class AppModel: ObservableObject {
 
         Task {
             do {
-                try await settingsStore.saveSettings(
-                    AppSettings(
-                        launchAtLogin: enabled,
-                        shortcuts: shortcuts
-                    )
-                )
+                try await settingsStore.saveSettings(currentSettings())
                 let state = try await loginItemManager.setEnabled(enabled)
                 await MainActor.run {
                     self.loginItemLine = state.description
@@ -185,6 +244,31 @@ final class AppModel: ObservableObject {
                     self.statusLine = L10n.t("status.failedUpdateLaunchAtLogin", error.localizedDescription)
                 }
             }
+        }
+    }
+
+    func setAutomaticUpdateChecks(_ enabled: Bool) {
+        automaticUpdateChecksEnabled = enabled
+
+        if !enabled {
+            updateState = .idle
+        }
+
+        Task {
+            await persistSettings()
+
+            if enabled {
+                await checkForUpdates(userInitiated: false, promptIfAvailable: false)
+            }
+        }
+    }
+
+    func setPreferredLanguage(_ option: AppLanguageOption) {
+        preferredLanguageOption = option
+        L10n.setPreferredLanguageCodeOverride(option.preferredLanguageCode)
+
+        Task {
+            await persistSettings()
         }
     }
 
@@ -235,6 +319,41 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func deleteProfile(_ profileID: UUID) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
+            return
+        }
+
+        let deletedProfile = profiles.remove(at: index)
+        autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
+
+        if latestMatchedProfileName == deletedProfile.name {
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
+        }
+
+        Task {
+            await persistProfiles()
+            await refreshCurrentState(
+                trigger: DisplayEvent(type: .manual, details: L10n.t("event.profileDeleted", deletedProfile.name)),
+                allowAutomaticRestore: false,
+                shouldRecordDecision: false
+            )
+        }
+    }
+
+    func restoreProfile(_ profileID: UUID) {
+        Task {
+            await performRestoreProfile(profileID)
+        }
+    }
+
+    func identifyDisplays(for profileID: UUID) {
+        Task {
+            await performDisplayIdentification(profileID)
+        }
+    }
+
     private func startMonitoring() {
         eventMonitor.start { [weak self] event in
             Task { @MainActor in
@@ -282,6 +401,7 @@ final class AppModel: ObservableObject {
                 return match?.profile.layout.engine.command ?? ""
             }()
 
+            currentDisplaySnapshots = currentDisplays
             detectedDisplayCount = currentDisplays.count
             latestDecision = decision
             latestMatchedProfileName = match?.profile.name
@@ -320,6 +440,7 @@ final class AppModel: ObservableObject {
             }
         } catch {
             lastCommand = ""
+            currentDisplaySnapshots = []
             detectedDisplayCount = 0
             latestDecision = nil
             latestMatchedProfileName = nil
@@ -349,7 +470,8 @@ final class AppModel: ObservableObject {
             guard result.outcome == .installed || result.outcome == .alreadyInstalled else {
                 latestDecision = RestoreDecision(
                     action: .offerManualFix,
-                    reason: L10n.t("decision.manualRestoreRequiresDependency")
+                    reason: L10n.t("decision.manualRestoreRequiresDependency"),
+                    context: .dependencyBlocked
                 )
                 latestMatchedProfileName = nil
                 latestMatchScore = nil
@@ -378,7 +500,8 @@ final class AppModel: ObservableObject {
             guard let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles) else {
                 latestDecision = RestoreDecision(
                     action: .offerManualFix,
-                    reason: L10n.t("decision.saveProfileBeforeManualRestore")
+                    reason: L10n.t("decision.saveProfileBeforeManualRestore"),
+                    context: .noConfidentMatch
                 )
                 latestMatchedProfileName = nil
                 latestMatchScore = nil
@@ -400,7 +523,8 @@ final class AppModel: ObservableObject {
                 action: .offerManualFix,
                 profileName: match.profile.name,
                 score: match.score,
-                reason: L10n.t("details.userRequestedManualRestore")
+                reason: L10n.t("details.userRequestedManualRestore"),
+                context: .manualRestoreRequested
             )
             latestMatchedProfileName = match.profile.name
             latestMatchScore = match.score
@@ -435,6 +559,37 @@ final class AppModel: ObservableObject {
         do {
             let currentDisplays = try await snapshotReader.currentDisplays()
             let layoutPlan = try commandBuilder.restorePlan(for: currentDisplays)
+
+            if let existingProfile = existingProfileMatchingCurrentLayout(
+                displays: currentDisplays,
+                layoutPlan: layoutPlan
+            ) {
+                currentDisplaySnapshots = currentDisplays
+                detectedDisplayCount = currentDisplays.count
+                latestDecision = RestoreDecision(
+                    action: .autoRestore(command: existingProfile.layout.engine.command),
+                    profileName: existingProfile.name,
+                    reason: L10n.t("decision.savedProfileAlreadyExists"),
+                    context: .savedProfileReady
+                )
+                latestMatchedProfileName = existingProfile.name
+                latestMatchScore = nil
+                lastCommand = existingProfile.layout.engine.command
+                statusLine = L10n.t("status.layoutAlreadySaved", existingProfile.name)
+                decisionLine = L10n.t("decision.savedProfileAlreadyExists")
+
+                await recordDiagnostic(
+                    eventType: DisplayEventType.manual.rawValue,
+                    profileName: existingProfile.name,
+                    score: nil,
+                    actionTaken: "save-profile-duplicate",
+                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
+                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                    details: L10n.t("details.savedLayoutAlreadyExists", existingProfile.name)
+                )
+                return
+            }
+
             let nextIndex = profiles.count + 1
             let profile = DisplayProfile.draft(
                 name: L10n.workspaceName(nextIndex),
@@ -444,11 +599,13 @@ final class AppModel: ObservableObject {
 
             profiles.append(profile)
             autoRestoreEnabled = profiles.allSatisfy(\.settings.autoRestore)
+            currentDisplaySnapshots = currentDisplays
             detectedDisplayCount = currentDisplays.count
             latestDecision = RestoreDecision(
                 action: .autoRestore(command: profile.layout.engine.command),
                 profileName: profile.name,
-                reason: L10n.t("decision.savedProfileReady")
+                reason: L10n.t("decision.savedProfileReady"),
+                context: .savedProfileReady
             )
             latestMatchedProfileName = profile.name
             latestMatchScore = nil
@@ -471,6 +628,150 @@ final class AppModel: ObservableObject {
         } catch {
             statusLine = L10n.t("status.failedCaptureLayout")
             decisionLine = error.localizedDescription
+        }
+    }
+
+    private func existingProfileMatchingCurrentLayout(
+        displays: [DisplaySnapshot],
+        layoutPlan: GeneratedLayoutPlan
+    ) -> DisplayProfile? {
+        let expectedOrigins = normalizedExpectedOrigins(layoutPlan.expectedOrigins)
+
+        return profiles.first { profile in
+            profile.displaySet.count == displays.count
+                && profile.displaySet.fingerprint == displays.fingerprint
+                && profile.layout.primaryDisplayKey == layoutPlan.primaryDisplayKey
+                && normalizedExpectedOrigins(profile.layout.expectedOrigins) == expectedOrigins
+        }
+    }
+
+    private func normalizedExpectedOrigins(_ origins: [DisplayOrigin]) -> [DisplayOrigin] {
+        origins.sorted { lhs, rhs in
+            if lhs.key != rhs.key {
+                return lhs.key < rhs.key
+            }
+
+            if lhs.x != rhs.x {
+                return lhs.x < rhs.x
+            }
+
+            return lhs.y < rhs.y
+        }
+    }
+
+    private func performRestoreProfile(_ profileID: UUID) async {
+        guard let profile = profiles.first(where: { $0.id == profileID }) else {
+            return
+        }
+
+        let dependency = await refreshDependencyState()
+        detectedDisplayCount = profile.displaySet.count
+
+        guard dependency.isAvailable else {
+            latestDecision = RestoreDecision(
+                action: .offerManualFix,
+                profileName: profile.name,
+                reason: L10n.t("decision.manualRestoreRequiresDependency"),
+                context: .dependencyBlocked
+            )
+            latestMatchedProfileName = profile.name
+            latestMatchScore = nil
+            statusLine = dependency.details
+            decisionLine = L10n.t("decision.manualRestoreRequiresDependency")
+            await recordDiagnostic(
+                eventType: DisplayEventType.manual.rawValue,
+                profileName: profile.name,
+                score: nil,
+                actionTaken: "restore-profile",
+                executionResult: RestoreExecutionOutcome.dependencyMissing.rawValue,
+                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                details: dependency.details
+            )
+            return
+        }
+
+        latestDecision = RestoreDecision(
+            action: .offerManualFix,
+            profileName: profile.name,
+            reason: L10n.t("details.userRequestedProfileRestore", profile.name),
+            context: .profileRestoreRequested
+        )
+        latestMatchedProfileName = profile.name
+        latestMatchScore = nil
+
+        await executeRestore(
+            command: profile.layout.engine.command,
+            expectedOrigins: profile.layout.expectedOrigins,
+            trigger: DisplayEventType.manual.rawValue,
+            actionTaken: "restore-profile",
+            profileName: profile.name,
+            score: nil,
+            details: L10n.t("details.userRequestedProfileRestore", profile.name)
+        )
+    }
+
+    private func performDisplayIdentification(_ profileID: UUID) async {
+        guard let profile = profiles.first(where: { $0.id == profileID }) else {
+            return
+        }
+
+        do {
+            let currentDisplays = try await snapshotReader.currentDisplays()
+            currentDisplaySnapshots = currentDisplays
+            let resolvedPrimaryDisplayKey = DisplayPresentationBuilder.resolvedPrimaryDisplayKey(
+                for: profile.displaySet.displays,
+                storedPrimaryDisplayKey: profile.layout.primaryDisplayKey,
+                currentDisplays: currentDisplays
+            )
+            let markers = DisplayPresentationBuilder.identificationMarkers(
+                for: profile.displaySet.displays,
+                primaryDisplayKey: resolvedPrimaryDisplayKey,
+                currentDisplays: currentDisplays
+            )
+
+            detectedDisplayCount = currentDisplays.count
+
+            guard !markers.isEmpty else {
+                statusLine = L10n.t("status.displayIdentificationUnavailable")
+                decisionLine = L10n.t("runtime.identifyNoMatchingDisplays")
+                await recordDiagnostic(
+                    eventType: DisplayEventType.manual.rawValue,
+                    profileName: profile.name,
+                    score: nil,
+                    actionTaken: "identify-displays",
+                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
+                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                    details: L10n.t("runtime.identifyNoMatchingDisplays")
+                )
+                return
+            }
+
+            displayIdentifier.showLabels(markers)
+            statusLine = L10n.t("status.displayIdentificationShown", profile.name)
+            decisionLine = L10n.t("details.userRequestedDisplayIdentification", profile.name)
+
+            await recordDiagnostic(
+                eventType: DisplayEventType.manual.rawValue,
+                profileName: profile.name,
+                score: nil,
+                actionTaken: "identify-displays",
+                executionResult: RestoreVerificationOutcome.skipped.rawValue,
+                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                details: L10n.t("details.userRequestedDisplayIdentification", profile.name)
+            )
+        } catch {
+            statusLine = L10n.t("status.displayIdentificationUnavailable")
+            decisionLine = error.localizedDescription
+
+            await recordDiagnostic(
+                eventType: DisplayEventType.manual.rawValue,
+                profileName: profile.name,
+                score: nil,
+                actionTaken: "identify-displays",
+                executionResult: RestoreVerificationOutcome.skipped.rawValue,
+                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                details: error.localizedDescription
+            )
         }
     }
 
@@ -544,14 +845,16 @@ final class AppModel: ObservableObject {
                 action: .autoRestore(command: command),
                 profileName: profileName,
                 score: score,
-                reason: verificationResult.details
+                reason: verificationResult.details,
+                context: .ready
             )
         } else {
             latestDecision = RestoreDecision(
                 action: .offerManualFix,
                 profileName: profileName,
                 score: score,
-                reason: executionResult.details
+                reason: executionResult.details,
+                context: .restoreFailed
             )
         }
         latestMatchedProfileName = profileName
@@ -638,6 +941,10 @@ final class AppModel: ObservableObject {
             let settings = try await settingsStore.loadSettings()
             launchAtLoginEnabled = settings.launchAtLogin
             shortcuts = settings.shortcuts
+            automaticUpdateChecksEnabled = settings.automaticallyCheckForUpdates
+            skippedReleaseVersion = settings.skippedReleaseVersion
+            preferredLanguageOption = AppLanguageOption(preferredLanguageCode: settings.preferredLanguageCode)
+            L10n.setPreferredLanguageCodeOverride(settings.preferredLanguageCode)
         } catch {
             statusLine = L10n.t("status.failedLoadSettings")
             decisionLine = error.localizedDescription
@@ -655,15 +962,103 @@ final class AppModel: ObservableObject {
 
     private func persistSettings() async {
         do {
-            try await settingsStore.saveSettings(
-                AppSettings(
-                    launchAtLogin: launchAtLoginEnabled,
-                    shortcuts: shortcuts
-                )
-            )
+            try await settingsStore.saveSettings(currentSettings())
         } catch {
             statusLine = L10n.t("status.failedSaveSettings")
             decisionLine = error.localizedDescription
+        }
+    }
+
+    private func currentSettings() -> AppSettings {
+        AppSettings(
+            launchAtLogin: launchAtLoginEnabled,
+            shortcuts: shortcuts,
+            automaticallyCheckForUpdates: automaticUpdateChecksEnabled,
+            skippedReleaseVersion: skippedReleaseVersion,
+            preferredLanguageCode: preferredLanguageOption.preferredLanguageCode
+        )
+    }
+
+    private func checkForUpdates(userInitiated: Bool, promptIfAvailable: Bool) async {
+        guard !updateState.isBusy else {
+            return
+        }
+
+        updateState = .checking
+
+        do {
+            guard let release = try await updateChecker.fetchLatestRelease() else {
+                availableUpdate = nil
+                updateState = .noPublishedReleases
+                return
+            }
+
+            guard AppVersionComparator.isNewer(release.versionIdentifier, than: AppRuntimeMetadata.currentVersion) else {
+                availableUpdate = nil
+                updateState = .upToDate
+                return
+            }
+
+            availableUpdate = release
+
+            if !userInitiated, skippedReleaseVersion == release.versionIdentifier {
+                updateState = .skipped(release)
+                return
+            }
+
+            updateState = .available(release)
+
+            guard promptIfAvailable,
+                  promptedUpdateVersion != release.versionIdentifier else {
+                return
+            }
+
+            promptedUpdateVersion = release.versionIdentifier
+
+            let promptResponse = await updatePrompt.promptToInstall(
+                release: release,
+                currentVersion: AppRuntimeMetadata.currentVersion
+            )
+
+            switch promptResponse {
+            case .install:
+                await installUpdate(release)
+            case .skipThisVersion:
+                await markSkippedRelease(release)
+            case .later:
+                updateState = .available(release)
+            }
+        } catch let error as AppUpdateError {
+            availableUpdate = nil
+            updateState = error == .noPublishedReleases
+                ? .noPublishedReleases
+                : .failed(error.localizedDescription)
+        } catch {
+            availableUpdate = nil
+            updateState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func markSkippedRelease(_ release: AppRelease) async {
+        skippedReleaseVersion = release.versionIdentifier
+        availableUpdate = release
+        updateState = .skipped(release)
+        await persistSettings()
+    }
+
+    private func installUpdate(_ release: AppRelease) async {
+        updateState = .downloading(release)
+
+        do {
+            try await updateInstaller.prepareUpdateInstallation(
+                release: release,
+                replacing: Bundle.main.bundleURL
+            )
+            updateState = .installing(release)
+            terminateApplication()
+        } catch {
+            availableUpdate = release
+            updateState = .failed(error.localizedDescription)
         }
     }
 

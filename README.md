@@ -29,7 +29,7 @@ The initial scope follows the product draft:
 ## Local development
 
 ```bash
-git clone https://github.com/aroido-bigcat/layoutrecall.git
+git clone https://github.com/aroido/layoutrecall.git
 cd layoutrecall
 make build
 make test
@@ -44,6 +44,19 @@ Open `Package.swift` in Xcode if you want an IDE workflow. The current app targe
 - Automatic restore and manual restore actions require `displayplacer` to be installed and available on `PATH`.
 - Build and test do not require `displayplacer`.
 - The current implementation targets the common two external display workflow first, especially the identical-monitor left/right swap problem.
+
+## Release updates
+
+- The app checks GitHub Releases for `aroido/layoutrecall` and can prompt the user to update or skip a specific version.
+- Automatic checks can be turned off from `General > Updates`.
+- To build signed ZIP + DMG release assets for GitHub Releases, run:
+
+```bash
+VERSION=0.1.0 ./scripts/build-release-archive
+```
+
+- The release workflow publishes `dist/releases/` artifacts to GitHub Releases and syncs the Homebrew tap at `aroido/homebrew-layoutrecall`.
+- In-app updates still download the ZIP asset from the matching GitHub Release.
 
 ## License
 

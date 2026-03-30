@@ -113,7 +113,9 @@ public extension DisplayProfile {
             layoutPlan: GeneratedLayoutPlan(
                 command: command,
                 expectedOrigins: origins,
-                primaryDisplayKey: displays.first.map { displays.uniqueMatchKey(for: $0) } ?? "primary"
+                primaryDisplayKey: displays.mainDisplayKey
+                    ?? displays.first.map { displays.uniqueMatchKey(for: $0) }
+                    ?? "primary"
             )
         )
     }

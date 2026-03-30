@@ -228,10 +228,40 @@ struct LayoutRecallSymbol: View {
 }
 
 struct LayoutRecallMenuBarIcon: View {
+    let state: MenuStatePresentation
+
+    private var badgeSymbol: String? {
+        switch state {
+        case .healthy:
+            return nil
+        case .installing:
+            return "hourglass"
+        case .dependencyMissing:
+            return "arrow.down.circle.fill"
+        case .noProfiles:
+            return "plus.circle.fill"
+        case .noMatch, .lowConfidence, .autoRestoreDisabled, .manualRecovery:
+            return "exclamationmark.circle.fill"
+        }
+    }
+
     var body: some View {
-        LayoutRecallSymbol(tone: .template, lineWidth: 1.75)
-            .frame(width: 18, height: 18)
-            .accessibilityLabel(L10n.t("app.name"))
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: "display.2")
+                .font(.system(size: 14, weight: .semibold))
+
+            if let badgeSymbol {
+                Image(systemName: badgeSymbol)
+                    .font(.system(size: 8, weight: .bold))
+                    .background(
+                        Circle()
+                            .fill(Color(nsColor: .windowBackgroundColor))
+                    )
+                    .offset(x: 3, y: -2)
+            }
+        }
+        .frame(width: 18, height: 18)
+        .accessibilityLabel("\(L10n.t("app.name")) \(state.badgeText)")
     }
 }
 

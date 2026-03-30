@@ -1,11 +1,18 @@
 import Foundation
 
 public enum L10n {
+    public static let preferredLanguageOverrideDefaultsKey = "LayoutRecallPreferredLanguageCode"
+
     static func preferredLanguageCode(
+        preferredLanguageOverride: String? = UserDefaults.standard.string(forKey: preferredLanguageOverrideDefaultsKey),
         environment: [String: String] = ProcessInfo.processInfo.environment,
         preferredLanguages: [String] = Locale.preferredLanguages,
         storedAppleLanguages: [String]? = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
     ) -> String {
+        if let preferredLanguageOverride = normalizedSupportedLanguageCode(preferredLanguageOverride) {
+            return preferredLanguageOverride
+        }
+
         let candidates =
             parsedAppleLanguages(environment["AppleLanguages"]) +
             preferredLanguages +
@@ -13,20 +20,27 @@ public enum L10n {
 
         return candidates
             .lazy
-            .map { $0.lowercased() }
-            .compactMap { languageTag -> String? in
-                if languageTag.hasPrefix("ko") {
-                    return "ko"
-                }
-
-                if languageTag.hasPrefix("en") {
-                    return "en"
-                }
-
-                return nil
-            }
+            .compactMap(normalizedSupportedLanguageCode)
             .first
             ?? "en"
+    }
+
+    private static func normalizedSupportedLanguageCode(_ languageTag: String?) -> String? {
+        guard let languageTag else {
+            return nil
+        }
+
+        let normalizedLanguageTag = languageTag.lowercased()
+
+        if normalizedLanguageTag.hasPrefix("ko") {
+            return "ko"
+        }
+
+        if normalizedLanguageTag.hasPrefix("en") {
+            return "en"
+        }
+
+        return nil
     }
 
     private static func parsedAppleLanguages(_ rawValue: String?) -> [String] {
@@ -65,6 +79,16 @@ public enum L10n {
 
     public static func t(_ key: String, _ arguments: CVarArg...) -> String {
         String(format: t(key), locale: Locale.current, arguments: arguments)
+    }
+
+    public static func setPreferredLanguageCodeOverride(_ languageCode: String?) {
+        let defaults = UserDefaults.standard
+
+        if let normalizedLanguageCode = normalizedSupportedLanguageCode(languageCode) {
+            defaults.set(normalizedLanguageCode, forKey: preferredLanguageOverrideDefaultsKey)
+        } else {
+            defaults.removeObject(forKey: preferredLanguageOverrideDefaultsKey)
+        }
     }
 
     public static func profileCount(_ count: Int) -> String {
