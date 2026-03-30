@@ -1,32 +1,51 @@
 # LayoutRecall
 
-LayoutRecall is a macOS menu bar utility that watches for external display reconfiguration and restores a saved layout when macOS scrambles identical monitors.
+LayoutRecall is a macOS menu bar utility that saves known display layouts and restores them when macOS scrambles identical or frequently reconnected monitors.
 
-This repository is published as open source under the MIT license.
+It is aimed at the common desktop problem where the same two external displays come back in the wrong order, wrong origin, or wrong main-display state after sleep, wake, dock reconnect, or cable churn.
 
-## Why this repo exists
+## Features
 
-The initial scope follows the product draft:
+- Saves one or more display layout profiles from the current live monitor arrangement
+- Watches for display reconfiguration events and attempts automatic restore when confidence is high
+- Falls back to one-click manual recovery with `Fix Now` and `Swap Left / Right`
+- Shows profile, confidence, and diagnostic context directly from the menu bar
+- Supports launch at login, keyboard shortcuts, and in-app update checks
+- Lets you choose app language explicitly with `System`, `English`, or `Korean`
 
-- menu bar app
-- live display snapshot capture
-- display change debounce
-- saved layout profiles
-- safe profile matching
-- automatic restore when confidence is high
-- one-click fallback with `Fix Now` and `Swap Left / Right`
-- persisted diagnostics and launch-at-login integration
+## Install
 
-## Repository layout
+### Download the signed app
 
-- `Package.swift`: Swift package entry point
-- `Sources/LayoutRecallApp`: SwiftUI menu bar shell
-- `Sources/LayoutRecallKit`: domain models and restore pipeline scaffolding
-- `Tests/LayoutRecallKitTests`: matcher-focused unit tests
-- `docs/PRD.md`: condensed build summary from the planning document
-- `docs/SPEC.md`: detailed product specification and delivery roadmap
+- Download the latest `DMG` from [GitHub Releases](https://github.com/aroido/layoutrecall/releases)
+- Drag `LayoutRecall.app` into `/Applications`
+- Launch the app and save a baseline layout from the menu bar
 
-## Local development
+### Install with Homebrew
+
+```bash
+brew install --cask aroido/layoutrecall/layoutrecall
+```
+
+## Requirements
+
+- macOS 13 or later
+- Apple Silicon is currently the primary tested target
+- `displayplacer` is required for actual restore commands
+
+LayoutRecall can build and run tests without `displayplacer`, but restoring a saved layout depends on it being available on `PATH`.
+
+## How it works
+
+1. Arrange your displays the way you want.
+2. Save the current layout as a profile.
+3. LayoutRecall watches for display change events.
+4. If the current display snapshot strongly matches a saved profile, the app restores it automatically.
+5. If confidence is lower, the menu bar app keeps recovery manual and shows the relevant action and diagnostics.
+
+The current implementation is deliberately biased toward stable, practical recovery for dual external monitor setups, especially identical left/right displays.
+
+## Development
 
 ```bash
 git clone https://github.com/aroido/layoutrecall.git
@@ -35,29 +54,52 @@ make build
 make test
 ```
 
-The repository uses a scratch build path in `~/Library/Caches` to avoid Swift index-store rename failures when the checkout lives on slower or externally mounted volumes.
-
-Open `Package.swift` in Xcode if you want an IDE workflow. The current app target now includes the live snapshot, event monitoring, restore execution, verification, diagnostics, and settings pipeline, but it is still early-stage software.
-
-## Runtime notes
-
-- Automatic restore and manual restore actions require `displayplacer` to be installed and available on `PATH`.
-- Build and test do not require `displayplacer`.
-- The current implementation targets the common two external display workflow first, especially the identical-monitor left/right swap problem.
-
-## Release updates
-
-- The app checks GitHub Releases for `aroido/layoutrecall` and can prompt the user to update or skip a specific version.
-- Automatic checks can be turned off from `General > Updates`.
-- To build signed ZIP + DMG release assets for GitHub Releases, run:
+Useful commands:
 
 ```bash
-VERSION=0.1.0 ./scripts/build-release-archive
+make run
+./scripts/run-ai-verify --mode full
 ```
 
-- The release workflow publishes `dist/releases/` artifacts to GitHub Releases and syncs the Homebrew tap at `aroido/homebrew-layoutrecall`.
-- In-app updates still download the ZIP asset from the matching GitHub Release.
+The repository uses a scratch build path in `~/Library/Caches` to avoid Swift index-store rename failures on slower or externally mounted volumes.
+
+Open `Package.swift` in Xcode if you want an IDE workflow.
+
+## Repository layout
+
+- `Sources/LayoutRecallApp`: SwiftUI menu bar application shell
+- `Sources/LayoutRecallKit`: matching, persistence, restore execution, localization, and diagnostics logic
+- `Tests/LayoutRecallAppTests`: app-level state, UI harness, and end-to-end coverage
+- `Tests/LayoutRecallKitTests`: matcher, localization, restore, and persistence coverage
+- `docs/PRD.md`: product summary
+- `docs/SPEC.md`: detailed product behavior and roadmap
+
+## Release workflow
+
+Tagged releases are published through GitHub Actions.
+
+Relevant pieces:
+
+- `./scripts/release-preflight.sh <tag>` validates version and required secrets
+- `./scripts/build-release-archive` builds signed and notarized `ZIP` and `DMG` artifacts
+- `.github/workflows/release.yml` publishes release assets and syncs the Homebrew tap
+
+Example local release build:
+
+```bash
+VERSION=<version> BUILD_NUMBER=$(date +%Y%m%d%H%M%S) ./scripts/build-release-archive
+```
+
+The app checks GitHub Releases for `aroido/layoutrecall`. Automatic update checks can be controlled from `General > Updates`.
+
+## Contributing
+
+Issues and pull requests are welcome. If you are changing restore behavior, matching logic, localization, or release packaging, run:
+
+```bash
+./scripts/run-ai-verify --mode full
+```
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](/Users/macmini/code/layoutrecall/LICENSE).
