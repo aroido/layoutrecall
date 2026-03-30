@@ -26,6 +26,7 @@ final class AppModel: ObservableObject {
     @Published var autoRestoreEnabled = true
     @Published var launchAtLoginEnabled = false
     @Published var preferredLanguageOption: AppLanguageOption = .system
+    @Published private(set) var restoreCommandInProgress = false
     @Published private(set) var shortcuts = ShortcutSettings()
     @Published private(set) var skippedReleaseVersion: String?
 
@@ -912,8 +913,29 @@ final class AppModel: ObservableObject {
 
     private func performSwapLeftRight() async {
         do {
+            guard !restoreCommandInProgress else {
+                statusLine = L10n.t("status.swapAlreadyRunning")
+                decisionLine = L10n.t("details.swapAlreadyRunning")
+                await logStartup("swapLeftRight ignored because restoreCommandInProgress=true")
+                return
+            }
+
             let currentDisplays = try await snapshotReader.currentDisplays()
+            await logStartup("swapLeftRight currentDisplays=\(describeDisplays(currentDisplays))")
+
+            guard !manualLayoutOverrideActive(for: currentDisplays) else {
+                statusLine = L10n.t("status.swapAlreadyApplied")
+                decisionLine = L10n.t("details.swapAlreadyApplied")
+                await logStartup(
+                    "swapLeftRight ignored because manualLayoutOverride active currentDisplays=\(describeDisplays(currentDisplays))"
+                )
+                return
+            }
+
             let layoutPlan = try commandBuilder.swapLeftRightPlan(for: currentDisplays)
+            await logStartup(
+                "swapLeftRight plan command=\(layoutPlan.command) expectedOrigins=\(describeOrigins(layoutPlan.expectedOrigins))"
+            )
             detectedDisplayCount = currentDisplays.count
             latestDecision = RestoreDecision(
                 action: .offerManualFix,
@@ -958,9 +980,17 @@ final class AppModel: ObservableObject {
         score: Int?,
         details: String
     ) async {
+        restoreCommandInProgress = true
+        defer {
+            restoreCommandInProgress = false
+        }
+
         lastCommand = command
         statusLine = L10n.t("status.runningRestoreCommand")
         decisionLine = details
+        await logStartup(
+            "executeRestore start action=\(actionTaken) trigger=\(trigger) profile=\(profileName ?? "<none>") command=\(command) expectedOrigins=\(describeOrigins(expectedOrigins))"
+        )
 
         let executionResult = await executor.execute(command: command)
         var verificationResult = RestoreVerificationResult.skipped
@@ -976,6 +1006,9 @@ final class AppModel: ObservableObject {
                 expectedOrigins: expectedOrigins
             )
         }
+        await logStartup(
+            "executeRestore finished action=\(actionTaken) execution=\(executionResult.outcome.rawValue) verification=\(verificationResult.outcome.rawValue) details=\(verificationResult.details)"
+        )
 
         let executionSummary = executionResult.outcome.rawValue
         let verificationSummary = verificationResult.outcome.rawValue
@@ -1374,5 +1407,33 @@ private extension AppModel {
 
     func logStartup(_ message: String) async {
         await StartupTraceLogger.shared.append(message)
+    }
+
+    private func describeDisplays(_ displays: [DisplaySnapshot]) -> String {
+        displays
+            .sorted(by: DisplaySnapshot.positionComparator)
+            .map { display in
+                let identifier = display.persistentID ?? display.contextualID ?? display.id
+                let mainMarker = display.isMain == true ? ":main" : ""
+                return "\(identifier)@(\(display.bounds.x),\(display.bounds.y))\(mainMarker)"
+            }
+            .joined(separator: ",")
+    }
+
+    private func describeOrigins(_ origins: [DisplayOrigin]) -> String {
+        origins
+            .sorted {
+                if $0.x != $1.x {
+                    return $0.x < $1.x
+                }
+
+                if $0.y != $1.y {
+                    return $0.y < $1.y
+                }
+
+                return $0.key < $1.key
+            }
+            .map { "\($0.key)@(\($0.x),\($0.y))" }
+            .joined(separator: ",")
     }
 }

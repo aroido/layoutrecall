@@ -256,7 +256,11 @@
 "details.savedLayoutAlreadyExists" = "Skipped saving because the current layout already matches %@.";
 "status.failedCaptureLayout" = "Failed to capture the current layout.";
 "details.userRequestedSwap" = "User requested the current two displays be swapped.";
+"details.swapAlreadyApplied" = "The manually changed layout is already being kept. Run a saved profile restore if you want to return to the original layout.";
+"details.swapAlreadyRunning" = "A swap is already being applied. Wait for the current run to finish, then check the resulting layout.";
 "status.swapUnavailable" = "Swap Left / Right is unavailable.";
+"status.swapAlreadyApplied" = "The swapped layout is already active.";
+"status.swapAlreadyRunning" = "Swap Left / Right is already running.";
 "status.runningRestoreCommand" = "Running restore command.";
 "status.failedLoadProfiles" = "Failed to load saved profiles.";
 "status.failedLoadDiagnostics" = "Failed to load diagnostics history.";

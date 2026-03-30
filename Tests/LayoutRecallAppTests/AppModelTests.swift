@@ -1069,8 +1069,18 @@ func swapLeftRightSuppressesAutomaticReapplyOfMatchedProfile() async {
     #expect(model.diagnostics.first?.actionTaken == "manual-layout-override")
     #expect(model.autoRestoreEnabled == true)
     #expect(model.menuPrimaryState == .manualLayoutOverride)
+    #expect(model.canSwapDisplays == false)
     #expect(model.menuStatusTitle == L10n.t("menu.state.manualLayoutOverride"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.manualLayoutOverride"))
+
+    model.swapLeftRight()
+
+    await waitUntil {
+        model.statusLine == L10n.t("status.swapAlreadyApplied")
+    }
+
+    #expect(await executor.executedCommands() == [swapPlan.command])
+    #expect(model.decisionLine == L10n.t("details.swapAlreadyApplied"))
 }
 
 @MainActor

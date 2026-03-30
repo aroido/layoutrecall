@@ -61,7 +61,7 @@ enum MenuStatePresentation: Equatable {
         case .lowConfidence:
             return "checkmark.seal"
         case .autoRestoreDisabled:
-            return "sparkles.slash"
+            return "sparkles"
         case .manualLayoutOverride:
             return "arrow.left.and.right.square"
         case .manualRecovery:
@@ -641,7 +641,11 @@ extension AppModel {
     }
 
     var canSwapDisplays: Bool {
-        dependencyAvailable && !installationInProgress && detectedDisplayCount == 2
+        dependencyAvailable
+            && !installationInProgress
+            && !restoreCommandInProgress
+            && detectedDisplayCount == 2
+            && menuPrimaryState != .manualLayoutOverride
     }
 
     var swapAvailabilityLine: String {

@@ -256,7 +256,11 @@
 "details.savedLayoutAlreadyExists" = "현재 레이아웃이 이미 %@ 프로필과 같아서 저장을 건너뛰었습니다.";
 "status.failedCaptureLayout" = "현재 레이아웃을 캡처하지 못했습니다.";
 "details.userRequestedSwap" = "사용자가 현재 두 디스플레이의 좌우 교체를 요청했습니다.";
+"details.swapAlreadyApplied" = "현재는 수동으로 바꾼 배치를 유지하고 있습니다. 원래 배치로 돌아가려면 저장된 프로필 복구를 실행하세요.";
+"details.swapAlreadyRunning" = "이미 좌우 교체를 적용하는 중입니다. 현재 실행이 끝난 뒤 상태를 확인하세요.";
 "status.swapUnavailable" = "좌우 교체를 사용할 수 없습니다.";
+"status.swapAlreadyApplied" = "좌우 교체가 이미 적용된 상태입니다.";
+"status.swapAlreadyRunning" = "좌우 교체를 이미 실행하는 중입니다.";
 "status.runningRestoreCommand" = "복구 명령을 실행하는 중입니다.";
 "status.failedLoadProfiles" = "저장된 프로필을 불러오지 못했습니다.";
 "status.failedLoadDiagnostics" = "진단 기록을 불러오지 못했습니다.";
