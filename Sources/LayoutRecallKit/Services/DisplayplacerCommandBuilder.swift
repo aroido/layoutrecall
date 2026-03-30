@@ -35,29 +35,41 @@ public struct DisplayplacerCommandBuilder: DisplayCommandBuilding {
             throw LayoutRecallRuntimeError.swapRequiresExactlyTwoDisplays
         }
 
+        let mainDisplay = orderedDisplays.first(where: { $0.isMain == true }) ?? orderedDisplays[0]
+        guard let secondaryDisplay = orderedDisplays.first(where: { $0.id != mainDisplay.id }) else {
+            throw LayoutRecallRuntimeError.swapRequiresExactlyTwoDisplays
+        }
+
+        let secondaryTargetX: Int
+        if secondaryDisplay.bounds.x < mainDisplay.bounds.x {
+            secondaryTargetX = mainDisplay.bounds.x + mainDisplay.bounds.width
+        } else {
+            secondaryTargetX = mainDisplay.bounds.x - secondaryDisplay.bounds.width
+        }
+
         let swappedOrigins = [
             DisplayOrigin(
-                key: orderedDisplays.uniqueMatchKey(for: orderedDisplays[0]),
-                x: orderedDisplays[1].bounds.x,
-                y: orderedDisplays[1].bounds.y
+                key: orderedDisplays.uniqueMatchKey(for: mainDisplay),
+                x: mainDisplay.bounds.x,
+                y: mainDisplay.bounds.y
             ),
             DisplayOrigin(
-                key: orderedDisplays.uniqueMatchKey(for: orderedDisplays[1]),
-                x: orderedDisplays[0].bounds.x,
-                y: orderedDisplays[0].bounds.y
+                key: orderedDisplays.uniqueMatchKey(for: secondaryDisplay),
+                x: secondaryTargetX,
+                y: secondaryDisplay.bounds.y
             )
         ]
 
         let segments = try [
-            makeCommandSegment(for: orderedDisplays[0], originX: swappedOrigins[0].x, originY: swappedOrigins[0].y),
-            makeCommandSegment(for: orderedDisplays[1], originX: swappedOrigins[1].x, originY: swappedOrigins[1].y)
+            makeCommandSegment(for: mainDisplay, originX: swappedOrigins[0].x, originY: swappedOrigins[0].y),
+            makeCommandSegment(for: secondaryDisplay, originX: swappedOrigins[1].x, originY: swappedOrigins[1].y)
         ]
 
         return GeneratedLayoutPlan(
             command: "displayplacer " + segments.joined(separator: " "),
             expectedOrigins: swappedOrigins,
             primaryDisplayKey: orderedDisplays.mainDisplayKey
-                ?? orderedDisplays.uniqueMatchKey(for: orderedDisplays[0])
+                ?? orderedDisplays.uniqueMatchKey(for: mainDisplay)
         )
     }
 

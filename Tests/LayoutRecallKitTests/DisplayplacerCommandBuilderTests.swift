@@ -18,15 +18,19 @@ func restorePlanBuildsAStableDisplayplacerCommand() throws {
 }
 
 @Test
-func swapLeftRightPlanSwapsTheTwoDisplayOrigins() throws {
+func swapLeftRightPlanKeepsMainDisplayInPlaceAndMovesSecondaryAcross() throws {
     let builder = DisplayplacerCommandBuilder()
 
     let plan = try builder.swapLeftRightPlan(for: [DisplaySnapshot.sampleLeft, DisplaySnapshot.sampleRight])
 
-    #expect(plan.command.contains("id:persistent-left enabled:true origin:(2560,0)"))
-    #expect(plan.command.contains("id:persistent-right enabled:true origin:(0,0)"))
-    #expect(plan.expectedOrigins[0].x == 2560)
-    #expect(plan.expectedOrigins[1].x == 0)
+    #expect(plan.command.contains("id:persistent-left enabled:true origin:(0,0)"))
+    #expect(plan.command.contains("id:persistent-right enabled:true origin:(-2560,0)"))
+    #expect(plan.expectedOrigins.count == 2)
+    #expect(plan.expectedOrigins[0].key == DisplaySnapshot.sampleLeft.preferredMatchKey)
+    #expect(plan.expectedOrigins[0].x == 0)
+    #expect(plan.expectedOrigins[1].key == DisplaySnapshot.sampleRight.preferredMatchKey)
+    #expect(plan.expectedOrigins[1].x == -2560)
+    #expect(plan.primaryDisplayKey == DisplaySnapshot.sampleLeft.preferredMatchKey)
 }
 
 @Test

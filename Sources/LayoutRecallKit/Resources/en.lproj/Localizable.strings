@@ -255,7 +255,7 @@
 "details.savedCurrentLayout" = "Saved the current live display layout as a profile.";
 "details.savedLayoutAlreadyExists" = "Skipped saving because the current layout already matches %@.";
 "status.failedCaptureLayout" = "Failed to capture the current layout.";
-"details.userRequestedSwap" = "User requested the current two displays be swapped.";
+"details.userRequestedSwap" = "User requested moving the non-main display to the opposite side while keeping the main display in place.";
 "details.swapAlreadyApplied" = "The manually changed layout is already being kept. Run a saved profile restore if you want to return to the original layout.";
 "details.swapAlreadyRunning" = "A swap is already being applied. Wait for the current run to finish, then check the resulting layout.";
 "status.swapUnavailable" = "Swap Left / Right is unavailable.";
@@ -286,7 +286,7 @@
 "shortcut.saveCurrentLayout.title" = "Save Profile";
 "shortcut.saveCurrentLayout.detail" = "Capture the current display arrangement as a saved profile.";
 "shortcut.swapLeftRight.title" = "Swap Displays";
-"shortcut.swapLeftRight.detail" = "Swap the current two-display layout.";
+"shortcut.swapLeftRight.detail" = "Keep the main display in place and move the other display to the opposite side.";
 "diagnostic.title.autoRestore" = "Automatic Restore";
 "diagnostic.title.fixNow" = "Fix Now";
 "diagnostic.title.manualRecovery" = "Manual Recovery";
@@ -333,9 +333,9 @@
 "runtime.identifyNoMatchingDisplays" = "No currently connected displays could be matched to this saved profile.";
 "diagnostic.title.identifyDisplays" = "Numbers Shown";
 "settings.swap.installingHint" = "Swap Left / Right will be available after setup finishes.";
-"settings.swap.ready" = "You can swap the left / right positions of the two connected displays immediately.";
+"settings.swap.ready" = "You can keep the main display in place and move the other display to the opposite side immediately.";
 "action.swapConfirm.title" = "Swap the left and right display positions?";
-"action.swapConfirm.message" = "This applies the current two-display arrangement immediately. Saved profiles are not changed.";
+"action.swapConfirm.message" = "This keeps the main display in place and moves the other display to the opposite side immediately. Saved profiles are not changed.";
 "action.swapConfirm.run" = "Run Swap";
 "runtime.noDisplays" = "No connected displays were detected.";
 "runtime.swapRequiresTwo" = "Swap Left / Right requires exactly two connected displays.";

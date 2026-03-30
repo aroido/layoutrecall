@@ -254,10 +254,10 @@ private struct SnapshotCommandBuilder: DisplayCommandBuilding, Sendable {
 
     func swapLeftRightPlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
         GeneratedLayoutPlan(
-            command: "displayplacer 'id:persistent-left origin:(2560,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right origin:(0,0) res:2560x1440 hz:60 scaling:off'",
+            command: "displayplacer 'id:persistent-left origin:(0,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right origin:(-2560,0) res:2560x1440 hz:60 scaling:off'",
             expectedOrigins: [
-                DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 2560, y: 0),
-                DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: 0, y: 0)
+                DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 0, y: 0),
+                DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: -2560, y: 0)
             ],
             primaryDisplayKey: DisplaySnapshot.sampleLeft.preferredMatchKey
         )

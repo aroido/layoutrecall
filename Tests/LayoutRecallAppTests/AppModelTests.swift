@@ -1316,10 +1316,10 @@ private func sampleRestorePlan() -> GeneratedLayoutPlan {
 
 private func sampleSwapPlan() -> GeneratedLayoutPlan {
     GeneratedLayoutPlan(
-        command: "displayplacer 'id:persistent-left enabled:true origin:(2560,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right enabled:true origin:(0,0) res:2560x1440 hz:60 scaling:off'",
+        command: "displayplacer 'id:persistent-left enabled:true origin:(0,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right enabled:true origin:(-2560,0) res:2560x1440 hz:60 scaling:off'",
         expectedOrigins: [
-            DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 2560, y: 0),
-            DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: 0, y: 0)
+            DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 0, y: 0),
+            DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: -2560, y: 0)
         ],
         primaryDisplayKey: DisplaySnapshot.sampleLeft.preferredMatchKey
     )
@@ -1345,10 +1345,10 @@ private func weakSignalDisplays() -> [DisplaySnapshot] {
 
 private func swappedDisplays() -> [DisplaySnapshot] {
     var left = DisplaySnapshot.sampleLeft
-    left.bounds.x = 2560
+    left.bounds.x = 0
 
     var right = DisplaySnapshot.sampleRight
-    right.bounds.x = 0
+    right.bounds.x = -2560
 
     return [left, right]
 }
