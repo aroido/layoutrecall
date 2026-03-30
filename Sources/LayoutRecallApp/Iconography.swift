@@ -229,7 +229,8 @@ struct LayoutRecallSymbol: View {
 
 struct LayoutRecallMenuBarIcon: View {
     var body: some View {
-        LayoutRecallSymbol(tone: .template, lineWidth: 1.75)
+        Image(systemName: "display.2")
+            .font(.system(size: 14, weight: .semibold))
             .frame(width: 18, height: 18)
             .accessibilityLabel(L10n.t("app.name"))
     }

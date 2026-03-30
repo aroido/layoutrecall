@@ -19,15 +19,12 @@ fi
 
 cd "$ROOT_DIR"
 
-make build SCRATCH_PATH="$SCRATCH_PATH"
-
+# Run the AppKit snapshot smoke test in its own process.
+# Keeping it in the main suite currently triggers an intermittent
+# signal 11 during later test teardown on this machine.
 swift test --no-parallel --scratch-path "$SCRATCH_PATH" \
-    --skip liveActionHandlersExercisePersistedRestoreAndUpdateFlows \
-    --skip liveHardwareRestoreCommandExecutesAgainstCurrentLayout \
-    --skip liveHardwareSwapLeftRightRoundTripsBackToOriginalLayout \
-    --skip liveHardwareDisplaySnapshotMatchesItsOwnDraftProfile \
-    --skip liveHardwareSleepWakeCyclesStayRestorable \
-    --skip liveUIHarnessClicksPersistExpectedState
+    --skip renderMenuAndSettingsSnapshots
+swift test --filter renderMenuAndSettingsSnapshots --scratch-path "$SCRATCH_PATH"
 
 run_live_test_if_requested() {
     local flag_name="$1"

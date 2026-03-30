@@ -177,6 +177,10 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
 }
 
 extension AppModel {
+    var canRestoreSavedProfiles: Bool {
+        dependencyAvailable && !installationInProgress && !profiles.isEmpty
+    }
+
     var menuStatePresentation: MenuStatePresentation {
         switch menuPrimaryState {
         case .noProfiles:

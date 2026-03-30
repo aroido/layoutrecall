@@ -334,6 +334,63 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
 
 @MainActor
 @Test
+func profileDeletionAndDirectRestorePersistExpectedState() async {
+    var secondaryProfile = DisplayProfile.officeDock
+    secondaryProfile.id = UUID()
+    secondaryProfile.name = "Travel Desk"
+    secondaryProfile.displaySet = DisplaySet(
+        count: 1,
+        fingerprint: "travel-single",
+        displays: [DisplaySnapshot.sampleLeft]
+    )
+    secondaryProfile.layout = LayoutDefinition(
+        primaryDisplayKey: secondaryProfile.layout.primaryDisplayKey,
+        expectedOrigins: secondaryProfile.layout.expectedOrigins,
+        engine: LayoutEngineCommand(type: "displayplacer", command: "displayplacer \"id:travel\"")
+    )
+
+    let profileStore = ProfileStoreStub(profiles: [.officeDock, secondaryProfile])
+    let executor = RestoreExecutorStub()
+    let installer = DependencyInstallerStub()
+    let model = AppModel(
+        store: profileStore,
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: SwitchingCommandBuilder(),
+        executor: executor,
+        dependencyInstaller: installer,
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.restoreProfile(secondaryProfile.id)
+
+    await waitUntil {
+        await executor.executedCommands().contains("displayplacer \"id:travel\"")
+    }
+
+    #expect(model.lastCommand == "displayplacer \"id:travel\"")
+    #expect(model.latestMatchedProfileName == "Travel Desk")
+
+    model.deleteProfile(secondaryProfile.id)
+
+    await waitUntil {
+        let persisted = await profileStore.currentProfiles()
+        return persisted.count == 1 && persisted.first?.id == DisplayProfile.officeDock.id
+    }
+
+    #expect(model.profiles.count == 1)
+    #expect(model.profiles.first?.name == DisplayProfile.officeDock.name)
+}
+
+@MainActor
+@Test
 func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
     let settingsStore = AppSettingsStoreStub()
     let loginItemManager = LoginItemManagerStub(current: .disabled, setResponse: .requiresApproval)
@@ -1027,6 +1084,26 @@ private struct StaticCommandBuilder: DisplayCommandBuilding, Sendable {
 
     func swapLeftRightPlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
         swapPlanResult
+    }
+}
+
+private struct SwitchingCommandBuilder: DisplayCommandBuilding, Sendable {
+    func restorePlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
+        if displays.count == 1 {
+            return GeneratedLayoutPlan(
+                command: "displayplacer \"id:travel\"",
+                expectedOrigins: [
+                    DisplayOrigin(key: displays.uniqueMatchKey(for: displays[0]), x: 0, y: 0)
+                ],
+                primaryDisplayKey: displays.uniqueMatchKey(for: displays[0])
+            )
+        }
+
+        return sampleRestorePlan()
+    }
+
+    func swapLeftRightPlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
+        sampleSwapPlan()
     }
 }
 

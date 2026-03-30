@@ -79,6 +79,7 @@ struct SettingsView: View {
     @State private var selectedPane: SettingsPane = .restore
     @State private var advancedActionsExpanded = false
     @State private var dangerousRestoreAction: DangerousRestoreAction?
+    @State private var profilePendingDeletion: DisplayProfile?
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
         self.model = model
@@ -129,6 +130,16 @@ struct SettingsView: View {
                 message: Text(action.message),
                 primaryButton: .default(Text(action.confirmationTitle)) {
                     model.perform(action)
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        .alert(item: $profilePendingDeletion) { profile in
+            Alert(
+                title: Text(L10n.t("profiles.delete.title")),
+                message: Text(L10n.t("profiles.delete.message", profile.name)),
+                primaryButton: .destructive(Text(L10n.t("profiles.delete.confirm"))) {
+                    model.deleteProfile(profile.id)
                 },
                 secondaryButton: .cancel()
             )
@@ -484,6 +495,17 @@ struct SettingsView: View {
                 }
 
                 FormHint(text: L10n.t("profiles.confidence.hint"))
+            }
+
+            HStack {
+                Spacer(minLength: 0)
+
+                Button(role: .destructive) {
+                    profilePendingDeletion = profile
+                } label: {
+                    Label(L10n.t("profiles.delete.button"), systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

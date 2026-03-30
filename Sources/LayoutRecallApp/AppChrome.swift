@@ -293,6 +293,8 @@ extension DiagnosticsEntry {
             return L10n.t("diagnostic.title.saveNewProfile")
         case "save-new-profile":
             return L10n.t("diagnostic.title.saveNewProfile")
+        case "restore-profile":
+            return L10n.t("diagnostic.title.profileRestore")
         case "swap-left-right":
             return L10n.t("diagnostic.title.swappedLeftRight")
         case "bootstrap-install":

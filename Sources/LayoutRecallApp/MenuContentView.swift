@@ -6,6 +6,7 @@ struct MenuContentView: View {
     @ObservedObject var model: AppModel
     let openSettings: () -> Void
     @State private var hasAnimatedIn = false
+    @State private var dangerousRestoreAction: DangerousRestoreAction?
 
     var body: some View {
         ZStack {
@@ -22,6 +23,11 @@ struct MenuContentView: View {
 
                 if !model.menuQuickActions.isEmpty {
                     quickActions
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
+                if !model.profiles.isEmpty {
+                    quickSwitchSection
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
@@ -42,6 +48,16 @@ struct MenuContentView: View {
             }
         }
         .animation(.spring(response: 0.30, dampingFraction: 0.84), value: model.menuTransitionKey)
+        .alert(item: $dangerousRestoreAction) { action in
+            Alert(
+                title: Text(action.title),
+                message: Text(action.message),
+                primaryButton: .default(Text(action.confirmationTitle)) {
+                    model.perform(action)
+                },
+                secondaryButton: .cancel()
+            )
+        }
     }
 
     private var header: some View {
@@ -185,6 +201,53 @@ struct MenuContentView: View {
             }
 
             Spacer(minLength: 0)
+        }
+    }
+
+    private var quickSwitchSection: some View {
+        GlassCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeading(
+                    title: L10n.t("menu.quickSwitch"),
+                    systemImage: "rectangle.2.swap"
+                )
+
+                ForEach(Array(model.profiles.enumerated()), id: \.element.id) { index, profile in
+                    Button {
+                        model.restoreProfile(profile.id)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text("\(index + 1)")
+                                .font(.caption2.weight(.bold))
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+
+                            Text(L10n.t("menu.profileShortcut", index + 1, profile.name))
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if model.referenceProfile?.id == profile.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .disabled(!model.canRestoreSavedProfiles)
+                    .accessibilityIdentifier("menu.profile.\(profile.id.uuidString)")
+                }
+
+                Button {
+                    dangerousRestoreAction = .swapLeftRight
+                } label: {
+                    Label(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(ActionButtonStyle(role: .secondary))
+                .disabled(!model.canSwapDisplays)
+                .accessibilityIdentifier("menu.quick.swap")
+            }
         }
     }
 

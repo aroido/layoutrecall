@@ -304,6 +304,35 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func deleteProfile(_ profileID: UUID) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
+            return
+        }
+
+        let deletedProfile = profiles.remove(at: index)
+        autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
+
+        if latestMatchedProfileName == deletedProfile.name {
+            latestMatchedProfileName = nil
+            latestMatchScore = nil
+        }
+
+        Task {
+            await persistProfiles()
+            await refreshCurrentState(
+                trigger: DisplayEvent(type: .manual, details: L10n.t("event.profileDeleted", deletedProfile.name)),
+                allowAutomaticRestore: false,
+                shouldRecordDecision: false
+            )
+        }
+    }
+
+    func restoreProfile(_ profileID: UUID) {
+        Task {
+            await performRestoreProfile(profileID)
+        }
+    }
+
     private func startMonitoring() {
         eventMonitor.start { [weak self] event in
             Task { @MainActor in
@@ -541,6 +570,55 @@ final class AppModel: ObservableObject {
             statusLine = L10n.t("status.failedCaptureLayout")
             decisionLine = error.localizedDescription
         }
+    }
+
+    private func performRestoreProfile(_ profileID: UUID) async {
+        guard let profile = profiles.first(where: { $0.id == profileID }) else {
+            return
+        }
+
+        let dependency = await refreshDependencyState()
+        detectedDisplayCount = profile.displaySet.count
+
+        guard dependency.isAvailable else {
+            latestDecision = RestoreDecision(
+                action: .offerManualFix,
+                profileName: profile.name,
+                reason: L10n.t("decision.manualRestoreRequiresDependency")
+            )
+            latestMatchedProfileName = profile.name
+            latestMatchScore = nil
+            statusLine = dependency.details
+            decisionLine = L10n.t("decision.manualRestoreRequiresDependency")
+            await recordDiagnostic(
+                eventType: DisplayEventType.manual.rawValue,
+                profileName: profile.name,
+                score: nil,
+                actionTaken: "restore-profile",
+                executionResult: RestoreExecutionOutcome.dependencyMissing.rawValue,
+                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+                details: dependency.details
+            )
+            return
+        }
+
+        latestDecision = RestoreDecision(
+            action: .offerManualFix,
+            profileName: profile.name,
+            reason: L10n.t("details.userRequestedProfileRestore", profile.name)
+        )
+        latestMatchedProfileName = profile.name
+        latestMatchScore = nil
+
+        await executeRestore(
+            command: profile.layout.engine.command,
+            expectedOrigins: profile.layout.expectedOrigins,
+            trigger: DisplayEventType.manual.rawValue,
+            actionTaken: "restore-profile",
+            profileName: profile.name,
+            score: nil,
+            details: L10n.t("details.userRequestedProfileRestore", profile.name)
+        )
     }
 
     private func performSwapLeftRight() async {

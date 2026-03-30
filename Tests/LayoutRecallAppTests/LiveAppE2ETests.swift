@@ -135,6 +135,23 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
             && model.autoRestoreEnabled == true
     }
 
+    model.restoreProfile(profileID)
+    await waitForLiveCondition("restore named profile") {
+        model.lastCommand.contains("displayplacer")
+            && model.latestMatchedProfileName == "Desk"
+    }
+
+    model.deleteProfile(profileID)
+    await waitForLiveCondition("delete profile") {
+        let persistedProfiles = (try? await profileStore.loadProfiles()) ?? []
+        return model.profiles.isEmpty && persistedProfiles.isEmpty
+    }
+
+    model.saveCurrentLayout()
+    await waitForLiveCondition("recreate profile after delete") {
+        model.profiles.count == 1 && model.diagnostics.first?.actionTaken == "save-profile"
+    }
+
     model.fixNow()
     await waitForLiveCondition("manual fix") {
         model.diagnostics.first?.actionTaken == "manual-fix"

@@ -25,6 +25,9 @@
 "menu.action.saveFirstBaseline" = "첫 기준 저장";
 "menu.action.saveAnotherBaseline" = "기준 추가 저장";
 "menu.recentActivity" = "최근 %@ · %@";
+"menu.quickSwitch" = "빠른 전환";
+"menu.profileShortcut" = "%lld. %@";
+"menu.swapShortcut" = "좌우 스왑";
 "menu.meta.profileCount" = "프로필 %lld개 저장됨";
 "menu.meta.dependencyReady" = "복구 도구 준비됨";
 "menu.meta.dependencyMissing" = "복구 도구 필요";
@@ -91,6 +94,10 @@
 "profiles.autoRestore.toggle" = "이 프로필에서 자동 복구 허용";
 "profiles.confidence.label" = "자동 복구 신뢰도 기준";
 "profiles.confidence.hint" = "이 점수 이상으로 일치할 때만 이 프로필을 자동 복구에 사용합니다.";
+"profiles.delete.button" = "프로필 삭제";
+"profiles.delete.title" = "이 프로필을 삭제할까요?";
+"profiles.delete.message" = "\"%@\" 프로필을 삭제합니다. 이 작업은 되돌릴 수 없습니다.";
+"profiles.delete.confirm" = "삭제";
 "profiles.column.name" = "이름";
 "profiles.column.displays" = "디스플레이";
 "profiles.column.autoRestore" = "자동 복구";
@@ -188,6 +195,7 @@
 "event.bootstrapCompleted" = "앱 초기화가 완료되었습니다.";
 "event.autoRestorePreferenceChanged" = "자동 복구 설정이 변경되었습니다.";
 "event.confidenceThresholdChanged" = "신뢰도 임계값이 변경되었습니다.";
+"event.profileDeleted" = "%@ 프로필을 삭제했습니다.";
 "status.launchAtLoginSaved" = "로그인 시 실행 설정을 저장했습니다.";
 "status.launchAtLoginCleared" = "로그인 시 실행 설정을 해제했습니다.";
 "status.launchAtLoginUpdateFailed" = "로그인 시 실행 설정을 업데이트하지 못했습니다.";
@@ -201,6 +209,7 @@
 "status.noCompatibleSavedProfile" = "호환되는 저장 프로필을 찾지 못했습니다.";
 "decision.saveProfileBeforeManualRestore" = "수동 복구 전에 프로필을 먼저 저장하세요.";
 "details.userRequestedManualRestore" = "사용자가 수동 복구를 요청했습니다.";
+"details.userRequestedProfileRestore" = "사용자가 %@ 프로필 적용을 요청했습니다.";
 "status.failedReadCurrentDisplaySetManual" = "수동 복구용 현재 디스플레이 구성을 읽지 못했습니다.";
 "status.capturedLayout" = "현재 레이아웃을 %@ 형태로 저장했습니다.";
 "decision.savedProfileReady" = "저장된 프로필이 다음 디스플레이 복구 이벤트에 사용될 준비가 되었습니다.";
@@ -239,6 +248,7 @@
 "diagnostic.title.manualRecovery" = "수동 복구";
 "diagnostic.title.savedCurrentLayout" = "현재 레이아웃 저장";
 "diagnostic.title.saveNewProfile" = "현재 레이아웃 저장";
+"diagnostic.title.profileRestore" = "프로필 적용";
 "diagnostic.title.swappedLeftRight" = "좌우가 교체됨";
 "diagnostic.title.dependencySetup" = "의존성 설정";
 "diagnostic.title.displayReadFailed" = "디스플레이 읽기 실패";

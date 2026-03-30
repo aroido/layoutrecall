@@ -25,6 +25,9 @@
 "menu.action.saveFirstBaseline" = "Save First Baseline";
 "menu.action.saveAnotherBaseline" = "Save Another Baseline";
 "menu.recentActivity" = "Latest %@ · %@";
+"menu.quickSwitch" = "Quick Switch";
+"menu.profileShortcut" = "%lld. %@";
+"menu.swapShortcut" = "Swap Left / Right";
 "menu.meta.profileCount" = "%lld profiles saved";
 "menu.meta.dependencyReady" = "Restore tool ready";
 "menu.meta.dependencyMissing" = "Restore tool required";
@@ -91,6 +94,10 @@
 "profiles.autoRestore.toggle" = "Allow automatic restore for this profile";
 "profiles.confidence.label" = "Automatic restore confidence";
 "profiles.confidence.hint" = "This profile is used for automatic restore only when the match reaches this score or higher.";
+"profiles.delete.button" = "Delete Profile";
+"profiles.delete.title" = "Delete this profile?";
+"profiles.delete.message" = "Delete \"%@\". This cannot be undone.";
+"profiles.delete.confirm" = "Delete";
 "profiles.column.name" = "Name";
 "profiles.column.displays" = "Displays";
 "profiles.column.autoRestore" = "Auto Restore";
@@ -188,6 +195,7 @@
 "event.bootstrapCompleted" = "Application bootstrap completed.";
 "event.autoRestorePreferenceChanged" = "Auto restore preference changed.";
 "event.confidenceThresholdChanged" = "Confidence threshold changed.";
+"event.profileDeleted" = "Deleted the %@ profile.";
 "status.launchAtLoginSaved" = "Launch at login preference saved.";
 "status.launchAtLoginCleared" = "Launch at login preference cleared.";
 "status.launchAtLoginUpdateFailed" = "Launch at login could not be updated.";
@@ -201,6 +209,7 @@
 "status.noCompatibleSavedProfile" = "No compatible saved profile was found.";
 "decision.saveProfileBeforeManualRestore" = "Save a profile before trying manual restore.";
 "details.userRequestedManualRestore" = "User requested manual restore.";
+"details.userRequestedProfileRestore" = "User requested the %@ profile be applied.";
 "status.failedReadCurrentDisplaySetManual" = "Failed to read the current display set for manual restore.";
 "status.capturedLayout" = "Captured the current layout as %@.";
 "decision.savedProfileReady" = "The saved profile is ready for future display restore events.";
@@ -239,6 +248,7 @@
 "diagnostic.title.manualRecovery" = "Manual Recovery";
 "diagnostic.title.savedCurrentLayout" = "Saved Current Layout";
 "diagnostic.title.saveNewProfile" = "Save Current Layout";
+"diagnostic.title.profileRestore" = "Apply Profile";
 "diagnostic.title.swappedLeftRight" = "Swapped Left / Right";
 "diagnostic.title.dependencySetup" = "Dependency Setup";
 "diagnostic.title.displayReadFailed" = "Display Read Failed";
