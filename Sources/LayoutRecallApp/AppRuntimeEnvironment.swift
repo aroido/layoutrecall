@@ -2,6 +2,53 @@ import AppKit
 import Foundation
 import LayoutRecallKit
 
+struct RunningApplicationSnapshot: Equatable {
+    let processIdentifier: pid_t
+    let launchDate: Date?
+}
+
+enum AppInstanceResolver {
+    static func existingPrimaryInstance(
+        in snapshots: [RunningApplicationSnapshot],
+        currentPID: pid_t
+    ) -> RunningApplicationSnapshot? {
+        snapshots
+            .filter { $0.processIdentifier != currentPID }
+            .sorted { lhs, rhs in
+                (normalizedDate(lhs.launchDate), lhs.processIdentifier) < (normalizedDate(rhs.launchDate), rhs.processIdentifier)
+            }
+            .first
+    }
+
+    @MainActor
+    static func existingPrimaryInstance(
+        bundleIdentifier: String,
+        currentPID: pid_t = ProcessInfo.processInfo.processIdentifier
+    ) -> NSRunningApplication? {
+        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+        let snapshots = applications.map {
+            RunningApplicationSnapshot(
+                processIdentifier: $0.processIdentifier,
+                launchDate: $0.launchDate
+            )
+        }
+
+        guard let resolved = existingPrimaryInstance(in: snapshots, currentPID: currentPID) else {
+            return nil
+        }
+
+        return applications.first { $0.processIdentifier == resolved.processIdentifier }
+    }
+
+    private static func normalizedDate(_ date: Date?) -> Date {
+        date ?? .distantPast
+    }
+}
+
+enum AppLaunchSignal {
+    static let revealExistingInstance = Notification.Name("com.aroido.layoutrecall.revealExistingInstance")
+}
+
 @MainActor
 enum AppLaunchMode {
     case standard
@@ -51,7 +98,8 @@ func makeAppModel(for launchMode: AppLaunchMode) -> AppModel {
         return AppModel(
             updateChecker: GitHubReleaseChecker(),
             updateInstaller: GitHubReleaseInstaller(),
-            updatePrompt: NSAlertUpdatePrompt()
+            updatePrompt: NSAlertUpdatePrompt(),
+            autoBootstrap: false
         )
     case .uiAutomationHarness:
         return AppModel(
@@ -62,7 +110,8 @@ func makeAppModel(for launchMode: AppLaunchMode) -> AppModel {
             shortcutManager: UITestShortcutManager(),
             updateChecker: UITestUpdateChecker(),
             updateInstaller: UITestUpdateInstaller(),
-            updatePrompt: NoopAppUpdatePrompt()
+            updatePrompt: NoopAppUpdatePrompt(),
+            autoBootstrap: false
         )
     }
 }

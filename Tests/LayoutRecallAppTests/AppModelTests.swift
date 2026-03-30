@@ -345,6 +345,117 @@ func saveCurrentLayoutCreatesAProfileAndDiagnostic() async {
 
 @MainActor
 @Test
+func savedProfilesReloadAcrossBootstrap() async throws {
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+    defer {
+        try? FileManager.default.removeItem(at: tempDirectory)
+    }
+
+    let profileStore = ProfileStore(fileURL: tempDirectory.appendingPathComponent("profiles.json", isDirectory: false))
+    let settingsStore = AppSettingsStore(fileURL: tempDirectory.appendingPathComponent("settings.json", isDirectory: false))
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let eventMonitor = EventMonitorStub()
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let commandBuilder = StaticCommandBuilder(
+        restorePlanResult: sampleRestorePlan(),
+        swapPlanResult: sampleSwapPlan()
+    )
+
+    let savingModel = AppModel(
+        store: profileStore,
+        settingsStore: settingsStore,
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: eventMonitor,
+        commandBuilder: commandBuilder,
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await savingModel.bootstrap()
+    savingModel.saveCurrentLayout()
+
+    await waitUntil {
+        (try? await profileStore.loadProfiles().count) == 1
+            && savingModel.profiles.count == 1
+    }
+
+    let persistedID = try #require(try await profileStore.loadProfiles().first?.id)
+
+    let reloadedModel = AppModel(
+        store: profileStore,
+        settingsStore: settingsStore,
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: snapshotReader,
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: commandBuilder,
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await reloadedModel.bootstrap()
+
+    #expect(reloadedModel.profiles.count == 1)
+    #expect(reloadedModel.profiles.first?.id == persistedID)
+    #expect(reloadedModel.referenceProfile?.id == persistedID)
+    #expect(reloadedModel.menuPrimaryState == .healthy)
+}
+
+@MainActor
+@Test
+func prepareForTerminationWaitsForPendingProfileSave() async {
+    let profileStore = SlowProfileStoreStub(saveDelayNanoseconds: 300_000_000)
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let eventMonitor = EventMonitorStub()
+    let plan = sampleRestorePlan()
+
+    let model = AppModel(
+        store: profileStore,
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: eventMonitor,
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: plan,
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.saveCurrentLayout()
+
+    try? await Task.sleep(nanoseconds: 50_000_000)
+
+    #expect(model.hasPendingTerminationWork)
+    #expect(await profileStore.currentProfiles().isEmpty)
+
+    await model.prepareForTermination()
+
+    #expect(!model.hasPendingTerminationWork)
+    #expect(await profileStore.currentProfiles().count == 1)
+}
+
+@MainActor
+@Test
 func saveCurrentLayoutSkipsDuplicateBaseline() async {
     let profileStore = ProfileStoreStub(profiles: [.officeDock])
     let diagnosticsStore = DiagnosticsStoreStub()
@@ -1122,6 +1233,29 @@ private actor ProfileStoreStub: ProfileStoring {
     }
 
     func saveProfiles(_ profiles: [DisplayProfile]) async throws {
+        self.profiles = profiles
+    }
+
+    func currentProfiles() -> [DisplayProfile] {
+        profiles
+    }
+}
+
+private actor SlowProfileStoreStub: ProfileStoring {
+    private let saveDelayNanoseconds: UInt64
+    private var profiles: [DisplayProfile]
+
+    init(saveDelayNanoseconds: UInt64, profiles: [DisplayProfile] = []) {
+        self.saveDelayNanoseconds = saveDelayNanoseconds
+        self.profiles = profiles
+    }
+
+    func loadProfiles() async throws -> [DisplayProfile] {
+        profiles
+    }
+
+    func saveProfiles(_ profiles: [DisplayProfile]) async throws {
+        try? await Task.sleep(nanoseconds: saveDelayNanoseconds)
         self.profiles = profiles
     }
 

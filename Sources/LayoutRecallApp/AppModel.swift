@@ -54,6 +54,8 @@ final class AppModel: ObservableObject {
     private var installationTask: Task<Void, Never>?
     private var automaticInstallAttempted = false
     private var promptedUpdateVersion: String?
+    private var hasBootstrapped = false
+    private var pendingTerminationTasks: [UUID: Task<Void, Never>] = [:]
 
     init(
         store: any ProfileStoring = ProfileStore(),
@@ -99,9 +101,35 @@ final class AppModel: ObservableObject {
 
         if autoBootstrap {
             Task {
-                await bootstrap()
+                await bootstrapIfNeeded()
             }
         }
+    }
+
+    var hasPendingTerminationWork: Bool {
+        !pendingTerminationTasks.isEmpty
+    }
+
+    func prepareForTermination() async {
+        while true {
+            let tasks = Array(pendingTerminationTasks.values)
+            guard !tasks.isEmpty else {
+                return
+            }
+
+            for task in tasks {
+                await task.value
+            }
+        }
+    }
+
+    func bootstrapIfNeeded() async {
+        guard !hasBootstrapped else {
+            return
+        }
+
+        hasBootstrapped = true
+        await bootstrap()
     }
 
     func bootstrap() async {
@@ -126,32 +154,32 @@ final class AppModel: ObservableObject {
     }
 
     func fixNow() {
-        Task {
-            await performManualRestore()
+        launchTrackedTask {
+            await self.performManualRestore()
         }
     }
 
     func saveCurrentLayout() {
-        Task {
-            await performSaveCurrentLayout()
+        launchTrackedTask {
+            await self.performSaveCurrentLayout()
         }
     }
 
     func installDisplayplacer() {
-        Task {
-            await installDependency(trigger: "manual-install", automatic: false)
+        launchTrackedTask {
+            await self.installDependency(trigger: "manual-install", automatic: false)
         }
     }
 
     func swapLeftRight() {
-        Task {
-            await performSwapLeftRight()
+        launchTrackedTask {
+            await self.performSwapLeftRight()
         }
     }
 
     func checkForUpdatesNow() {
-        Task {
-            await checkForUpdates(userInitiated: true, promptIfAvailable: false)
+        launchTrackedTask {
+            await self.checkForUpdates(userInitiated: true, promptIfAvailable: false)
         }
     }
 
@@ -160,8 +188,8 @@ final class AppModel: ObservableObject {
             return
         }
 
-        Task {
-            await installUpdate(availableUpdate)
+        launchTrackedTask {
+            await self.installUpdate(availableUpdate)
         }
     }
 
@@ -170,16 +198,16 @@ final class AppModel: ObservableObject {
             return
         }
 
-        Task {
-            await markSkippedRelease(availableUpdate)
+        launchTrackedTask {
+            await self.markSkippedRelease(availableUpdate)
         }
     }
 
     func clearSkippedUpdateVersion() {
         skippedReleaseVersion = nil
 
-        Task {
-            await persistSettings()
+        launchTrackedTask {
+            await self.persistSettings()
         }
     }
 
@@ -196,9 +224,9 @@ final class AppModel: ObservableObject {
 
         shortcuts[action] = binding
 
-        Task {
-            await persistSettings()
-            await configureShortcuts()
+        launchTrackedTask {
+            await self.persistSettings()
+            await self.configureShortcuts()
         }
     }
 
@@ -215,9 +243,9 @@ final class AppModel: ObservableObject {
             return updated
         }
 
-        Task {
-            await persistProfiles()
-            await refreshCurrentState(
+        launchTrackedTask {
+            await self.persistProfiles()
+            await self.refreshCurrentState(
                 trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
@@ -228,10 +256,10 @@ final class AppModel: ObservableObject {
     func setLaunchAtLogin(_ enabled: Bool) {
         launchAtLoginEnabled = enabled
 
-        Task {
+        launchTrackedTask {
             do {
-                try await settingsStore.saveSettings(currentSettings())
-                let state = try await loginItemManager.setEnabled(enabled)
+                try await self.settingsStore.saveSettings(self.currentSettings())
+                let state = try await self.loginItemManager.setEnabled(enabled)
                 await MainActor.run {
                     self.loginItemLine = state.description
                     self.statusLine = enabled
@@ -254,11 +282,11 @@ final class AppModel: ObservableObject {
             updateState = .idle
         }
 
-        Task {
-            await persistSettings()
+        launchTrackedTask {
+            await self.persistSettings()
 
             if enabled {
-                await checkForUpdates(userInitiated: false, promptIfAvailable: false)
+                await self.checkForUpdates(userInitiated: false, promptIfAvailable: false)
             }
         }
     }
@@ -267,8 +295,8 @@ final class AppModel: ObservableObject {
         preferredLanguageOption = option
         L10n.setPreferredLanguageCodeOverride(option.preferredLanguageCode)
 
-        Task {
-            await persistSettings()
+        launchTrackedTask {
+            await self.persistSettings()
         }
     }
 
@@ -279,8 +307,8 @@ final class AppModel: ObservableObject {
 
         profiles[index].name = name
 
-        Task {
-            await persistProfiles()
+        launchTrackedTask {
+            await self.persistProfiles()
         }
     }
 
@@ -291,9 +319,9 @@ final class AppModel: ObservableObject {
 
         profiles[index].settings.confidenceThreshold = threshold
 
-        Task {
-            await persistProfiles()
-            await refreshCurrentState(
+        launchTrackedTask {
+            await self.persistProfiles()
+            await self.refreshCurrentState(
                 trigger: DisplayEvent(type: .manual, details: L10n.t("event.confidenceThresholdChanged")),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
@@ -309,9 +337,9 @@ final class AppModel: ObservableObject {
         profiles[index].settings.autoRestore = enabled
         autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
 
-        Task {
-            await persistProfiles()
-            await refreshCurrentState(
+        launchTrackedTask {
+            await self.persistProfiles()
+            await self.refreshCurrentState(
                 trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
@@ -332,9 +360,9 @@ final class AppModel: ObservableObject {
             latestMatchScore = nil
         }
 
-        Task {
-            await persistProfiles()
-            await refreshCurrentState(
+        launchTrackedTask {
+            await self.persistProfiles()
+            await self.refreshCurrentState(
                 trigger: DisplayEvent(type: .manual, details: L10n.t("event.profileDeleted", deletedProfile.name)),
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
@@ -343,15 +371,28 @@ final class AppModel: ObservableObject {
     }
 
     func restoreProfile(_ profileID: UUID) {
-        Task {
-            await performRestoreProfile(profileID)
+        launchTrackedTask {
+            await self.performRestoreProfile(profileID)
         }
     }
 
     func identifyDisplays(for profileID: UUID) {
-        Task {
-            await performDisplayIdentification(profileID)
+        launchTrackedTask {
+            await self.performDisplayIdentification(profileID)
         }
+    }
+
+    private func launchTrackedTask(_ operation: @escaping @MainActor () async -> Void) {
+        let taskID = UUID()
+        let task = Task { @MainActor [weak self] in
+            defer {
+                self?.pendingTerminationTasks.removeValue(forKey: taskID)
+            }
+
+            await operation()
+        }
+
+        pendingTerminationTasks[taskID] = task
     }
 
     private func startMonitoring() {
