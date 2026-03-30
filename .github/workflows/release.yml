@@ -91,16 +91,27 @@ jobs:
         run: |
           release_title="LayoutRecall ${RELEASE_TAG}"
           prerelease_args=()
+          assets=()
+
           if [ "${{ steps.release_meta.outputs.prerelease }}" = "true" ]; then
             prerelease_args+=(--prerelease)
           fi
 
+          while IFS= read -r asset; do
+            assets+=("$asset")
+          done < <(find dist/releases -maxdepth 1 -type f | sort)
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release files found in dist/releases."
+            exit 1
+          fi
+
           if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" dist/releases/* \
+            gh release upload "${RELEASE_TAG}" "${assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           else
-            gh release create "${RELEASE_TAG}" dist/releases/* \
+            gh release create "${RELEASE_TAG}" "${assets[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --title "${release_title}" \
               --target "${GITHUB_SHA}" \
@@ -112,7 +123,10 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: release-assets-${{ env.RELEASE_TAG }}
-          path: dist/releases/*
+          path: |
+            dist/releases/*.zip
+            dist/releases/*.dmg
+            dist/releases/SHA256SUMS.txt
           retention-days: 14
 
   sync-homebrew-tap:
