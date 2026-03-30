@@ -76,12 +76,12 @@ func renderMenuAndSettingsSnapshots() async throws {
         minimumSize: CGSize(width: 560, height: 520)
     )
 
-    #expect(FileManager.default.fileExists(atPath: menuURL.path()))
-    #expect(FileManager.default.fileExists(atPath: settingsURL.path()))
-    #expect(FileManager.default.fileExists(atPath: profilesURL.path()))
-    #expect(FileManager.default.fileExists(atPath: diagnosticsURL.path()))
-    #expect(FileManager.default.fileExists(atPath: shortcutsURL.path()))
-    #expect(FileManager.default.fileExists(atPath: generalURL.path()))
+    #expect(FileManager.default.fileExists(atPath: menuURL.path))
+    #expect(FileManager.default.fileExists(atPath: settingsURL.path))
+    #expect(FileManager.default.fileExists(atPath: profilesURL.path))
+    #expect(FileManager.default.fileExists(atPath: diagnosticsURL.path))
+    #expect(FileManager.default.fileExists(atPath: shortcutsURL.path))
+    #expect(FileManager.default.fileExists(atPath: generalURL.path))
 
     let menuImageSize = try imageSize(at: menuURL)
     let settingsImageSize = try imageSize(at: settingsURL)

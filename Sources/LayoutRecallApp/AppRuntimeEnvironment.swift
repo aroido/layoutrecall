@@ -98,8 +98,7 @@ func makeAppModel(for launchMode: AppLaunchMode) -> AppModel {
         return AppModel(
             updateChecker: GitHubReleaseChecker(),
             updateInstaller: GitHubReleaseInstaller(),
-            updatePrompt: NSAlertUpdatePrompt(),
-            autoBootstrap: false
+            updatePrompt: NSAlertUpdatePrompt()
         )
     case .uiAutomationHarness:
         return AppModel(
@@ -110,8 +109,7 @@ func makeAppModel(for launchMode: AppLaunchMode) -> AppModel {
             shortcutManager: UITestShortcutManager(),
             updateChecker: UITestUpdateChecker(),
             updateInstaller: UITestUpdateInstaller(),
-            updatePrompt: NoopAppUpdatePrompt(),
-            autoBootstrap: false
+            updatePrompt: NoopAppUpdatePrompt()
         )
     }
 }

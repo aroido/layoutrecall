@@ -8,7 +8,7 @@ public actor AppSettingsStore: AppSettingsStoring {
     }
 
     public func loadSettings() async throws -> AppSettings {
-        guard FileManager.default.fileExists(atPath: fileURL.path()) else {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return AppSettings()
         }
 

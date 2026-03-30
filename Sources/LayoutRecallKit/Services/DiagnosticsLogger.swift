@@ -51,7 +51,7 @@ public actor DiagnosticsLogger: DiagnosticsStoring {
     }
 
     public func recentEntries() async throws -> [DiagnosticsEntry] {
-        guard FileManager.default.fileExists(atPath: fileURL.path()) else {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []
         }
 
