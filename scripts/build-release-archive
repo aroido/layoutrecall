@@ -7,7 +7,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/dist/releases}"
 APP_NAME="LayoutRecall"
 EXECUTABLE_NAME="LayoutRecallApp"
 BUNDLE_ID="${BUNDLE_ID:-com.aroido.layoutrecall}"
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-0.1.1}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
 APP_BUNDLE="$OUTPUT_DIR/$APP_NAME.app"
 ZIP_NAME="${ZIP_NAME:-$APP_NAME-$VERSION-macos.zip}"
@@ -72,12 +72,18 @@ resolve_executable_path() {
 
 build_app_bundle() {
   local executable_path="$1"
+  local executable_dir
+  executable_dir="$(dirname "$executable_path")"
 
   rm -rf "$APP_BUNDLE" "$ZIP_PATH" "$DMG_PATH" "$SHA256_PATH"
   mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
   cp "$REPO_ROOT/Packaging/LayoutRecall-Info.plist" "$APP_BUNDLE/Contents/Info.plist"
   cp "$executable_path" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
   chmod +x "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+
+  while IFS= read -r bundle_path; do
+    ditto "$bundle_path" "$APP_BUNDLE/Contents/Resources/$(basename "$bundle_path")"
+  done < <(find "$executable_dir" -maxdepth 1 -type d -name '*.bundle' | sort)
 
   if [[ -f "$REPO_ROOT/Packaging/AppIcon.icns" ]]; then
     cp "$REPO_ROOT/Packaging/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
@@ -104,11 +110,11 @@ prepare_signing_keychain() {
     exit 1
   fi
 
-  ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user | tr -d '"')"
+  ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user 2>/dev/null | tr -d '"' || true)"
   while IFS= read -r keychain; do
     keychain="${keychain//\"/}"
     [[ -n "$keychain" ]] && ORIGINAL_KEYCHAINS+=("$keychain")
-  done < <(security list-keychains -d user)
+  done < <(security list-keychains -d user 2>/dev/null || true)
 
   security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
   security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"

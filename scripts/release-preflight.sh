@@ -6,9 +6,9 @@ usage() {
 Usage: scripts/release-preflight.sh <tag> [--skip-secrets] [--allow-unsigned]
 
 Examples:
-  scripts/release-preflight.sh v0.1.0
-  scripts/release-preflight.sh v0.1.0 --skip-secrets
-  scripts/release-preflight.sh v0.1.0 --allow-unsigned
+  scripts/release-preflight.sh v0.1.1
+  scripts/release-preflight.sh v0.1.1 --skip-secrets
+  scripts/release-preflight.sh v0.1.1 --allow-unsigned
 EOF
 }
 

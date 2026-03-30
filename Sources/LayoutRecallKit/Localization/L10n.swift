@@ -2,6 +2,7 @@ import Foundation
 
 public enum L10n {
     public static let preferredLanguageOverrideDefaultsKey = "LayoutRecallPreferredLanguageCode"
+    private static let resourceBundleName = "LayoutRecall_LayoutRecallKit.bundle"
 
     static func preferredLanguageCode(
         preferredLanguageOverride: String? = UserDefaults.standard.string(forKey: preferredLanguageOverrideDefaultsKey),
@@ -59,6 +60,14 @@ public enum L10n {
     }
 
     private static func localizedBundle(for languageCode: String) -> Bundle {
+        if
+            let bundle = embeddedResourceBundle(),
+            let bundlePath = bundle.path(forResource: languageCode, ofType: "lproj"),
+            let localized = Bundle(path: bundlePath)
+        {
+            return localized
+        }
+
         guard
             let bundlePath = Bundle.module.path(forResource: languageCode, ofType: "lproj"),
             let bundle = Bundle(path: bundlePath)
@@ -71,6 +80,24 @@ public enum L10n {
 
     private static var localizedBundle: Bundle {
         localizedBundle(for: preferredLanguageCode())
+    }
+
+    private static func embeddedResourceBundle() -> Bundle? {
+        let candidateRoots: [URL?] = [
+            Bundle.main.resourceURL,
+            Bundle.main.bundleURL,
+            Bundle(for: BundleMarker.self).resourceURL,
+            Bundle(for: BundleMarker.self).bundleURL,
+        ]
+
+        for root in candidateRoots.compactMap({ $0 }) {
+            let candidateURL = root.appendingPathComponent(resourceBundleName, isDirectory: true)
+            if let bundle = Bundle(url: candidateURL) {
+                return bundle
+            }
+        }
+
+        return nil
     }
 
     public static func t(_ key: String) -> String {
@@ -134,3 +161,5 @@ public enum L10n {
         }
     }
 }
+
+private final class BundleMarker {}
