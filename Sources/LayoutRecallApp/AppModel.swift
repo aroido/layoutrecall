@@ -101,7 +101,16 @@ final class AppModel: ObservableObject {
 
         if autoBootstrap {
             Task {
+                await self.logStartup(
+                    "AppModel init autoBootstrap=true profilePath=\(self.profileStorePath) settingsPath=\(self.settingsStorePath)"
+                )
                 await bootstrapIfNeeded()
+            }
+        } else {
+            Task {
+                await self.logStartup(
+                    "AppModel init autoBootstrap=false profilePath=\(self.profileStorePath) settingsPath=\(self.settingsStorePath)"
+                )
             }
         }
     }
@@ -125,14 +134,17 @@ final class AppModel: ObservableObject {
 
     func bootstrapIfNeeded() async {
         guard !hasBootstrapped else {
+            await logStartup("bootstrapIfNeeded skipped because hasBootstrapped=true")
             return
         }
 
         hasBootstrapped = true
+        await logStartup("bootstrapIfNeeded starting bootstrap()")
         await bootstrap()
     }
 
     func bootstrap() async {
+        await logStartup("bootstrap begin")
         await loadProfiles()
         await loadDiagnostics()
         await loadSettings()
@@ -144,6 +156,9 @@ final class AppModel: ObservableObject {
             trigger: DisplayEvent(type: .manual, details: L10n.t("event.bootstrapCompleted")),
             allowAutomaticRestore: false,
             shouldRecordDecision: false
+        )
+        await logStartup(
+            "bootstrap completed profiles=\(profiles.count) diagnostics=\(diagnostics.count) decisionContext=\(String(describing: latestDecision?.context)) menuState=\(String(describing: menuPrimaryState))"
         )
 
         if automaticUpdateChecksEnabled {
@@ -934,18 +949,26 @@ final class AppModel: ObservableObject {
     }
 
     private func loadProfiles() async {
+        await logStartup(
+            "loadProfiles begin path=\(profileStorePath) exists=\(FileManager.default.fileExists(atPath: profileStorePath))"
+        )
         do {
             let storedProfiles = try await store.loadProfiles()
             let normalizedProfiles = normalizeProfiles(storedProfiles)
             profiles = normalizedProfiles
             autoRestoreEnabled = profiles.isEmpty ? true : profiles.allSatisfy(\.settings.autoRestore)
+            await logStartup(
+                "loadProfiles success stored=\(storedProfiles.count) normalized=\(normalizedProfiles.count) names=\(normalizedProfiles.map { $0.name }.joined(separator: ","))"
+            )
 
             if normalizedProfiles != storedProfiles {
                 try await store.saveProfiles(normalizedProfiles)
+                await logStartup("loadProfiles wrote normalized profiles back to disk")
             }
         } catch {
             statusLine = L10n.t("status.failedLoadProfiles")
             decisionLine = error.localizedDescription
+            await logStartup("loadProfiles failed error=\(error.localizedDescription)")
         }
     }
 
@@ -993,11 +1016,14 @@ final class AppModel: ObservableObject {
     }
 
     private func persistProfiles() async {
+        await logStartup("persistProfiles begin count=\(profiles.count) path=\(profileStorePath)")
         do {
             try await store.saveProfiles(profiles)
+            await logStartup("persistProfiles success count=\(profiles.count)")
         } catch {
             statusLine = L10n.t("status.failedSaveProfiles")
             decisionLine = error.localizedDescription
+            await logStartup("persistProfiles failed error=\(error.localizedDescription)")
         }
     }
 
@@ -1234,5 +1260,29 @@ final class AppModel: ObservableObject {
             statusLine = L10n.t("status.failedSaveDiagnostics")
             decisionLine = error.localizedDescription
         }
+    }
+}
+
+private extension AppModel {
+    var profileStorePath: String {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+            .appendingPathComponent("LayoutRecall", isDirectory: true)
+            .appendingPathComponent("profiles.json", isDirectory: false)
+            .path
+    }
+
+    var settingsStorePath: String {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+            .appendingPathComponent("LayoutRecall", isDirectory: true)
+            .appendingPathComponent("settings.json", isDirectory: false)
+            .path
+    }
+
+    func logStartup(_ message: String) async {
+        await StartupTraceLogger.shared.append(message)
     }
 }

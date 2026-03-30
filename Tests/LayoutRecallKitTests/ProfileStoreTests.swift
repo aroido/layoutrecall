@@ -45,7 +45,88 @@ func profileStoreReloadsProfilesSavedWithIso8601Dates() async throws {
 
 @Test
 func displayProfilesDecodeFromPersistedAppSchema() throws {
-    let data = Data(
+    let data = persistedAppSchemaFixtureData()
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let profiles = try decoder.decode([DisplayProfile].self, from: data)
+
+    #expect(profiles.count == 1)
+    #expect(profiles.first?.name == "작업공간 1")
+    #expect(profiles.first?.displaySet.displays.count == 2)
+    #expect(profiles.first?.displaySet.displays.first?.scale == 2)
+}
+
+@Test
+func profileStoreLoadsPersistedAppSchemaFixture() async throws {
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let fileURL = tempDirectory.appendingPathComponent("profiles.json", isDirectory: false)
+    let store = ProfileStore(fileURL: fileURL)
+
+    defer {
+        try? FileManager.default.removeItem(at: tempDirectory)
+    }
+
+    try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+    try persistedAppSchemaFixtureData().write(to: fileURL, options: .atomic)
+
+    let profiles = try await store.loadProfiles()
+
+    #expect(profiles.count == 1)
+    #expect(profiles.first?.name == "작업공간 1")
+    #expect(profiles.first?.displaySet.fingerprint == "1962f01e-5158-401f-8ba4-9480cd7dc215|4e747025-110e-4dcd-bd2f-cd0f28d043d5")
+}
+
+@Test
+func storesLoadDataFromFileURLsWithSpacesInPath() async throws {
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let storageDirectory = tempDirectory.appendingPathComponent("Application Support", isDirectory: true)
+
+    defer {
+        try? FileManager.default.removeItem(at: tempDirectory)
+    }
+
+    let profileStore = ProfileStore(fileURL: storageDirectory.appendingPathComponent("profiles.json", isDirectory: false))
+    let settingsStore = AppSettingsStore(fileURL: storageDirectory.appendingPathComponent("settings.json", isDirectory: false))
+    let diagnosticsStore = DiagnosticsLogger(fileURL: storageDirectory.appendingPathComponent("diagnostics.json", isDirectory: false))
+
+    try await profileStore.saveProfiles([.officeDock])
+    try await settingsStore.saveSettings(
+        AppSettings(
+            launchAtLogin: true,
+            shortcuts: ShortcutSettings(
+                fixNow: ShortcutBinding(keyCode: 15, modifiersRawValue: 1 << 20, keyDisplay: "R")
+            ),
+            automaticallyCheckForUpdates: false,
+            skippedReleaseVersion: "9.9.9",
+            preferredLanguageCode: "ko"
+        )
+    )
+    try await diagnosticsStore.append(
+        DiagnosticsEntry(
+            eventType: "manual",
+            profileName: "Office Dock",
+            score: 90,
+            actionTaken: "save-profile",
+            executionResult: "skipped",
+            verificationResult: "skipped",
+            details: "saved"
+        )
+    )
+
+    let profiles = try await profileStore.loadProfiles()
+    let settings = try await settingsStore.loadSettings()
+    let diagnostics = try await diagnosticsStore.recentEntries()
+
+    #expect(profiles.count == 1)
+    #expect(settings.launchAtLogin == true)
+    #expect(settings.preferredLanguageCode == "ko")
+    #expect(diagnostics.count == 1)
+    #expect(diagnostics.first?.profileName == "Office Dock")
+}
+
+private func persistedAppSchemaFixtureData() -> Data {
+    Data(
         """
         [
           {
@@ -126,13 +207,4 @@ func displayProfilesDecodeFromPersistedAppSchema() throws {
         ]
         """.utf8
     )
-
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    let profiles = try decoder.decode([DisplayProfile].self, from: data)
-
-    #expect(profiles.count == 1)
-    #expect(profiles.first?.name == "작업공간 1")
-    #expect(profiles.first?.displaySet.displays.count == 2)
-    #expect(profiles.first?.displaySet.displays.first?.scale == 2)
 }
