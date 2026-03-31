@@ -34,6 +34,64 @@ func swapLeftRightPlanKeepsMainDisplayInPlaceAndMovesSecondaryAcross() throws {
 }
 
 @Test
+func swapLeftRightPlanMovesSecondaryAcrossVerticallyWhenDisplaysAreStacked() throws {
+    let builder = DisplayplacerCommandBuilder()
+    let mainDisplay = DisplaySnapshot.sampleLeft
+    var upperDisplay = DisplaySnapshot.sampleRight
+    upperDisplay.bounds = DisplayRect(x: 0, y: 1440, width: 2560, height: 1440)
+
+    let plan = try builder.swapLeftRightPlan(for: [mainDisplay, upperDisplay])
+
+    #expect(plan.command.contains("id:persistent-left enabled:true origin:(0,0)"))
+    #expect(plan.command.contains("id:persistent-right enabled:true origin:(0,-1440)"))
+    #expect(plan.expectedOrigins.count == 2)
+    #expect(plan.expectedOrigins[0].key == DisplaySnapshot.sampleLeft.preferredMatchKey)
+    #expect(plan.expectedOrigins[0].y == 0)
+    #expect(plan.expectedOrigins[1].key == DisplaySnapshot.sampleRight.preferredMatchKey)
+    #expect(plan.expectedOrigins[1].x == 0)
+    #expect(plan.expectedOrigins[1].y == -1440)
+    #expect(plan.primaryDisplayKey == DisplaySnapshot.sampleLeft.preferredMatchKey)
+}
+
+@Test
+func swapLeftRightPlanSwapsTwoNonMainDisplaysWhileKeepingMainFixed() throws {
+    let builder = DisplayplacerCommandBuilder()
+    let mainDisplay = DisplaySnapshot.sampleLeft
+    let leftExternal = DisplaySnapshot(
+        id: "external-left",
+        persistentID: "persistent-external-left",
+        isMain: false,
+        resolution: DisplayResolution(width: 2560, height: 1440),
+        refreshRate: 60,
+        scale: 1.0,
+        bounds: DisplayRect(x: -2560, y: 0, width: 2560, height: 1440)
+    )
+    let rightExternal = DisplaySnapshot(
+        id: "external-right",
+        persistentID: "persistent-external-right",
+        isMain: false,
+        resolution: DisplayResolution(width: 2560, height: 1440),
+        refreshRate: 60,
+        scale: 1.0,
+        bounds: DisplayRect(x: 2560, y: 0, width: 2560, height: 1440)
+    )
+
+    let plan = try builder.swapLeftRightPlan(for: [mainDisplay, leftExternal, rightExternal])
+
+    #expect(plan.command.contains("id:persistent-left enabled:true origin:(0,0)"))
+    #expect(plan.command.contains("id:persistent-external-left enabled:true origin:(2560,0)"))
+    #expect(plan.command.contains("id:persistent-external-right enabled:true origin:(-2560,0)"))
+    #expect(plan.expectedOrigins.count == 3)
+    #expect(plan.expectedOrigins[0].key == DisplaySnapshot.sampleLeft.preferredMatchKey)
+    #expect(plan.expectedOrigins[0].x == 0)
+    #expect(plan.expectedOrigins[1].key == "persistent-external-left")
+    #expect(plan.expectedOrigins[1].x == 2560)
+    #expect(plan.expectedOrigins[2].key == "persistent-external-right")
+    #expect(plan.expectedOrigins[2].x == -2560)
+    #expect(plan.primaryDisplayKey == DisplaySnapshot.sampleLeft.preferredMatchKey)
+}
+
+@Test
 func swapLeftRightRejectsNonDualDisplayLayouts() {
     let builder = DisplayplacerCommandBuilder()
 

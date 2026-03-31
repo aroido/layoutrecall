@@ -337,23 +337,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func setProfileAutoRestore(_ profileID: UUID, to enabled: Bool) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
-            return
-        }
-
-        profiles[index].settings.autoRestore = enabled
-
-        launchTrackedTask {
-            await self.persistProfiles()
-            await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-        }
-    }
-
     func deleteProfile(_ profileID: UUID) {
         guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
             return
@@ -434,24 +417,27 @@ final class AppModel: ObservableObject {
 
         do {
             let currentDisplays = try await snapshotReader.currentDisplays()
+            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
             if manualLayoutOverrideActive(for: currentDisplays) {
                 currentDisplaySnapshots = currentDisplays
                 detectedDisplayCount = currentDisplays.count
                 latestDecision = RestoreDecision(
                     action: .idle,
+                    profileName: match?.profile.name,
+                    score: match?.score,
                     reason: L10n.t("restoreDecision.manualLayoutOverride"),
                     context: .manualLayoutOverride
                 )
-                latestMatchedProfileName = nil
-                latestMatchScore = nil
+                latestMatchedProfileName = match?.profile.name
+                latestMatchScore = match?.score
                 decisionLine = L10n.t("restoreDecision.manualLayoutOverride")
                 statusLine = L10n.connectedDisplayCount(currentDisplays.count)
 
                 if shouldRecordDecision {
                     await recordDiagnostic(
                         eventType: trigger.type.rawValue,
-                        profileName: nil,
-                        score: nil,
+                        profileName: match?.profile.name,
+                        score: match?.score,
                         actionTaken: "manual-layout-override",
                         executionResult: RestoreVerificationOutcome.skipped.rawValue,
                         verificationResult: RestoreVerificationOutcome.skipped.rawValue,
@@ -460,8 +446,6 @@ final class AppModel: ObservableObject {
                 }
                 return
             }
-
-            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
             let decision = coordinator.decide(
                 for: currentDisplays,
                 profiles: profiles,
@@ -922,16 +906,7 @@ final class AppModel: ObservableObject {
 
             let currentDisplays = try await snapshotReader.currentDisplays()
             await logStartup("swapLeftRight currentDisplays=\(describeDisplays(currentDisplays))")
-
-            guard !manualLayoutOverrideActive(for: currentDisplays) else {
-                statusLine = L10n.t("status.swapAlreadyApplied")
-                decisionLine = L10n.t("details.swapAlreadyApplied")
-                await logStartup(
-                    "swapLeftRight ignored because manualLayoutOverride active currentDisplays=\(describeDisplays(currentDisplays))"
-                )
-                return
-            }
-
+            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
             let layoutPlan = try commandBuilder.swapLeftRightPlan(for: currentDisplays)
             await logStartup(
                 "swapLeftRight plan command=\(layoutPlan.command) expectedOrigins=\(describeOrigins(layoutPlan.expectedOrigins))"
@@ -939,18 +914,20 @@ final class AppModel: ObservableObject {
             detectedDisplayCount = currentDisplays.count
             latestDecision = RestoreDecision(
                 action: .offerManualFix,
+                profileName: match?.profile.name,
+                score: match?.score,
                 reason: L10n.t("details.userRequestedSwap")
             )
-            latestMatchedProfileName = nil
-            latestMatchScore = nil
+            latestMatchedProfileName = match?.profile.name
+            latestMatchScore = match?.score
 
             await executeRestore(
                 command: layoutPlan.command,
                 expectedOrigins: layoutPlan.expectedOrigins,
                 trigger: DisplayEventType.manual.rawValue,
                 actionTaken: "swap-left-right",
-                profileName: nil,
-                score: nil,
+                profileName: match?.profile.name,
+                score: match?.score,
                 details: L10n.t("details.userRequestedSwap")
             )
         } catch {
@@ -1100,6 +1077,7 @@ final class AppModel: ObservableObject {
             }
 
             var normalized = profile
+            normalized.settings.autoRestore = true
             normalized.layout = LayoutDefinition(
                 primaryDisplayKey: updatedPlan.primaryDisplayKey,
                 expectedOrigins: updatedPlan.expectedOrigins,

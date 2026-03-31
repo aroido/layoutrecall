@@ -2,13 +2,13 @@
 
 LayoutRecall is a macOS menu bar utility that saves known display layouts and restores them when macOS scrambles identical or frequently reconnected monitors.
 
-It is aimed at the common desktop problem where the same two external displays come back in the wrong order, wrong origin, or wrong main-display state after sleep, wake, dock reconnect, or cable churn.
+It is aimed at the common desktop problem where external displays come back in the wrong order, wrong origin, or wrong main-display state after sleep, wake, dock reconnect, or cable churn.
 
 ## Features
 
 - Saves one or more display layout profiles from the current live monitor arrangement
 - Watches for display reconfiguration events and attempts automatic restore when confidence is high
-- Falls back to one-click manual recovery with `Fix Now` and `Swap Left / Right`
+- Falls back to one-click manual recovery with `Fix Now` and `Change Positions`
 - Shows profile, confidence, and diagnostic context directly from the menu bar
 - Supports launch at login, keyboard shortcuts, and in-app update checks
 - Lets you choose app language explicitly with `System`, `English`, or `Korean`
@@ -43,7 +43,11 @@ LayoutRecall can build and run tests without `displayplacer`, but restoring a sa
 4. If the current display snapshot strongly matches a saved profile, the app restores it automatically.
 5. If confidence is lower, the menu bar app keeps recovery manual and shows the relevant action and diagnostics.
 
-The current implementation is deliberately biased toward stable, practical recovery for dual external monitor setups, especially identical left/right displays.
+The current implementation is deliberately biased toward stable, practical recovery for common desk setups:
+
+- automatic restore focuses on exact or high-confidence matches against saved profiles
+- `Change Positions` supports either two displays, or a main display plus two secondary displays
+- four-plus-display layouts stay manual on purpose until the app can expose a predictable repositioning model
 
 ## Development
 

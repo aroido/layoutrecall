@@ -46,7 +46,7 @@ func liveHardwareSwapLeftRightRoundTripsBackToOriginalLayout() async throws {
     #expect(dependency.isAvailable)
 
     let originalDisplays = try await reader.currentDisplays()
-    #expect(originalDisplays.count == 2)
+    #expect(originalDisplays.count == 2 || originalDisplays.count == 3)
 
     let originalPlan = try builder.restorePlan(for: originalDisplays)
     let swappedPlan = try builder.swapLeftRightPlan(for: originalDisplays)

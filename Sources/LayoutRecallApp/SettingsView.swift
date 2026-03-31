@@ -29,57 +29,15 @@ private struct FormHint: View {
     }
 }
 
-private struct SidebarPaneButton: View {
-    let pane: SettingsPane
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: pane.systemImage)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
-                    .frame(width: 16)
-
-                Text(pane.title)
-                    .font(.subheadline.weight(selected ? .semibold : .medium))
-                    .foregroundStyle(selected ? Color.primary : Color.secondary)
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(
-                        selected
-                            ? Color.accentColor.opacity(0.18)
-                            : Color(nsColor: .controlBackgroundColor).opacity(0.001)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(
-                        selected
-                            ? Color.accentColor.opacity(0.18)
-                            : Color.clear,
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("settings.sidebar.\(pane.rawValue)")
-    }
-}
-
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
     @State private var dangerousRestoreAction: DangerousRestoreAction?
     @State private var profilePendingDeletion: DisplayProfile?
     @State private var expandedProfileIDs: Set<UUID> = []
+    @State private var editingProfileID: UUID?
+    @State private var profileNameDraft = ""
+    @FocusState private var focusedProfileID: UUID?
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
         self.model = model
@@ -155,19 +113,26 @@ struct SettingsView: View {
         }
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(SettingsPane.allCases) { pane in
-                SidebarPaneButton(
-                    pane: pane,
-                    selected: selectedPane == pane,
-                    action: { selectedPane = pane }
-                )
+    private var sidebarSelection: Binding<SettingsPane?> {
+        Binding(
+            get: { selectedPane },
+            set: { newValue in
+                guard let newValue else { return }
+                selectedPane = newValue
             }
+        )
+    }
 
-            Spacer(minLength: 0)
+    private var sidebar: some View {
+        List(selection: sidebarSelection) {
+            ForEach(SettingsPane.allCases) { pane in
+                Label(pane.title, systemImage: pane.systemImage)
+                    .tag(Optional(pane))
+                    .accessibilityIdentifier("settings.sidebar.\(pane.rawValue)")
+            }
         }
-        .padding(12)
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .frame(width: 220)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .underPageBackgroundColor))
@@ -223,7 +188,7 @@ struct SettingsView: View {
         GlassCard(padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeading(
-                    title: L10n.t("menu.automaticRestore"),
+                    title: model.automaticRestoreControlTitle,
                     systemImage: "sparkles"
                 )
 
@@ -232,7 +197,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Toggle(L10n.t("toggle.enableAutomaticRestore"), isOn: autoRestoreBinding)
+                Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
                     .toggleStyle(.switch)
                     .accessibilityIdentifier("settings.restore.autoRestore")
             }
@@ -274,7 +239,7 @@ struct SettingsView: View {
                     }
                 }
 
-                if model.canSwapDisplays {
+                if model.showsSwapDisplaysControl {
                     Button {
                         dangerousRestoreAction = .swapLeftRight
                     } label: {
@@ -282,6 +247,8 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .disabled(!model.canSwapDisplays)
+                    .help(model.swapAvailabilityLine)
                     .accessibilityIdentifier("settings.restore.swap")
                 }
             }
@@ -513,14 +480,6 @@ struct SettingsView: View {
                     )
 
                     StatusPill(
-                        text: profile.settings.autoRestore
-                            ? L10n.t("status.badge.autoRestoreOn")
-                            : L10n.t("status.badge.autoRestoreOff"),
-                        systemImage: "sparkles",
-                        emphasis: profile.settings.autoRestore
-                    )
-
-                    StatusPill(
                         text: L10n.t("confidence.threshold.short", profile.settings.confidenceThreshold),
                         systemImage: "dial.medium"
                     )
@@ -619,15 +578,62 @@ struct SettingsView: View {
     }
 
     private func profileNameField(for profile: DisplayProfile) -> some View {
-        TextField(
-            L10n.t("field.profileName"),
-            text: Binding(
-                get: { profile.name },
-                set: { model.renameProfile(profile.id, to: $0) }
-            )
-        )
-        .textFieldStyle(.roundedBorder)
-        .frame(maxWidth: .infinity)
+        HStack(spacing: 10) {
+            if editingProfileID == profile.id {
+                TextField(L10n.t("field.profileName"), text: $profileNameDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedProfileID, equals: profile.id)
+                    .onSubmit { commitProfileRename(for: profile) }
+
+                Button(L10n.t("profiles.rename.confirm")) {
+                    commitProfileRename(for: profile)
+                }
+                .buttonStyle(InlineActionButtonStyle(accent: true))
+
+                Button(L10n.t("action.cancel")) {
+                    cancelProfileRename()
+                }
+                .buttonStyle(InlineActionButtonStyle())
+            } else {
+                Text(profile.name)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(L10n.t("profiles.rename.button")) {
+                    beginProfileRename(for: profile)
+                }
+                .buttonStyle(InlineActionButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func beginProfileRename(for profile: DisplayProfile) {
+        editingProfileID = profile.id
+        profileNameDraft = profile.name
+
+        DispatchQueue.main.async {
+            focusedProfileID = profile.id
+        }
+    }
+
+    private func cancelProfileRename() {
+        editingProfileID = nil
+        profileNameDraft = ""
+        focusedProfileID = nil
+    }
+
+    private func commitProfileRename(for profile: DisplayProfile) {
+        let trimmedName = profileNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            cancelProfileRename()
+            return
+        }
+
+        model.renameProfile(profile.id, to: trimmedName)
+        cancelProfileRename()
     }
 
     private func profileControls(for profile: DisplayProfile) -> some View {
@@ -642,15 +648,6 @@ struct SettingsView: View {
             }
             .buttonStyle(ActionButtonStyle(role: .secondary))
             .disabled(profile.displaySet.displays.isEmpty)
-
-            Toggle(
-                L10n.t("profiles.autoRestore.toggle"),
-                isOn: Binding(
-                    get: { profile.settings.autoRestore },
-                    set: { model.setProfileAutoRestore(profile.id, to: $0) }
-                )
-            )
-            .toggleStyle(.switch)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(L10n.t("profiles.confidence.label"))
@@ -1059,7 +1056,11 @@ struct SettingsView: View {
             return model.installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow, .enableAutoRestore, .saveNewProfile:
+        case .fixNow:
+            return action.title
+        case .enableAutoRestore:
+            return model.menuTitle(for: action)
+        case .saveNewProfile:
             return action.title
         }
     }

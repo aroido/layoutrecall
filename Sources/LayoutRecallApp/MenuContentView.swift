@@ -6,9 +6,7 @@ struct MenuContentView: View {
     @ObservedObject var model: AppModel
     let openSettings: (SettingsPane) -> Void
     @State private var hasAnimatedIn = false
-    @State private var quickSwitchExpanded = false
     @State private var dangerousRestoreAction: DangerousRestoreAction?
-    private let quickSwitchVisibleLimit = 4
 
     private var autoRestoreBinding: Binding<Bool> {
         Binding(
@@ -37,16 +35,6 @@ struct MenuContentView: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
-                if model.profiles.count > 1 {
-                    quickSwitchSection
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-
-                if let action = dangerousRestoreAction {
-                    inlineDangerousActionConfirmation(for: action)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-
                 Divider()
                     .padding(.top, 2)
 
@@ -62,6 +50,16 @@ struct MenuContentView: View {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
                 hasAnimatedIn = true
             }
+        }
+        .alert(item: $dangerousRestoreAction) { action in
+            Alert(
+                title: Text(action.title),
+                message: Text(action.message),
+                primaryButton: .default(Text(action.confirmationTitle)) {
+                    model.perform(action)
+                },
+                secondaryButton: .cancel()
+            )
         }
         .animation(.spring(response: 0.30, dampingFraction: 0.84), value: model.menuTransitionKey)
     }
@@ -89,7 +87,7 @@ struct MenuContentView: View {
                     statusBanner
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(model.menuStatusTitle)
+                Text(model.menuStatusTitle)
                             .font(.title3.weight(.semibold))
                             .fixedSize(horizontal: false, vertical: true)
 
@@ -126,7 +124,7 @@ struct MenuContentView: View {
     private var autoRestoreControl: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.t("menu.automaticRestore"))
+                Text(model.automaticRestoreControlTitle)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
@@ -137,7 +135,7 @@ struct MenuContentView: View {
 
             Spacer(minLength: 0)
 
-            Toggle("", isOn: autoRestoreBinding)
+            Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .disabled(model.profiles.isEmpty)
@@ -225,89 +223,68 @@ struct MenuContentView: View {
 
     private var quickControlSection: some View {
         GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 autoRestoreControl
 
-                if shouldShowSecondaryActions {
+                if shouldShowSecondaryActionsRow {
                     Divider()
                         .padding(.vertical, 2)
 
-                    SectionHeading(
-                        title: L10n.t("menu.actions"),
-                        systemImage: "bolt.circle"
-                    )
-
-                    LazyVGrid(
-                        columns: mainActionColumns,
-                        alignment: .leading,
-                        spacing: 10
-                    ) {
-                        ForEach(model.menuQuickActions) { action in
-                            secondaryActionButton(for: action)
-                        }
-
-                        if shouldShowInlineFixNowButton {
-                            fixNowButton
-                        }
-
-                        if model.referenceProfile != nil {
-                            identifyDisplaysButton
-                        }
-
-                        if model.canSwapDisplays {
-                            swapDisplaysButton
-                        }
-                    }
+                    compactActionRow
                 }
             }
         }
-    }
-
-    private var mainActionColumns: [GridItem] {
-        let secondaryActionCount =
-            model.menuQuickActions.count
-            + (shouldShowInlineFixNowButton ? 1 : 0)
-            + (model.referenceProfile == nil ? 0 : 1)
-            + (model.canSwapDisplays ? 1 : 0)
-        let columnCount = max(1, min(2, secondaryActionCount))
-        return Array(repeating: GridItem(.flexible(minimum: 120), spacing: 10), count: columnCount)
     }
 
     private var shouldShowQuickControlSection: Bool {
         !model.profiles.isEmpty
     }
 
-    private var shouldShowSecondaryActions: Bool {
-        !model.menuQuickActions.isEmpty
-            || shouldShowInlineFixNowButton
+    private var shouldShowSecondaryActionsRow: Bool {
+        shouldShowInlineFixNowButton
             || model.referenceProfile != nil
-            || model.canSwapDisplays
+            || shouldShowAdvancedActionsMenu
     }
 
     private var shouldShowInlineFixNowButton: Bool {
         model.menuPrimaryAction != .fixNow && model.canRestoreSavedProfiles
     }
 
-    @ViewBuilder
-    private func secondaryActionButton(for action: SurfaceAction) -> some View {
-        Button(action: { model.perform(action) }) {
-            actionLabel(model.menuTitle(for: action), systemImage: action.systemImage)
-        }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(isDisabled(action))
-        .accessibilityIdentifier(secondaryActionIdentifier(for: action))
+    private var shouldShowAdvancedActionsMenu: Bool {
+        !model.menuQuickActions.isEmpty
+            || model.showsSwapDisplaysControl
+            || model.profiles.count > 1
     }
 
-    private func secondaryActionIdentifier(for action: SurfaceAction) -> String {
-        switch action {
-        case .installDependency:
-            return "menu.action.installDependency"
-        case .fixNow:
-            return "menu.action.fixNow"
-        case .enableAutoRestore:
-            return "menu.action.enableAutoRestore"
-        case .saveNewProfile:
-            return "menu.action.save"
+    private var compactActionRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                if shouldShowInlineFixNowButton {
+                    fixNowButton
+                }
+
+                if model.referenceProfile != nil {
+                    identifyDisplaysButton
+                }
+
+                if shouldShowAdvancedActionsMenu {
+                    advancedActionsMenu
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                if shouldShowInlineFixNowButton {
+                    fixNowButton
+                }
+
+                if model.referenceProfile != nil {
+                    identifyDisplaysButton
+                }
+
+                if shouldShowAdvancedActionsMenu {
+                    advancedActionsMenu
+                }
+            }
         }
     }
 
@@ -335,15 +312,61 @@ struct MenuContentView: View {
         .accessibilityIdentifier("menu.action.identify")
     }
 
-    private var swapDisplaysButton: some View {
-        Button {
-            dangerousRestoreAction = .swapLeftRight
-        } label: {
-            actionLabel(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
+    private var advancedActionsMenu: some View {
+        Menu {
+            ForEach(model.menuQuickActions) { action in
+                Button {
+                    model.perform(action)
+                } label: {
+                    Label(model.menuTitle(for: action), systemImage: action.systemImage)
+                }
+                .disabled(isDisabled(action))
+            }
+
+            if model.showsSwapDisplaysControl {
+                if !model.menuQuickActions.isEmpty {
+                    Divider()
+                }
+
+                Button {
+                    dangerousRestoreAction = .swapLeftRight
+                } label: {
+                    Label(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
+                }
+                .disabled(!model.canSwapDisplays)
+            }
+
+            if model.profiles.count > 1 {
+                Divider()
+
+                Menu(L10n.t("menu.quickSwitch")) {
+                    ForEach(model.profiles) { profile in
+                        Button {
+                            model.restoreProfile(profile.id)
+                        } label: {
+                            if model.referenceProfile?.id == profile.id {
+                                Label(profile.name, systemImage: "checkmark.circle.fill")
+                            } else {
+                                Text(profile.name)
+                            }
+                        }
+                        .disabled(!model.canRestoreSavedProfiles)
+                    }
+
+                    Divider()
+
+                    Button(L10n.t("menu.quickSwitch.manageProfiles")) {
+                        openSettings(.profiles)
+                    }
+                }
+            }
         }
+        label: {
+            actionLabel(L10n.t("menu.moreActions"), systemImage: "ellipsis.circle")
+        }
+        .menuStyle(.borderlessButton)
         .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!model.canSwapDisplays)
-        .accessibilityIdentifier("menu.action.swap")
+        .accessibilityIdentifier("menu.action.more")
     }
 
     private func actionLabel(_ title: String, systemImage: String) -> some View {
@@ -351,111 +374,6 @@ struct MenuContentView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.9)
             .frame(maxWidth: .infinity)
-    }
-
-    private var quickSwitchSection: some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        SectionHeading(
-                            title: L10n.t("menu.quickSwitch"),
-                            systemImage: "rectangle.2.swap"
-                        )
-
-                        Text(L10n.t("menu.meta.profileCount", model.profiles.count))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Button(L10n.t("menu.quickSwitch.manageProfiles")) {
-                        openSettings(.profiles)
-                    }
-                    .buttonStyle(InlineActionButtonStyle(accent: true))
-                }
-
-                DisclosureGroup(isExpanded: $quickSwitchExpanded) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(visibleQuickSwitchEntries, id: \.element.id) { index, profile in
-                            Button {
-                                model.restoreProfile(profile.id)
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Text("\(index + 1)")
-                                        .font(.caption2.weight(.bold))
-                                        .monospacedDigit()
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 18)
-
-                                    Text(L10n.t("menu.profileShortcut", index + 1, profile.name))
-                                        .lineLimit(1)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    if model.referenceProfile?.id == profile.id {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                            }
-                            .buttonStyle(ActionButtonStyle(role: .secondary))
-                            .disabled(!model.canRestoreSavedProfiles)
-                            .accessibilityIdentifier("menu.profile.\(profile.id.uuidString)")
-                        }
-
-                        if hiddenQuickSwitchCount > 0 {
-                            Label(
-                                L10n.t("menu.quickSwitch.moreProfiles", hiddenQuickSwitchCount),
-                                systemImage: "ellipsis.circle"
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.top, 8)
-                } label: {
-                    Text(L10n.t("section.profiles"))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private var visibleQuickSwitchEntries: [(offset: Int, element: DisplayProfile)] {
-        Array(model.profiles.enumerated().prefix(quickSwitchVisibleLimit))
-    }
-
-    private var hiddenQuickSwitchCount: Int {
-        max(0, model.profiles.count - visibleQuickSwitchEntries.count)
-    }
-
-    private func inlineDangerousActionConfirmation(for action: DangerousRestoreAction) -> some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(action.title)
-                    .font(.headline.weight(.semibold))
-
-                Text(action.message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 10) {
-                    Button(L10n.t("action.cancel")) {
-                        dangerousRestoreAction = nil
-                    }
-                    .buttonStyle(ActionButtonStyle(role: .secondary))
-
-                    Button(action.confirmationTitle) {
-                        model.perform(action)
-                        dangerousRestoreAction = nil
-                    }
-                    .buttonStyle(ActionButtonStyle(role: .primary))
-                }
-            }
-        }
     }
 
     private var footer: some View {

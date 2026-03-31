@@ -104,7 +104,7 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
         case .fixNow:
             return L10n.t("action.fixNow")
         case .enableAutoRestore:
-            return L10n.t("action.enableAutoRestore")
+            return L10n.t("action.enableAppAutoRestore")
         case .saveNewProfile:
             return L10n.t("action.save")
         }
@@ -207,13 +207,21 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
 }
 
 extension AppModel {
+    var automaticRestoreControlTitle: String {
+        L10n.t("menu.appAutomaticRestore")
+    }
+
+    var automaticRestoreToggleTitle: String {
+        L10n.t("toggle.enableAppAutomaticRestore")
+    }
+
     var canRestoreSavedProfiles: Bool {
         dependencyAvailable && !installationInProgress && !profiles.isEmpty
     }
 
     var autoRestoreDisabledContext: RestoreDecisionContext? {
         switch latestDecision?.context {
-        case .automaticRestoreDisabled, .profileAutoRestoreDisabled:
+        case .automaticRestoreDisabled:
             return latestDecision?.context
         default:
             return nil
@@ -221,47 +229,7 @@ extension AppModel {
     }
 
     var canEnableAutomaticRestoreAction: Bool {
-        switch autoRestoreDisabledContext {
-        case .profileAutoRestoreDisabled:
-            return referenceProfile != nil
-        case .automaticRestoreDisabled:
-            return !autoRestoreEnabled
-        default:
-            return !autoRestoreEnabled && !profiles.isEmpty
-        }
-    }
-
-    private var autoRestoreStatusTitleKey: String {
-        switch autoRestoreDisabledContext {
-        case .automaticRestoreDisabled:
-            return "menu.state.globalAutoRestoreDisabled"
-        case .profileAutoRestoreDisabled:
-            return "menu.state.profileAutoRestoreDisabled"
-        default:
-            return "menu.state.autoRestoreDisabled"
-        }
-    }
-
-    private var autoRestoreStatusSubtitleKey: String {
-        switch autoRestoreDisabledContext {
-        case .automaticRestoreDisabled:
-            return "menu.subtitle.globalAutoRestoreDisabled"
-        case .profileAutoRestoreDisabled:
-            return "menu.subtitle.profileAutoRestoreDisabled"
-        default:
-            return "menu.subtitle.autoRestoreDisabled"
-        }
-    }
-
-    private var autoRestoreHintKey: String {
-        switch autoRestoreDisabledContext {
-        case .automaticRestoreDisabled:
-            return "settings.restore.globalAutoRestoreDisabledHint"
-        case .profileAutoRestoreDisabled:
-            return "settings.restore.profileAutoRestoreDisabledHint"
-        default:
-            return "settings.restore.autoRestoreDisabledHint"
-        }
+        !autoRestoreEnabled && !profiles.isEmpty
     }
 
     var menuStatePresentation: MenuStatePresentation {
@@ -399,7 +367,7 @@ extension AppModel {
     }
 
     var restoreModeLine: String {
-        (autoRestoreDisabledContext == .profileAutoRestoreDisabled ? false : autoRestoreEnabled)
+        autoRestoreEnabled
             ? L10n.t("restore.automatic")
             : L10n.t("restore.manualOnly")
     }
@@ -485,13 +453,7 @@ extension AppModel {
         case .fixNow:
             fixNow()
         case .enableAutoRestore:
-            if autoRestoreDisabledContext == .profileAutoRestoreDisabled,
-               let profileID = referenceProfile?.id
-            {
-                setProfileAutoRestore(profileID, to: true)
-            } else {
-                setAutoRestore(true)
-            }
+            setAutoRestore(true)
         case .saveNewProfile:
             saveCurrentLayout()
         }
@@ -524,7 +486,7 @@ extension AppModel {
             return .noMatch
         case .belowThreshold:
             return .lowConfidence
-        case .automaticRestoreDisabled, .profileAutoRestoreDisabled:
+        case .automaticRestoreDisabled:
             return .autoRestoreDisabled
         case .manualLayoutOverride:
             return .manualLayoutOverride
@@ -620,7 +582,7 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("settings.restore.lowConfidenceHint")
         case .autoRestoreDisabled:
-            return L10n.t(autoRestoreHintKey)
+            return L10n.t("settings.restore.globalAutoRestoreDisabledHint")
         case .manualLayoutOverride:
             return L10n.t("settings.restore.manualLayoutOverrideHint")
         case .manualRecovery:
@@ -644,8 +606,14 @@ extension AppModel {
         dependencyAvailable
             && !installationInProgress
             && !restoreCommandInProgress
-            && detectedDisplayCount == 2
-            && menuPrimaryState != .manualLayoutOverride
+            && (detectedDisplayCount == 2 || detectedDisplayCount == 3)
+    }
+
+    var showsSwapDisplaysControl: Bool {
+        restoreCommandInProgress
+            || installationInProgress
+            || dependencyAvailable
+            || detectedDisplayCount > 0
     }
 
     var swapAvailabilityLine: String {
@@ -657,7 +625,7 @@ extension AppModel {
             return L10n.t("settings.swap.dependencyHint")
         }
 
-        if detectedDisplayCount != 2 {
+        if detectedDisplayCount != 2 && detectedDisplayCount != 3 {
             return L10n.t("runtime.swapRequiresTwo")
         }
 
@@ -677,7 +645,7 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("menu.state.lowConfidence")
         case .autoRestoreDisabled:
-            return L10n.t(autoRestoreStatusTitleKey)
+            return L10n.t("menu.state.globalAutoRestoreDisabled")
         case .manualLayoutOverride:
             return L10n.t("menu.state.manualLayoutOverride")
         case .manualRecovery:
@@ -704,7 +672,7 @@ extension AppModel {
         case .lowConfidence:
             return L10n.t("menu.subtitle.lowConfidence")
         case .autoRestoreDisabled:
-            return L10n.t(autoRestoreStatusSubtitleKey)
+            return L10n.t("menu.subtitle.globalAutoRestoreDisabled")
         case .manualLayoutOverride:
             return L10n.t("menu.subtitle.manualLayoutOverride")
         case .manualRecovery:
@@ -740,8 +708,10 @@ extension AppModel {
             return installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow, .enableAutoRestore:
+        case .fixNow:
             return action.title
+        case .enableAutoRestore:
+            return L10n.t("action.enableAppAutoRestore")
         case .saveNewProfile:
             switch menuPrimaryState {
             case .noProfiles:

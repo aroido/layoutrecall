@@ -31,43 +31,93 @@ public struct DisplayplacerCommandBuilder: DisplayCommandBuilding {
     public func swapLeftRightPlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
         let orderedDisplays = displays.sorted(by: DisplaySnapshot.positionComparator)
 
-        guard orderedDisplays.count == 2 else {
+        guard orderedDisplays.count == 2 || orderedDisplays.count == 3 else {
             throw LayoutRecallRuntimeError.swapRequiresExactlyTwoDisplays
         }
 
         let mainDisplay = orderedDisplays.first(where: { $0.isMain == true }) ?? orderedDisplays[0]
-        guard let secondaryDisplay = orderedDisplays.first(where: { $0.id != mainDisplay.id }) else {
+        let nonMainDisplays = orderedDisplays.filter { $0.id != mainDisplay.id }
+        guard nonMainDisplays.count == orderedDisplays.count - 1 else {
             throw LayoutRecallRuntimeError.swapRequiresExactlyTwoDisplays
         }
 
-        let secondaryTargetX: Int
-        if secondaryDisplay.bounds.x < mainDisplay.bounds.x {
-            secondaryTargetX = mainDisplay.bounds.x + mainDisplay.bounds.width
+        let segments: [String]
+        let expectedOrigins: [DisplayOrigin]
+
+        if nonMainDisplays.count == 1, let secondaryDisplay = nonMainDisplays.first {
+            let deltaX = secondaryDisplay.bounds.x - mainDisplay.bounds.x
+            let deltaY = secondaryDisplay.bounds.y - mainDisplay.bounds.y
+            let isHorizontalArrangement = abs(deltaX) >= abs(deltaY)
+
+            let secondaryTargetX: Int
+            let secondaryTargetY: Int
+            if isHorizontalArrangement {
+                if secondaryDisplay.bounds.x < mainDisplay.bounds.x {
+                    secondaryTargetX = mainDisplay.bounds.x + mainDisplay.bounds.width
+                } else {
+                    secondaryTargetX = mainDisplay.bounds.x - secondaryDisplay.bounds.width
+                }
+
+                secondaryTargetY = secondaryDisplay.bounds.y
+            } else {
+                secondaryTargetX = secondaryDisplay.bounds.x
+
+                if secondaryDisplay.bounds.y < mainDisplay.bounds.y {
+                    secondaryTargetY = mainDisplay.bounds.y + mainDisplay.bounds.height
+                } else {
+                    secondaryTargetY = mainDisplay.bounds.y - secondaryDisplay.bounds.height
+                }
+            }
+
+            expectedOrigins = [
+                DisplayOrigin(
+                    key: orderedDisplays.uniqueMatchKey(for: mainDisplay),
+                    x: mainDisplay.bounds.x,
+                    y: mainDisplay.bounds.y
+                ),
+                DisplayOrigin(
+                    key: orderedDisplays.uniqueMatchKey(for: secondaryDisplay),
+                    x: secondaryTargetX,
+                    y: secondaryTargetY
+                )
+            ]
+
+            segments = try [
+                makeCommandSegment(for: mainDisplay, originX: expectedOrigins[0].x, originY: expectedOrigins[0].y),
+                makeCommandSegment(for: secondaryDisplay, originX: expectedOrigins[1].x, originY: expectedOrigins[1].y)
+            ]
         } else {
-            secondaryTargetX = mainDisplay.bounds.x - secondaryDisplay.bounds.width
+            let firstExternal = nonMainDisplays[0]
+            let secondExternal = nonMainDisplays[1]
+
+            expectedOrigins = [
+                DisplayOrigin(
+                    key: orderedDisplays.uniqueMatchKey(for: mainDisplay),
+                    x: mainDisplay.bounds.x,
+                    y: mainDisplay.bounds.y
+                ),
+                DisplayOrigin(
+                    key: orderedDisplays.uniqueMatchKey(for: firstExternal),
+                    x: secondExternal.bounds.x,
+                    y: secondExternal.bounds.y
+                ),
+                DisplayOrigin(
+                    key: orderedDisplays.uniqueMatchKey(for: secondExternal),
+                    x: firstExternal.bounds.x,
+                    y: firstExternal.bounds.y
+                )
+            ]
+
+            segments = try [
+                makeCommandSegment(for: mainDisplay, originX: expectedOrigins[0].x, originY: expectedOrigins[0].y),
+                makeCommandSegment(for: firstExternal, originX: expectedOrigins[1].x, originY: expectedOrigins[1].y),
+                makeCommandSegment(for: secondExternal, originX: expectedOrigins[2].x, originY: expectedOrigins[2].y)
+            ]
         }
-
-        let swappedOrigins = [
-            DisplayOrigin(
-                key: orderedDisplays.uniqueMatchKey(for: mainDisplay),
-                x: mainDisplay.bounds.x,
-                y: mainDisplay.bounds.y
-            ),
-            DisplayOrigin(
-                key: orderedDisplays.uniqueMatchKey(for: secondaryDisplay),
-                x: secondaryTargetX,
-                y: secondaryDisplay.bounds.y
-            )
-        ]
-
-        let segments = try [
-            makeCommandSegment(for: mainDisplay, originX: swappedOrigins[0].x, originY: swappedOrigins[0].y),
-            makeCommandSegment(for: secondaryDisplay, originX: swappedOrigins[1].x, originY: swappedOrigins[1].y)
-        ]
 
         return GeneratedLayoutPlan(
             command: "displayplacer " + segments.joined(separator: " "),
-            expectedOrigins: swappedOrigins,
+            expectedOrigins: expectedOrigins,
             primaryDisplayKey: orderedDisplays.mainDisplayKey
                 ?? orderedDisplays.uniqueMatchKey(for: mainDisplay)
         )

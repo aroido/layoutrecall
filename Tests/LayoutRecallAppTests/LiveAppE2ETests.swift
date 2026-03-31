@@ -113,28 +113,6 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
             && persistedProfile.settings.confidenceThreshold == 77
     }
 
-    model.setProfileAutoRestore(profileID, to: false)
-    await waitForLiveCondition("disable profile auto restore") {
-        guard let persistedProfile = try? await profileStore.loadProfiles().first else {
-            return false
-        }
-
-        return model.profiles.first?.settings.autoRestore == false
-            && persistedProfile.settings.autoRestore == false
-            && model.autoRestoreEnabled == true
-    }
-
-    model.setProfileAutoRestore(profileID, to: true)
-    await waitForLiveCondition("enable profile auto restore") {
-        guard let persistedProfile = try? await profileStore.loadProfiles().first else {
-            return false
-        }
-
-        return model.profiles.first?.settings.autoRestore == true
-            && persistedProfile.settings.autoRestore == true
-            && model.autoRestoreEnabled == true
-    }
-
     model.restoreProfile(profileID)
     await waitForLiveCondition("restore named profile") {
         model.lastCommand.contains("displayplacer")

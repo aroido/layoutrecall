@@ -13,7 +13,6 @@ public enum RestoreDecisionContext: Equatable, Sendable {
     case noConfidentMatch
     case belowThreshold
     case automaticRestoreDisabled
-    case profileAutoRestoreDisabled
     case manualLayoutOverride
     case dependencyBlocked
     case ready
@@ -93,16 +92,6 @@ public struct RestoreCoordinator: Sendable {
                 score: match.score,
                 reason: L10n.t("restoreDecision.globalAutoRestoreDisabled"),
                 context: .automaticRestoreDisabled
-            )
-        }
-
-        guard match.profile.settings.autoRestore else {
-            return RestoreDecision(
-                action: .offerManualFix,
-                profileName: match.profile.name,
-                score: match.score,
-                reason: L10n.t("restoreDecision.profileAutoRestoreDisabled"),
-                context: .profileAutoRestoreDisabled
             )
         }
 
