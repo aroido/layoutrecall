@@ -222,6 +222,9 @@
 "settings.referenceMode" = "Automatic restore status";
 "settings.referenceConfidence" = "Current confidence";
 "settings.referenceDependency" = "Restore tool";
+"settings.preview.currentLayout" = "Current layout";
+"settings.preview.currentLayoutEmpty" = "No live display snapshot is available yet.";
+"settings.preview.savedLayout" = "Saved target";
 "settings.referenceProfileMissing" = "No saved profile yet.";
 "settings.referenceProfileUnmatched" = "No saved profile matches this setup.";
 "settings.referenceConfidenceUnavailable" = "No confidence score yet.";

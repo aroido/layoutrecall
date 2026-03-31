@@ -299,8 +299,21 @@ extension AppModel {
             .sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:))
     }
 
+    var liveDisplaysForPreview: [DisplaySnapshot] {
+        currentDisplaySnapshots.sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:))
+    }
+
     var referencePrimaryDisplayKey: String? {
         referenceProfile.flatMap(primaryDisplayKey(for:))
+    }
+
+    var livePrimaryDisplayKey: String? {
+        guard !liveDisplaysForPreview.isEmpty else {
+            return nil
+        }
+
+        return liveDisplaysForPreview.mainDisplayKey
+            ?? liveDisplaysForPreview.first.map { liveDisplaysForPreview.uniqueMatchKey(for: $0) }
     }
 
     func primaryDisplayKey(for profile: DisplayProfile) -> String? {

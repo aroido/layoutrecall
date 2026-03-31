@@ -222,6 +222,9 @@
 "settings.referenceMode" = "자동 복구 상태";
 "settings.referenceConfidence" = "현재 신뢰도";
 "settings.referenceDependency" = "복구 도구";
+"settings.preview.currentLayout" = "현재 배치";
+"settings.preview.currentLayoutEmpty" = "아직 실시간 디스플레이 스냅샷이 없습니다.";
+"settings.preview.savedLayout" = "저장된 목표";
 "settings.referenceProfileMissing" = "아직 저장된 프로필이 없습니다.";
 "settings.referenceProfileUnmatched" = "현재 구성과 일치하는 저장 프로필이 없습니다.";
 "settings.referenceConfidenceUnavailable" = "아직 점수를 계산하지 않았습니다.";

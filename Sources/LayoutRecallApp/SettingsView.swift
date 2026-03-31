@@ -259,32 +259,99 @@ struct SettingsView: View {
 
     private var restoreOverviewCard: some View {
         GlassCard(padding: 18) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 18) {
-                    restoreOverviewContent
+            VStack(alignment: .leading, spacing: 18) {
+                restoreOverviewContent
 
-                    if !model.referenceDisplays.isEmpty {
-                        DisplayLayoutPreview(
-                            displays: model.referenceDisplays,
-                            primaryDisplayKey: model.referencePrimaryDisplayKey
-                        )
-                        .frame(width: 160, height: 100)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 16) {
-                    restoreOverviewContent
-
-                    if !model.referenceDisplays.isEmpty {
-                        DisplayLayoutPreview(
-                            displays: model.referenceDisplays,
-                            primaryDisplayKey: model.referencePrimaryDisplayKey
-                        )
-                        .frame(height: 112)
-                    }
-                }
+                restoreLayoutComparison
             }
         }
+    }
+
+    private var restoreLayoutComparison: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 14) {
+                currentLayoutPreviewCard
+                savedLayoutPreviewCard
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                currentLayoutPreviewCard
+                savedLayoutPreviewCard
+            }
+        }
+    }
+
+    private var currentLayoutPreviewCard: some View {
+        layoutPreviewCard(
+            title: L10n.t("settings.preview.currentLayout"),
+            subtitle: model.activeDisplayCountLine,
+            displays: model.liveDisplaysForPreview,
+            primaryDisplayKey: model.livePrimaryDisplayKey,
+            emptyMessage: L10n.t("settings.preview.currentLayoutEmpty")
+        )
+    }
+
+    private var savedLayoutPreviewCard: some View {
+        let subtitle: String
+        if let profile = model.referenceProfile {
+            subtitle = "\(profile.name) · \(L10n.t("settings.profileDisplayCountCompact", profile.displaySet.count))"
+        } else {
+            subtitle = model.referenceProfileLine
+        }
+
+        return layoutPreviewCard(
+            title: L10n.t("settings.preview.savedLayout"),
+            subtitle: subtitle,
+            displays: model.referenceDisplays,
+            primaryDisplayKey: model.referencePrimaryDisplayKey,
+            emptyMessage: model.referenceProfileLine
+        )
+    }
+
+    private func layoutPreviewCard(
+        title: String,
+        subtitle: String,
+        displays: [DisplaySnapshot],
+        primaryDisplayKey: String?,
+        emptyMessage: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(subtitle)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Group {
+                if displays.isEmpty {
+                    Text(emptyMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+                        .padding(12)
+                } else {
+                    DisplayLayoutPreview(
+                        displays: displays,
+                        primaryDisplayKey: primaryDisplayKey
+                    )
+                    .frame(height: 112)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .underPageBackgroundColor).opacity(0.72))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color(nsColor: .separatorColor).opacity(0.24), lineWidth: 1)
+                    )
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var restoreOverviewContent: some View {

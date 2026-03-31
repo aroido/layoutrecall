@@ -198,6 +198,35 @@ func presentationActionsReflectNoMatchingBaseline() async {
 
 @MainActor
 @Test
+func restorePreviewUsesLiveDisplaysAndResolvesPrimaryDisplay() async {
+    let installer = DependencyInstallerStub()
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleRight, .sampleLeft]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(),
+        dependencyInstaller: installer,
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    #expect(model.liveDisplaysForPreview.map(\.id) == [DisplaySnapshot.sampleLeft.id, DisplaySnapshot.sampleRight.id])
+    #expect(model.livePrimaryDisplayKey == DisplaySnapshot.sampleLeft.alphaSerialNumber)
+}
+
+@MainActor
+@Test
 func presentationAllowsPositionSwapForThreeDisplayLayouts() async {
     let installer = DependencyInstallerStub()
     let model = AppModel(
