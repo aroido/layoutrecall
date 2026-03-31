@@ -1356,6 +1356,70 @@ func askBeforeRestorePreventsAutomaticExecutionUntilUserConfirms() async {
 
 @MainActor
 @Test
+func displayEventsAreIgnoredDuringRestoreCooldown() async {
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let eventMonitor = EventMonitorStub()
+    let restorePlan = sampleRestorePlan()
+    let executor = RestoreExecutorStub(
+        dependency: .init(
+            isAvailable: true,
+            location: "/usr/local/bin/displayplacer",
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+        ),
+        executionResult: .init(
+            outcome: .success,
+            command: restorePlan.command,
+            exitCode: 0,
+            details: L10n.t("restoreExecutor.success")
+        )
+    )
+    let verifier = RestoreVerifierStub(
+        result: .init(
+            outcome: .success,
+            attempts: 1,
+            details: L10n.t("verify.match")
+        )
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: eventMonitor,
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: restorePlan,
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: verifier,
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 60,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    eventMonitor.emit(DisplayEvent(type: .reconfigured, details: "First event"))
+
+    await waitUntil {
+        await executor.executedCommands() == [DisplayProfile.officeDock.layout.engine.command]
+            && model.diagnostics.first?.actionTaken == "auto-restore"
+    }
+
+    eventMonitor.emit(DisplayEvent(type: .reconfigured, details: "Second event"))
+
+    await waitUntil {
+        model.statusLine == L10n.t("status.ignoringEventCooldown", L10n.eventTypeName(DisplayEventType.reconfigured.rawValue))
+    }
+
+    #expect((await executor.executedCommands()).count == 1)
+    #expect(model.statusLine == L10n.t("status.ignoringEventCooldown", L10n.eventTypeName(DisplayEventType.reconfigured.rawValue)))
+    #expect(model.diagnostics.first?.actionTaken == "auto-restore")
+}
+
+@MainActor
+@Test
 func ignoreCurrentSetupSuppressesAutomaticRestoreUntilLayoutChanges() async {
     let diagnosticsStore = DiagnosticsStoreStub()
     let eventMonitor = EventMonitorStub()
@@ -1502,6 +1566,82 @@ func swapLeftRightSuppressesAutomaticReapplyOfMatchedProfile() async {
 
     #expect((await executor.executedCommands()).count == 2)
     #expect(model.decisionLine == L10n.t("restoreDecision.manualLayoutOverride"))
+}
+
+@MainActor
+@Test
+func manualLayoutOverrideClearsWhenDisplaysChangeAwayFromSuppressedOrigins() async {
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let eventMonitor = EventMonitorStub()
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let executor = RestoreExecutorStub(
+        dependency: .init(
+            isAvailable: true,
+            location: "/usr/local/bin/displayplacer",
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+        ),
+        executionResult: .init(
+            outcome: .success,
+            command: "",
+            exitCode: 0,
+            details: L10n.t("restoreExecutor.success")
+        )
+    )
+    let verifier = RestoreVerifierStub(
+        result: .init(
+            outcome: .success,
+            attempts: 1,
+            details: L10n.t("verify.match")
+        )
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: eventMonitor,
+        commandBuilder: DisplayplacerCommandBuilder(),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: verifier,
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.swapLeftRight()
+
+    await waitUntil {
+        let commands = await executor.executedCommands()
+        return commands.count == 1
+            && commands[0].contains("id:persistent-right enabled:true origin:(-2560,0)")
+            && model.diagnostics.first?.actionTaken == "swap-left-right"
+    }
+
+    await snapshotReader.setDisplays(swappedDisplays())
+    eventMonitor.emit(DisplayEvent(type: .reconfigured, details: "Displays swapped"))
+
+    await waitUntil {
+        model.diagnostics.first?.actionTaken == "manual-layout-override"
+    }
+
+    await snapshotReader.setDisplays([.sampleLeft, .sampleRight])
+    eventMonitor.emit(DisplayEvent(type: .reconfigured, details: "Displays restored"))
+
+    await waitUntil {
+        let commands = await executor.executedCommands()
+        return commands.count == 2
+            && model.diagnostics.first?.actionTaken == "auto-restore"
+            && model.menuPrimaryState == .healthy
+    }
+
+    #expect((await executor.executedCommands()).count == 2)
+    #expect(model.diagnostics.first?.actionTaken == "auto-restore")
+    #expect(model.menuPrimaryState == .healthy)
+    #expect(model.menuStatusTitle == L10n.t("menu.state.readyProfile", "Office Dock"))
+    #expect(model.decisionLine == L10n.t("verify.match"))
 }
 
 @MainActor
