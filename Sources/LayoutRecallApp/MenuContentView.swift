@@ -254,6 +254,7 @@ struct MenuContentView: View {
         !model.menuQuickActions.isEmpty
             || model.showsSwapDisplaysControl
             || model.profiles.count > 1
+            || model.shouldOfferDiagnosticsShortcut
     }
 
     private var compactActionRow: some View {
@@ -314,6 +315,11 @@ struct MenuContentView: View {
 
     private var advancedActionsMenu: some View {
         Menu {
+            let showsOtherAdvancedItems =
+                !model.menuQuickActions.isEmpty
+                || model.showsSwapDisplaysControl
+                || model.profiles.count > 1
+
             ForEach(model.menuQuickActions) { action in
                 Button {
                     model.perform(action)
@@ -358,6 +364,18 @@ struct MenuContentView: View {
                     Button(L10n.t("menu.quickSwitch.manageProfiles")) {
                         openSettings(.profiles)
                     }
+                }
+            }
+
+            if model.shouldOfferDiagnosticsShortcut {
+                if showsOtherAdvancedItems {
+                    Divider()
+                }
+
+                Button {
+                    openSettings(.diagnostics)
+                } label: {
+                    Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
                 }
             }
         }

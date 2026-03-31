@@ -51,6 +51,7 @@
 "action.fixNow" = "Restore Now";
 "action.enableAutoRestore" = "Enable Automatic Restore";
 "action.enableAppAutoRestore" = "Enable App Automatic Restore";
+"action.openDiagnostics" = "Open Diagnostics";
 "action.save" = "Save Profile";
 "action.swap" = "Swap Positions";
 "section.status" = "Status";
@@ -116,6 +117,8 @@
 "settings.restore.manualLayoutOverrideHint" = "A manually changed layout is active right now. Save it as a profile if you want to keep using it.";
 "settings.restore.manualHint" = "Check the current state first, then run manual restore only when needed.";
 "settings.restore.noImmediateAction" = "No restore is needed right now. Keep new profile saves in the Profiles tab.";
+"settings.restore.openDiagnosticsHint" = "Open diagnostics to inspect the current runtime snapshot and restore evidence.";
+"settings.restore.reviewDiagnosticsHint" = "Review diagnostics before retrying restore so you can see the latest runtime evidence.";
 "section.profiles" = "Profiles";
 "profiles.empty" = "Save the current layout to create your first profile.";
 "profiles.save.hint" = "Save the current monitor arrangement as a new profile. You can rename it and adjust the confidence threshold from the card right after saving.";

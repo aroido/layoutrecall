@@ -253,6 +253,27 @@ struct SettingsView: View {
                     .help(model.swapAvailabilityLine)
                     .accessibilityIdentifier("settings.restore.swap")
                 }
+
+                if model.shouldOfferDiagnosticsShortcut {
+                    Divider()
+                        .padding(.vertical, 2)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(model.diagnosticsShortcutHint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button {
+                            selectedPane = .diagnostics
+                        } label: {
+                            Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                        .accessibilityIdentifier("settings.restore.diagnostics")
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

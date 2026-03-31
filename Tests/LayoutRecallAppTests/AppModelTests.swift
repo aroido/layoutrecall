@@ -73,6 +73,7 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == nil)
     #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.shouldOfferDiagnosticsShortcut == false)
     #expect(model.menuStatusTitle == L10n.t("menu.state.readyProfile", "Office Dock"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.ready"))
     #expect(model.menuMetadataLine.contains(L10n.t("confidence.high")))
@@ -214,6 +215,8 @@ func presentationActionsReflectMissingDependency() async {
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == .installDependency)
     #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.shouldOfferDiagnosticsShortcut == true)
+    #expect(model.diagnosticsShortcutHint == L10n.t("settings.restore.openDiagnosticsHint"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.dependencyMissing"))
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.missing"))
     #expect(model.canSwapDisplays == false)
@@ -261,20 +264,37 @@ func presentationActionsReflectNoMatchingBaseline() async {
 
 @MainActor
 @Test
-func restorePreviewUsesLiveDisplaysAndResolvesPrimaryDisplay() async {
-    let installer = DependencyInstallerStub()
+func diagnosticsShortcutAppearsForHealthyStateAfterRecentRestoreWarning() async {
+    let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+    let diagnosticsStore = DiagnosticsStoreStub(entries: [
+        DiagnosticsEntry(
+            eventType: DisplayEventType.reconfigured.rawValue,
+            profileName: DisplayProfile.officeDock.name,
+            score: 92,
+            actionTaken: "manual-fix",
+            executionResult: RestoreExecutionOutcome.success.rawValue,
+            verificationResult: RestoreVerificationOutcome.unverified.rawValue,
+            details: "Verification was skipped after a manual restore."
+        )
+    ])
     let model = AppModel(
         store: ProfileStoreStub(profiles: [.officeDock]),
         settingsStore: AppSettingsStoreStub(),
-        diagnosticsStore: DiagnosticsStoreStub(),
-        snapshotReader: SnapshotReaderStub(displays: [.sampleRight, .sampleLeft]),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
         eventMonitor: EventMonitorStub(),
         commandBuilder: StaticCommandBuilder(
             restorePlanResult: sampleRestorePlan(),
             swapPlanResult: sampleSwapPlan()
         ),
-        executor: RestoreExecutorStub(),
-        dependencyInstaller: installer,
+        executor: RestoreExecutorStub(
+            dependency: .init(
+                isAvailable: true,
+                location: "/usr/local/bin/displayplacer",
+                details: dependencyDetails
+            )
+        ),
+        dependencyInstaller: DependencyInstallerStub(),
         verifier: RestoreVerifierStub(result: .skipped),
         loginItemManager: LoginItemManagerStub(),
         debounceNanoseconds: 1_000_000,
@@ -284,8 +304,10 @@ func restorePreviewUsesLiveDisplaysAndResolvesPrimaryDisplay() async {
 
     await model.bootstrap()
 
-    #expect(model.liveDisplaysForPreview.map(\.id) == [DisplaySnapshot.sampleLeft.id, DisplaySnapshot.sampleRight.id])
-    #expect(model.livePrimaryDisplayKey == DisplaySnapshot.sampleLeft.alphaSerialNumber)
+    #expect(model.menuPrimaryState == .healthy)
+    #expect(model.diagnosticsNeedsAttention == true)
+    #expect(model.shouldOfferDiagnosticsShortcut == true)
+    #expect(model.diagnosticsShortcutHint == L10n.t("settings.restore.reviewDiagnosticsHint"))
 }
 
 @MainActor

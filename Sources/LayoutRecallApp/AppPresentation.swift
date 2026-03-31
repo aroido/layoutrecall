@@ -570,6 +570,23 @@ extension AppModel {
         }
     }
 
+    var diagnosticsNeedsAttention: Bool {
+        guard let latestEntry = diagnostics.first else {
+            return false
+        }
+
+        switch latestEntry.outcomeTone {
+        case .caution, .negative:
+            return true
+        case .positive, .neutral:
+            return false
+        }
+    }
+
+    var shouldOfferDiagnosticsShortcut: Bool {
+        menuPrimaryState != .healthy || diagnosticsNeedsAttention
+    }
+
     var restorePrimaryAction: SurfaceAction? {
         switch menuPrimaryState {
         case .noProfiles:
@@ -623,6 +640,12 @@ extension AppModel {
         case .healthy:
             return L10n.t("settings.restore.noImmediateAction")
         }
+    }
+
+    var diagnosticsShortcutHint: String {
+        diagnosticsNeedsAttention
+            ? L10n.t("settings.restore.reviewDiagnosticsHint")
+            : L10n.t("settings.restore.openDiagnosticsHint")
     }
 
     var dependencySummaryLine: String {

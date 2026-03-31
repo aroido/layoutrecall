@@ -51,6 +51,7 @@
 "action.fixNow" = "지금 복구";
 "action.enableAutoRestore" = "자동 복구 켜기";
 "action.enableAppAutoRestore" = "앱 자동 복구 켜기";
+"action.openDiagnostics" = "진단 열기";
 "action.save" = "프로필 저장";
 "action.swap" = "위치 바꾸기";
 "section.status" = "상태";
@@ -116,6 +117,8 @@
 "settings.restore.manualLayoutOverrideHint" = "지금은 수동으로 바꾼 배치를 유지하고 있습니다. 이 배치를 계속 쓰려면 프로필로 저장하세요.";
 "settings.restore.manualHint" = "현재 상태를 확인한 뒤 필요할 때만 수동 복구를 실행하세요.";
 "settings.restore.noImmediateAction" = "지금은 복구가 필요하지 않습니다. 새 프로필 저장은 프로필 탭에서 관리하세요.";
+"settings.restore.openDiagnosticsHint" = "진단 탭에서 현재 런타임 상태와 복구 근거를 확인하세요.";
+"settings.restore.reviewDiagnosticsHint" = "복구를 다시 시도하기 전에 진단을 열어 최신 런타임 근거를 확인하세요.";
 "section.profiles" = "프로필";
 "profiles.empty" = "현재 레이아웃을 저장해서 첫 프로필을 만드세요.";
 "profiles.save.hint" = "지금 연결된 모니터 배치를 새 프로필로 저장합니다. 저장한 뒤 프로필 이름과 신뢰도 임계값을 카드에서 바로 조정할 수 있습니다.";
