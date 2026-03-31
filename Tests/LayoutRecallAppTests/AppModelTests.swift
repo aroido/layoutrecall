@@ -310,6 +310,42 @@ func profileCardActionStateSurfacesDirectApplyActionAndAvailability() async {
 
 @MainActor
 @Test
+func profileCardActionStateDisablesDirectApplyWhenDependencyIsMissing() async {
+    let dependency = RestoreDependencyStatus(
+        isAvailable: false,
+        details: L10n.t("restoreExecutor.dependencyMissing")
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(dependency: dependency),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    let actionState = model.profileCardActionState(for: DisplayProfile.officeDock)
+
+    #expect(model.canRestoreSavedProfiles == false)
+    #expect(actionState.canApplyLayout == false)
+    #expect(actionState.canIdentifyDisplays == true)
+    #expect(actionState.applyHelp == L10n.t("profiles.apply.hint", DisplayProfile.officeDock.name))
+}
+
+@MainActor
+@Test
 func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
     var profile = DisplayProfile.officeDock
     profile.settings.autoRestore = false
@@ -867,12 +903,8 @@ func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
 }
 
 @MainActor
-@Test(.serialized)
+@Test
 func preferredLanguageSelectionPersistsSetting() async {
-    defer {
-        L10n.setPreferredLanguageCodeOverride(nil)
-    }
-
     let settingsStore = AppSettingsStoreStub()
     let model = AppModel(
         store: ProfileStoreStub(),
@@ -895,6 +927,7 @@ func preferredLanguageSelectionPersistsSetting() async {
 
     await model.bootstrap()
     model.setPreferredLanguage(.english)
+    L10n.setPreferredLanguageCodeOverride(nil)
 
     await waitUntil {
         await settingsStore.latestSavedSettings()?.preferredLanguageCode == "en"
@@ -1043,6 +1076,50 @@ func manualFixStopsWhenDisplayplacerIsMissingAndRecordsWhy() async {
     #expect(model.statusLine == dependency.details)
     #expect(model.decisionLine == L10n.t("decision.manualRestoreRequiresDependency"))
     #expect(model.diagnostics.first?.executionResult == RestoreExecutionOutcome.dependencyMissing.rawValue)
+}
+
+@MainActor
+@Test
+func directProfileRestoreStopsWhenDisplayplacerIsMissingAndRecordsWhy() async {
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let dependency = RestoreDependencyStatus(
+        isAvailable: false,
+        details: L10n.t("restoreExecutor.dependencyMissing")
+    )
+    let executor = RestoreExecutorStub(dependency: dependency)
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.restoreProfile(DisplayProfile.officeDock.id)
+
+    await waitUntil {
+        model.diagnostics.first?.actionTaken == "restore-profile"
+    }
+
+    #expect(await executor.executedCommands().isEmpty)
+    #expect(model.statusLine == dependency.details)
+    #expect(model.decisionLine == L10n.t("decision.manualRestoreRequiresDependency"))
+    #expect(model.latestMatchedProfileName == DisplayProfile.officeDock.name)
+    #expect(model.diagnostics.first?.profileName == DisplayProfile.officeDock.name)
+    #expect(model.diagnostics.first?.executionResult == RestoreExecutionOutcome.dependencyMissing.rawValue)
+    #expect(model.diagnostics.first?.details == dependency.details)
 }
 
 @MainActor
