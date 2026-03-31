@@ -187,6 +187,14 @@
 "section.diagnostics" = "Diagnostics";
 "diagnostics.latest" = "Latest result";
 "diagnostics.runtimeSnapshot" = "Current runtime";
+"diagnostics.supportFiles" = "Support files";
+"diagnostics.supportFolder" = "Support folder";
+"diagnostics.supportProfiles" = "Profiles";
+"diagnostics.supportSettings" = "Settings";
+"diagnostics.supportHistory" = "Diagnostics history";
+"diagnostics.supportStartupLog" = "Startup trace";
+"diagnostics.fileAvailable" = "Available";
+"diagnostics.fileMissing" = "Missing";
 "diagnostics.recentHistory" = "Recent history";
 "diagnostics.empty" = "No diagnostics have been recorded yet.";
 "diagnostics.report.title" = "LayoutRecall diagnostics report";

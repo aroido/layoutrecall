@@ -30,6 +30,43 @@ private struct FormHint: View {
     }
 }
 
+private struct SupportFileDescriptor: Identifiable {
+    let title: String
+    let url: URL
+
+    var id: String { title }
+    var exists: Bool { FileManager.default.fileExists(atPath: url.path) }
+}
+
+private struct SupportFileRow: View {
+    let item: SupportFileDescriptor
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+
+                DiagnosticBadge(
+                    text: item.exists
+                        ? L10n.t("diagnostics.fileAvailable")
+                        : L10n.t("diagnostics.fileMissing"),
+                    tone: item.exists ? .positive : .caution
+                )
+
+                Spacer(minLength: 0)
+            }
+
+            Text(item.url.path)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
@@ -983,6 +1020,21 @@ struct SettingsView: View {
             }
 
             GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(supportFileDescriptors.enumerated()), id: \.element.id) { index, item in
+                        SupportFileRow(item: item)
+
+                        if index < supportFileDescriptors.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("diagnostics.supportFiles"), systemImage: "folder")
+            }
+
+            GroupBox {
                 if model.diagnostics.isEmpty {
                     Text(L10n.t("diagnostics.empty"))
                         .foregroundStyle(.secondary)
@@ -1040,16 +1092,31 @@ struct SettingsView: View {
         }
     }
 
-    private func copyDiagnosticsReport() {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(model.diagnosticsReportText, forType: .string)
+    private var supportFileDescriptors: [SupportFileDescriptor] {
+        let supportDirectory = LayoutRecallStorage.baseDirectory()
 
-        diagnosticsReportCopied = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            diagnosticsReportCopied = false
-        }
+        return [
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportFolder"),
+                url: supportDirectory
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportProfiles"),
+                url: LayoutRecallStorage.fileURL(named: "profiles.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportSettings"),
+                url: LayoutRecallStorage.fileURL(named: "settings.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportHistory"),
+                url: LayoutRecallStorage.fileURL(named: "diagnostics.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportStartupLog"),
+                url: supportDirectory.appendingPathComponent("startup.log", isDirectory: false)
+            ),
+        ]
     }
 
     private var generalPane: some View {

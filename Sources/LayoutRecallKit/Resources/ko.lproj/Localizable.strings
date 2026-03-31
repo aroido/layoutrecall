@@ -187,6 +187,14 @@
 "section.diagnostics" = "진단";
 "diagnostics.latest" = "가장 최근 결과";
 "diagnostics.runtimeSnapshot" = "현재 런타임";
+"diagnostics.supportFiles" = "지원 파일";
+"diagnostics.supportFolder" = "지원 폴더";
+"diagnostics.supportProfiles" = "프로필";
+"diagnostics.supportSettings" = "설정";
+"diagnostics.supportHistory" = "진단 기록";
+"diagnostics.supportStartupLog" = "시동 추적";
+"diagnostics.fileAvailable" = "있음";
+"diagnostics.fileMissing" = "없음";
 "diagnostics.recentHistory" = "최근 이력";
 "diagnostics.empty" = "아직 기록된 진단 정보가 없습니다.";
 "diagnostics.report.title" = "LayoutRecall 진단 리포트";
