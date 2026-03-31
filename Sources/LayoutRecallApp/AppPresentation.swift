@@ -206,6 +206,15 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
     }
 }
 
+struct ProfileCardActionState: Equatable {
+    let canApplyLayout: Bool
+    let canIdentifyDisplays: Bool
+    let applyTitle: String
+    let identifyTitle: String
+    let applyHelp: String
+    let identifyHelp: String
+}
+
 extension AppModel {
     var automaticRestoreControlTitle: String {
         L10n.t("menu.appAutomaticRestore")
@@ -444,6 +453,17 @@ extension AppModel {
         }
 
         return components.isEmpty ? nil : components.joined(separator: " · ")
+    }
+
+    func profileCardActionState(for profile: DisplayProfile) -> ProfileCardActionState {
+        ProfileCardActionState(
+            canApplyLayout: canRestoreSavedProfiles,
+            canIdentifyDisplays: !profile.displaySet.displays.isEmpty,
+            applyTitle: L10n.t("action.applyProfile"),
+            identifyTitle: L10n.t("action.identifyDisplays"),
+            applyHelp: L10n.t("profiles.apply.hint", profile.name),
+            identifyHelp: L10n.t("profiles.identify.hint", profile.name)
+        )
     }
 
     func perform(_ action: SurfaceAction) {

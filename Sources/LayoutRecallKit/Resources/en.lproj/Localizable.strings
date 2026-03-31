@@ -123,6 +123,8 @@
 "profiles.savedAt" = "Saved %@";
 "profiles.preview.hint" = "These rectangles are a saved layout preview. Use Show Display Numbers below to light up the same numbers on the real monitors.";
 "profiles.details" = "Layout details";
+"profiles.apply.hint" = "Apply the saved %@ layout right now.";
+"profiles.identify.hint" = "Show the saved %@ display numbers on the connected monitors.";
 "profiles.confidence.label" = "Automatic restore confidence";
 "profiles.confidence.hint" = "This profile is used for automatic restore only when the match reaches this score or higher.";
 "profiles.delete.button" = "Delete Profile";
@@ -318,6 +320,7 @@
 "launchAtLogin.unsupported.unknown" = "Launch at login returned an unknown system status.";
 "settings.profileDisplayCountCompact" = "%lld displays";
 "settings.swap.dependencyHint" = "Install displayplacer before changing display positions.";
+"action.applyProfile" = "Apply Layout";
 "action.identifyDisplays" = "Show Numbers";
 "display.preview.number" = "Display %lld";
 "display.preview.primary.short" = "Main";

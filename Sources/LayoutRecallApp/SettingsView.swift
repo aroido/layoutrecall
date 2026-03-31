@@ -485,6 +485,8 @@ struct SettingsView: View {
                     )
                 }
 
+                profileActionRow(for: profile)
+
                 DisclosureGroup(
                     isExpanded: profileExpansionBinding(for: profile),
                     content: {
@@ -636,19 +638,57 @@ struct SettingsView: View {
         cancelProfileRename()
     }
 
+    private func profileActionRow(for profile: DisplayProfile) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                applyLayoutButton(for: profile)
+                identifyDisplaysButton(for: profile)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                applyLayoutButton(for: profile)
+                identifyDisplaysButton(for: profile)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func applyLayoutButton(for profile: DisplayProfile) -> some View {
+        let actionState = model.profileCardActionState(for: profile)
+
+        return Button {
+            model.restoreProfile(profile.id)
+        } label: {
+            Label(actionState.applyTitle, systemImage: "bolt.fill")
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ActionButtonStyle(role: .primary))
+        .disabled(!actionState.canApplyLayout)
+        .help(actionState.applyHelp)
+        .accessibilityIdentifier("settings.profile.apply.\(profile.id.uuidString)")
+    }
+
+    private func identifyDisplaysButton(for profile: DisplayProfile) -> some View {
+        let actionState = model.profileCardActionState(for: profile)
+
+        return Button {
+            model.identifyDisplays(for: profile.id)
+        } label: {
+            Label(actionState.identifyTitle, systemImage: "number.square.fill")
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ActionButtonStyle(role: .secondary))
+        .disabled(!actionState.canIdentifyDisplays)
+        .help(actionState.identifyHelp)
+        .accessibilityIdentifier("settings.profile.identify.\(profile.id.uuidString)")
+    }
+
     private func profileControls(for profile: DisplayProfile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Button {
-                model.identifyDisplays(for: profile.id)
-            } label: {
-                Label(L10n.t("action.identifyDisplays"), systemImage: "number.square.fill")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.9)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ActionButtonStyle(role: .secondary))
-            .disabled(profile.displaySet.displays.isEmpty)
-
             VStack(alignment: .leading, spacing: 8) {
                 Text(L10n.t("profiles.confidence.label"))
                     .font(.subheadline.weight(.semibold))

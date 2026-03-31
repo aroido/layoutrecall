@@ -269,6 +269,47 @@ func presentationActionsReflectLowConfidenceMatch() async {
 
 @MainActor
 @Test
+func profileCardActionStateSurfacesDirectApplyActionAndAvailability() async {
+    let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(
+            dependency: .init(
+                isAvailable: true,
+                location: "/usr/local/bin/displayplacer",
+                details: dependencyDetails
+            )
+        ),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    let actionState = model.profileCardActionState(for: DisplayProfile.officeDock)
+
+    #expect(actionState.canApplyLayout == true)
+    #expect(actionState.canIdentifyDisplays == true)
+    #expect(actionState.applyTitle == L10n.t("action.applyProfile"))
+    #expect(actionState.identifyTitle == L10n.t("action.identifyDisplays"))
+    #expect(actionState.applyHelp == L10n.t("profiles.apply.hint", DisplayProfile.officeDock.name))
+    #expect(actionState.identifyHelp == L10n.t("profiles.identify.hint", DisplayProfile.officeDock.name))
+}
+
+@MainActor
+@Test
 func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
     var profile = DisplayProfile.officeDock
     profile.settings.autoRestore = false
@@ -826,7 +867,7 @@ func launchAtLoginTogglePersistsPreferenceAndReflectsSystemState() async {
 }
 
 @MainActor
-@Test
+@Test(.serialized)
 func preferredLanguageSelectionPersistsSetting() async {
     defer {
         L10n.setPreferredLanguageCodeOverride(nil)

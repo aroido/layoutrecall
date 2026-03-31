@@ -123,6 +123,8 @@
 "profiles.savedAt" = "%@ 저장";
 "profiles.preview.hint" = "네모는 저장된 배치 미리보기입니다. 아래 번호 보기로 같은 번호를 실제 모니터에 표시할 수 있습니다.";
 "profiles.details" = "배치 세부 정보";
+"profiles.apply.hint" = "저장된 %@ 배치를 지금 바로 적용합니다.";
+"profiles.identify.hint" = "연결된 모니터에 %@ 프로필 번호를 표시합니다.";
 "profiles.confidence.label" = "자동 복구 신뢰도";
 "profiles.confidence.hint" = "이 점수 이상으로 일치할 때만 이 프로필을 자동 복구에 사용합니다.";
 "profiles.delete.button" = "프로필 삭제";
@@ -318,6 +320,7 @@
 "launchAtLogin.unsupported.unknown" = "로그인 시 실행 상태를 시스템이 알 수 없는 값으로 반환했습니다.";
 "settings.profileDisplayCountCompact" = "%lld대";
 "settings.swap.dependencyHint" = "위치 바꾸기를 실행하려면 먼저 displayplacer를 설치하세요.";
+"action.applyProfile" = "배치 적용";
 "action.identifyDisplays" = "번호 표시";
 "display.preview.number" = "%lld번";
 "display.preview.primary.short" = "메인";
