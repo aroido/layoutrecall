@@ -778,6 +778,36 @@ extension AppModel {
         diagnostics.first?.details
     }
 
+    var diagnosticsReportText: String {
+        var lines: [String] = [
+            L10n.t("diagnostics.report.title"),
+            ""
+        ]
+
+        lines.append("\(L10n.t("section.status")): \(statusLine)")
+        lines.append("\(L10n.t("settings.referenceDependency")): \(dependencyLine)")
+        lines.append("\(L10n.t("settings.referenceDisplays")): \(activeDisplayCountLine)")
+        lines.append("\(L10n.t("settings.referenceProfile")): \(referenceProfileLine)")
+
+        if !lastCommand.isEmpty {
+            lines.append("\(L10n.t("section.lastCommand")): \(lastCommand)")
+        }
+
+        lines.append("")
+        lines.append("\(L10n.t("diagnostics.recentHistory")):")
+
+        if diagnostics.isEmpty {
+            lines.append(L10n.t("diagnostics.empty"))
+        } else {
+            for entry in diagnostics.prefix(5) {
+                lines.append(entry.supportReportSummaryLine)
+                lines.append("  \(entry.details)")
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
     var updateStatusTitle: String {
         switch updateState {
         case .idle:

@@ -186,6 +186,10 @@
 "diagnostics.runtimeSnapshot" = "현재 런타임";
 "diagnostics.recentHistory" = "최근 이력";
 "diagnostics.empty" = "아직 기록된 진단 정보가 없습니다.";
+"diagnostics.report.title" = "LayoutRecall 진단 리포트";
+"diagnostics.copyReport" = "지원 리포트 복사";
+"diagnostics.copyReportCopied" = "리포트가 복사됨";
+"diagnostics.copyReportHint" = "최신 런타임 상태와 최근 복구 이력이 클립보드에 복사되었습니다.";
 "section.runtime" = "런타임";
 "shortcut.press" = "단축키를 누르세요";
 "shortcut.record" = "단축키 기록";

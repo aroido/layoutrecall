@@ -84,6 +84,69 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
 
 @MainActor
 @Test
+func diagnosticsReportSummarizesRuntimeAndRecentEntries() async {
+    let diagnosticsStore = DiagnosticsStoreStub(entries: [
+        DiagnosticsEntry(
+            eventType: DisplayEventType.manual.rawValue,
+            profileName: "Office Dock",
+            score: 92,
+            actionTaken: "manual-fix",
+            executionResult: RestoreExecutionOutcome.success.rawValue,
+            verificationResult: RestoreVerificationOutcome.success.rawValue,
+            details: "Restored both displays to their saved positions."
+        ),
+        DiagnosticsEntry(
+            eventType: DisplayEventType.reconfigured.rawValue,
+            profileName: nil,
+            score: nil,
+            actionTaken: "idle",
+            executionResult: RestoreVerificationOutcome.skipped.rawValue,
+            verificationResult: RestoreVerificationOutcome.skipped.rawValue,
+            details: "Monitoring a wake-driven display change."
+        )
+    ])
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: AppSettingsStoreStub(),
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: RestoreExecutorStub(
+            dependency: .init(
+                isAvailable: true,
+                location: "/usr/local/bin/displayplacer",
+                details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+            )
+        ),
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    let report = model.diagnosticsReportText
+
+    #expect(report.contains(L10n.t("diagnostics.report.title")))
+    #expect(report.contains("\(L10n.t("section.status")): \(model.statusLine)"))
+    #expect(report.contains("\(L10n.t("settings.referenceProfile")): Office Dock"))
+    #expect(report.contains(DisplayProfile.officeDock.layout.engine.command))
+    #expect(report.contains("Office Dock"))
+    #expect(report.contains(L10n.t("diagnostic.outcome.appliedVerified")))
+    #expect(report.contains("Restored both displays to their saved positions."))
+    #expect(report.contains(L10n.t("diagnostics.recentHistory")))
+    #expect(report.contains(L10n.t("diagnostic.outcome.monitoringOnly")))
+}
+
+@MainActor
+@Test
 func presentationActionsReflectMissingBaseline() async {
     let installer = DependencyInstallerStub()
     let model = AppModel(

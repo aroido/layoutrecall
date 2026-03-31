@@ -445,6 +445,24 @@ extension DiagnosticsEntry {
             return .neutral
         }
     }
+
+    var supportReportSummaryLine: String {
+        var components: [String] = [
+            "- \(timestamp.formatted(date: .abbreviated, time: .shortened))",
+            displayTitle,
+            outcomeSummary
+        ]
+
+        if let profileName, !profileName.isEmpty {
+            components.append(profileName)
+        }
+
+        if let confidenceSummary {
+            components.append(confidenceSummary)
+        }
+
+        return components.joined(separator: " · ")
+    }
 }
 
 struct ActionButtonStyle: ButtonStyle {

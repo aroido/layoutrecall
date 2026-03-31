@@ -1,3 +1,4 @@
+import AppKit
 import LayoutRecallKit
 import SwiftUI
 
@@ -37,6 +38,7 @@ struct SettingsView: View {
     @State private var expandedProfileIDs: Set<UUID> = []
     @State private var editingProfileID: UUID?
     @State private var profileNameDraft = ""
+    @State private var diagnosticsReportCopied = false
     @FocusState private var focusedProfileID: UUID?
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
@@ -865,10 +867,26 @@ struct SettingsView: View {
             if let latestEntry = model.diagnostics.first {
                 GlassCard(padding: 18) {
                     VStack(alignment: .leading, spacing: 14) {
-                        SectionHeading(
-                            title: L10n.t("diagnostics.latest"),
-                            systemImage: "waveform.path.ecg"
-                        )
+                        HStack(alignment: .top, spacing: 12) {
+                            SectionHeading(
+                                title: L10n.t("diagnostics.latest"),
+                                systemImage: "waveform.path.ecg"
+                            )
+
+                            Spacer(minLength: 0)
+
+                            Button {
+                                copyDiagnosticsReport()
+                            } label: {
+                                Label(
+                                    diagnosticsReportCopied
+                                        ? L10n.t("diagnostics.copyReportCopied")
+                                        : L10n.t("diagnostics.copyReport"),
+                                    systemImage: diagnosticsReportCopied ? "checkmark" : "doc.on.doc"
+                                )
+                            }
+                            .buttonStyle(ActionButtonStyle(role: .secondary))
+                        }
 
                         Text(latestEntry.displayTitle)
                             .font(.title3.weight(.semibold))
@@ -894,7 +912,27 @@ struct SettingsView: View {
                             DiagnosticBadge(text: L10n.eventTypeName(latestEntry.eventType))
                             DiagnosticBadge(text: latestEntry.timestamp.formatted(date: .abbreviated, time: .shortened))
                         }
+
+                        if diagnosticsReportCopied {
+                            FormHint(text: L10n.t("diagnostics.copyReportHint"))
+                        }
                     }
+                }
+            } else {
+                HStack {
+                    Spacer(minLength: 0)
+
+                    Button {
+                        copyDiagnosticsReport()
+                    } label: {
+                        Label(
+                            diagnosticsReportCopied
+                                ? L10n.t("diagnostics.copyReportCopied")
+                                : L10n.t("diagnostics.copyReport"),
+                            systemImage: diagnosticsReportCopied ? "checkmark" : "doc.on.doc"
+                        )
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
                 }
             }
 
@@ -978,6 +1016,18 @@ struct SettingsView: View {
             } label: {
                 Label(L10n.t("diagnostics.recentHistory"), systemImage: "stethoscope")
             }
+        }
+    }
+
+    private func copyDiagnosticsReport() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(model.diagnosticsReportText, forType: .string)
+
+        diagnosticsReportCopied = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            diagnosticsReportCopied = false
         }
     }
 

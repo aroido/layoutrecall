@@ -186,6 +186,10 @@
 "diagnostics.runtimeSnapshot" = "Current runtime";
 "diagnostics.recentHistory" = "Recent history";
 "diagnostics.empty" = "No diagnostics have been recorded yet.";
+"diagnostics.report.title" = "LayoutRecall diagnostics report";
+"diagnostics.copyReport" = "Copy support report";
+"diagnostics.copyReportCopied" = "Report copied";
+"diagnostics.copyReportHint" = "The latest runtime snapshot and recent recovery history were copied to your clipboard.";
 "section.runtime" = "Runtime";
 "shortcut.press" = "Press shortcut";
 "shortcut.record" = "Record Shortcut";
