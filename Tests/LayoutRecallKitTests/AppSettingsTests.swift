@@ -3,28 +3,42 @@ import Testing
 @testable import LayoutRecallKit
 
 @Test
-func appSettingsDecodesLegacyPayloadWithoutUpdateFields() throws {
+func appSettingsDecodeLegacyPayloadWithNewRestoreControlsDisabledByDefault() throws {
     let data = Data(
         """
         {
-          "launchAtLogin" : true,
-          "shortcuts" : {
-            "fixNow" : {
-              "keyCode" : 15,
-              "keyDisplay" : "R",
-              "modifiersRawValue" : 1572864
-            }
-          }
+          "automaticRestoreEnabled": true,
+          "launchAtLogin": false,
+          "shortcuts": {},
+          "automaticallyCheckForUpdates": true
         }
         """.utf8
     )
 
     let settings = try JSONDecoder().decode(AppSettings.self, from: data)
 
-    #expect(settings.automaticRestoreEnabled == true)
-    #expect(settings.launchAtLogin == true)
-    #expect(settings.shortcuts.fixNow?.keyDisplay == "R")
-    #expect(settings.automaticallyCheckForUpdates == true)
-    #expect(settings.skippedReleaseVersion == nil)
-    #expect(settings.preferredLanguageCode == nil)
+    #expect(settings.askBeforeAutomaticRestore == false)
+    #expect(settings.ignoredCurrentSetup == nil)
+}
+
+@Test
+func appSettingsRoundTripRestoreConfirmationAndIgnoredSetup() throws {
+    let original = AppSettings(
+        automaticRestoreEnabled: true,
+        askBeforeAutomaticRestore: true,
+        launchAtLogin: false,
+        shortcuts: ShortcutSettings(),
+        automaticallyCheckForUpdates: true,
+        skippedReleaseVersion: nil,
+        preferredLanguageCode: "en",
+        ignoredCurrentSetup: IgnoredCurrentSetup(
+            displayFingerprint: DisplaySnapshot.developmentDesk.fingerprint,
+            expectedOrigins: DisplayProfile.officeDock.layout.expectedOrigins
+        )
+    )
+
+    let data = try JSONEncoder().encode(original)
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+
+    #expect(decoded == original)
 }

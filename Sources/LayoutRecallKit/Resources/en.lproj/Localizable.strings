@@ -12,6 +12,7 @@
 "menu.state.installingDependency" = "Preparing the restore tool.";
 "menu.state.noMatch" = "No saved profile matches this setup.";
 "menu.state.lowConfidence" = "A profile needs review before restore.";
+"menu.state.reviewBeforeRestore" = "Review before restoring this setup.";
 "menu.state.autoRestoreDisabled" = "Automatic restore is currently off.";
 "menu.state.globalAutoRestoreDisabled" = "Automatic restore is turned off.";
 "menu.state.manualRecovery" = "Ready for manual review and restore.";
@@ -22,7 +23,9 @@
 "menu.state.badge.dependencyMissing" = "Install needed";
 "menu.state.badge.noMatch" = "No match";
 "menu.state.badge.lowConfidence" = "Low confidence";
+"menu.state.badge.reviewBeforeRestore" = "Review first";
 "menu.state.badge.autoRestoreDisabled" = "Manual only";
+"menu.state.badge.pausedCurrentSetup" = "Paused here";
 "menu.state.badge.manualLayoutOverride" = "Manual layout";
 "menu.state.badge.manualRecovery" = "Review needed";
 "menu.state.badge.healthy" = "Stable";
@@ -31,8 +34,11 @@
 "menu.subtitle.dependencyMissing" = "Install the restore tool before automatic restore can keep protecting this setup.";
 "menu.subtitle.noMatch" = "Review the current display arrangement and save a new profile if this setup should be restorable.";
 "menu.subtitle.lowConfidence" = "A similar profile was found, but the match is too weak for safe automatic restore.";
+"menu.subtitle.reviewBeforeRestore" = "A matching profile was found, but LayoutRecall is waiting for your confirmation before restoring.";
 "menu.subtitle.autoRestoreDisabled" = "Turn automatic restore back on if this setup should recover automatically.";
 "menu.subtitle.globalAutoRestoreDisabled" = "Automatic restore is off for the app. Turn it back on if this setup should recover automatically.";
+"menu.state.pausedCurrentSetup" = "Automatic restore is paused for this exact setup.";
+"menu.subtitle.pausedCurrentSetup" = "LayoutRecall will ignore this exact arrangement until the setup changes or you resume protection here.";
 "menu.state.manualLayoutOverride" = "A manual layout is active.";
 "menu.subtitle.manualLayoutOverride" = "The repositioned layout is being kept as-is. Save it as a profile if you want to keep using it.";
 "menu.subtitle.manualRecovery" = "The current state needs a manual review before another restore attempt.";
@@ -52,6 +58,8 @@
 "action.enableAutoRestore" = "Enable Automatic Restore";
 "action.enableAppAutoRestore" = "Enable App Automatic Restore";
 "action.openDiagnostics" = "Open Diagnostics";
+"action.ignoreCurrentSetup" = "Pause on This Setup";
+"action.resumeCurrentSetup" = "Resume on This Setup";
 "action.save" = "Save Profile";
 "action.swap" = "Swap Positions";
 "section.status" = "Status";
@@ -101,9 +109,11 @@
 "toggle.launchAtLogin" = "Launch at login";
 "section.restore" = "Restore";
 "restore.automatic" = "On";
+"restore.askBeforeAutomatic" = "Review first";
 "restore.manualOnly" = "Off";
 "toggle.enableAutomaticRestore" = "Enable automatic restore";
 "toggle.enableAppAutomaticRestore" = "Enable app automatic restore";
+"toggle.askBeforeAutomaticRestore" = "Ask before restoring automatically";
 "restore.dependency.ready" = "The restore tool is ready.";
 "restore.dependency.missing" = "Install the restore tool before automatic restore can run.";
 "restore.dependency.installing" = "Installing the restore tool now.";
@@ -111,9 +121,15 @@
 "settings.restore.dependencyHint" = "Install displayplacer before you rely on automatic restore.";
 "settings.restore.installingHint" = "Restore actions will be available as soon as setup finishes.";
 "settings.restore.noMatchHint" = "This display arrangement does not match any saved profile. Save a new profile if this setup should be recoverable.";
+"settings.restore.askBeforeRestore" = "Restore confirmation";
+"settings.restore.askBeforeRestoreHint" = "When enabled, LayoutRecall surfaces the matched profile and waits for Restore Now instead of moving displays immediately.";
 "settings.restore.lowConfidenceHint" = "A similar profile exists, but the match is too weak for safe automatic restore. Review it before restoring.";
+"settings.restore.reviewBeforeRestoreHint" = "A trusted profile is ready, but confirmation is required before LayoutRecall moves any displays.";
 "settings.restore.autoRestoreDisabledHint" = "Automatic restore is turned off. Turn it back on if this setup should recover automatically.";
 "settings.restore.globalAutoRestoreDisabledHint" = "Automatic restore is turned off for the app. Turn it back on if this setup should recover automatically.";
+"settings.restore.ignoreCurrentSetupHint" = "Pause automatic restore for the exact arrangement that is connected right now.";
+"settings.restore.resumeCurrentSetupHint" = "Resume automatic restore for this exact arrangement and let future matches recover automatically again.";
+"settings.restore.currentSetupIgnoredHint" = "This exact arrangement is intentionally ignored until the setup changes or you resume protection here.";
 "settings.restore.manualLayoutOverrideHint" = "A manually changed layout is active right now. Save it as a profile if you want to keep using it.";
 "settings.restore.manualHint" = "Check the current state first, then run manual restore only when needed.";
 "settings.restore.noImmediateAction" = "No restore is needed right now. Keep new profile saves in the Profiles tab.";
@@ -222,6 +238,7 @@
 "connected.display.count.one" = "Detected %lld connected display.";
 "connected.display.count.other" = "Detected %lld connected displays.";
 "status.badge.autoRestoreOn" = "Auto restore on";
+"status.badge.askBeforeRestore" = "Review before restore";
 "status.badge.autoRestoreOff" = "Auto restore off";
 "status.badge.dependencyReady" = "Restore tool ready";
 "status.badge.dependencyMissing" = "Restore tool needed";
@@ -251,6 +268,9 @@
 "status.checkingLoginItem" = "Checking launch at login status.";
 "event.bootstrapCompleted" = "Application bootstrap completed.";
 "event.autoRestorePreferenceChanged" = "Auto restore preference changed.";
+"event.askBeforeRestorePreferenceChanged" = "Restore confirmation preference changed.";
+"event.currentSetupIgnored" = "Paused automatic restore for the current setup.";
+"event.currentSetupIgnoreCleared" = "Resumed automatic restore for the current setup.";
 "event.confidenceThresholdChanged" = "Confidence threshold changed.";
 "event.profileDeleted" = "Deleted the %@ profile.";
 "status.launchAtLoginSaved" = "Launch at login preference saved.";
@@ -263,6 +283,8 @@
 "decision.scoreSuffix" = "%@ Score: %lld.";
 "status.failedReadCurrentDisplaySet" = "Failed to read the current display set.";
 "decision.manualRestoreRequiresDependency" = "displayplacer is required before manual restore can run.";
+"restoreDecision.askBeforeAutomaticRestore" = "A matching profile is ready. Review the setup, then click Restore Now when you want LayoutRecall to apply it.";
+"restoreDecision.currentSetupIgnored" = "Automatic restore is paused for this exact setup until it changes or you resume protection.";
 "status.noCompatibleSavedProfile" = "No compatible saved profile was found.";
 "decision.saveProfileBeforeManualRestore" = "Save a profile before trying manual restore.";
 "details.userRequestedManualRestore" = "User requested manual restore.";

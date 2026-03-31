@@ -17,6 +17,15 @@ struct MenuContentView: View {
         )
     }
 
+    private var askBeforeRestoreBinding: Binding<Bool> {
+        Binding(
+            get: { model.askBeforeAutomaticRestoreEnabled },
+            set: { newValue in
+                model.setAskBeforeAutomaticRestore(newValue)
+            }
+        )
+    }
+
     var body: some View {
         ZStack {
             AppChromeBackground()
@@ -123,23 +132,33 @@ struct MenuContentView: View {
 
     private var autoRestoreControl: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.automaticRestoreControlTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(model.automaticRestoreControlTitle)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
 
-                Text(model.restoreModeLine)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                        Text(model.restoreModeLine)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .disabled(model.profiles.isEmpty)
+                        .accessibilityIdentifier("menu.toggle.autoRestore")
+                }
+
+                Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
+                    .toggleStyle(.switch)
+                    .disabled(model.profiles.isEmpty || !model.autoRestoreEnabled)
+                    .font(.caption)
+                    .accessibilityIdentifier("menu.toggle.askBeforeRestore")
             }
-
-            Spacer(minLength: 0)
-
-            Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .disabled(model.profiles.isEmpty)
-                .accessibilityIdentifier("menu.toggle.autoRestore")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -264,6 +283,10 @@ struct MenuContentView: View {
                     fixNowButton
                 }
 
+                if model.canToggleCurrentSetupPause {
+                    currentSetupPauseButton
+                }
+
                 if model.referenceProfile != nil {
                     identifyDisplaysButton
                 }
@@ -276,6 +299,10 @@ struct MenuContentView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if shouldShowInlineFixNowButton {
                     fixNowButton
+                }
+
+                if model.canToggleCurrentSetupPause {
+                    currentSetupPauseButton
                 }
 
                 if model.referenceProfile != nil {
@@ -313,6 +340,21 @@ struct MenuContentView: View {
         .accessibilityIdentifier("menu.action.identify")
     }
 
+    private var currentSetupPauseButton: some View {
+        Button {
+            model.toggleIgnoreCurrentSetup()
+        } label: {
+            actionLabel(
+                model.currentSetupPauseActionTitle,
+                systemImage: model.currentSetupPauseActionSystemImage
+            )
+        }
+        .buttonStyle(ActionButtonStyle(role: .secondary))
+        .disabled(!model.canToggleCurrentSetupPause)
+        .help(model.currentSetupPauseHint)
+        .accessibilityIdentifier("menu.action.currentSetupPause")
+    }
+
     private var advancedActionsMenu: some View {
         Menu {
             let showsOtherAdvancedItems =
@@ -331,6 +373,16 @@ struct MenuContentView: View {
 
             if model.showsSwapDisplaysControl {
                 if !model.menuQuickActions.isEmpty {
+                    Divider()
+                }
+
+                if model.canToggleCurrentSetupPause {
+                    Button {
+                        model.toggleIgnoreCurrentSetup()
+                    } label: {
+                        Label(model.currentSetupPauseActionTitle, systemImage: model.currentSetupPauseActionSystemImage)
+                    }
+
                     Divider()
                 }
 

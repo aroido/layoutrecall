@@ -15,6 +15,8 @@ public enum RestoreDecisionContext: Equatable, Sendable {
     case automaticRestoreDisabled
     case manualLayoutOverride
     case dependencyBlocked
+    case awaitingUserConfirmation
+    case currentSetupIgnored
     case ready
     case savedProfileReady
     case manualRestoreRequested

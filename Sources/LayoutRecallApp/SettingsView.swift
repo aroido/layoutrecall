@@ -101,6 +101,15 @@ struct SettingsView: View {
         )
     }
 
+    private var askBeforeRestoreBinding: Binding<Bool> {
+        Binding(
+            get: { model.askBeforeAutomaticRestoreEnabled },
+            set: { newValue in
+                model.setAskBeforeAutomaticRestore(newValue)
+            }
+        )
+    }
+
     private var automaticUpdateChecksBinding: Binding<Bool> {
         Binding(
             get: { model.automaticUpdateChecksEnabled },
@@ -239,6 +248,21 @@ struct SettingsView: View {
                 Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
                     .toggleStyle(.switch)
                     .accessibilityIdentifier("settings.restore.autoRestore")
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.askBeforeRestoreControlTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
+                        .toggleStyle(.switch)
+                        .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
+                        .accessibilityIdentifier("settings.restore.askBeforeRestore")
+
+                    FormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -310,6 +334,18 @@ struct SettingsView: View {
                         .buttonStyle(ActionButtonStyle(role: .secondary))
                         .accessibilityIdentifier("settings.restore.diagnostics")
                     }
+                }
+
+                if model.canToggleCurrentSetupPause {
+                    Button {
+                        model.toggleIgnoreCurrentSetup()
+                    } label: {
+                        Label(model.currentSetupPauseActionTitle, systemImage: model.currentSetupPauseActionSystemImage)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .help(model.currentSetupPauseHint)
+                    .accessibilityIdentifier("settings.restore.currentSetupPause")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
