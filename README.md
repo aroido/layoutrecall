@@ -6,12 +6,13 @@ It is aimed at the common desktop problem where external displays come back in t
 
 ## Features
 
-- Saves one or more display layout profiles from the current live monitor arrangement
-- Watches for display reconfiguration events and attempts automatic restore when confidence is high
-- Falls back to one-click manual recovery with `Fix Now` and `Change Positions`
-- Shows profile, confidence, and diagnostic context directly from the menu bar
-- Supports launch at login, keyboard shortcuts, and in-app update checks
-- Lets you choose app language explicitly with `System`, `English`, or `Korean`
+- Saves and manages one or more display layout profiles from the current live monitor arrangement
+- Watches for real display reconfiguration events and attempts automatic restore when confidence is high
+- Falls back to manual recovery with `Fix Now`, direct `Apply Layout`, `Show Numbers`, and `Swap Positions`
+- Shows profile, confidence, dependency, and diagnostic context directly from the menu bar
+- Persists diagnostics history and exposes restore controls from a five-pane settings window
+- Supports launch at login, keyboard shortcuts, in-app update checks, and explicit `System` / `English` / `Korean` language choice
+- Can install `displayplacer` through the app flow when the dependency is missing
 
 ## Install
 
@@ -46,7 +47,7 @@ LayoutRecall can build and run tests without `displayplacer`, but restoring a sa
 The current implementation is deliberately biased toward stable, practical recovery for common desk setups:
 
 - automatic restore focuses on exact or high-confidence matches against saved profiles
-- `Change Positions` supports either two displays, or a main display plus two secondary displays
+- `Swap Positions` supports either two displays, or a main display plus two secondary displays
 - four-plus-display layouts stay manual on purpose until the app can expose a predictable repositioning model
 
 ## Development
@@ -76,7 +77,7 @@ Open `Package.swift` in Xcode if you want an IDE workflow.
 - `Tests/LayoutRecallAppTests`: app-level state, UI harness, and end-to-end coverage
 - `Tests/LayoutRecallKitTests`: matcher, localization, restore, and persistence coverage
 - `docs/PRD.md`: product summary
-- `docs/SPEC.md`: detailed product behavior and roadmap
+- `docs/SPEC.md`: detailed current behavior, architecture, and 2.0 priorities
 
 ## Release workflow
 

@@ -1,567 +1,225 @@
 # LayoutRecall Product Specification
 
-Status: Draft  
-Last updated: 2026-03-29
+Status: Working baseline for the 2.0 overnight program  
+Last updated: 2026-04-01
 
 ## 1. Purpose
 
-LayoutRecall is a macOS menu bar utility that detects disruptive external display changes and restores a previously saved layout when the connected monitor set matches a known workspace with high confidence.
+LayoutRecall is a macOS menu bar utility that detects disruptive display changes and restores a previously saved layout when the connected monitor set matches a known workspace with high confidence.
 
-This document turns the high-level product draft into an implementation-ready plan. It defines scope, architecture direction, acceptance criteria, delivery phases, and the issue breakdown needed to move the repository from scaffold to MVP.
+This specification reflects the **current implemented baseline**, not an earlier scaffold plan. Its job is to document what exists today, where the product intentionally draws safety boundaries, and which areas are the best candidates for the next improvement waves.
 
-## 2. Problem Statement
-
-macOS may reorder or swap identical external displays after:
-
-- dock reconnect
-- sleep and wake
-- cable reconnect
-- monitor power cycle
-- spontaneous display reconfiguration
-
-For users who rely on stable left/right monitor placement, this creates immediate productivity loss and forces repetitive manual correction.
-
-## 3. Product Goals
+## 2. Product goals
 
 ### Primary goals
 
 - Detect meaningful display reconfiguration events with low noise.
 - Match the current monitor set against saved profiles safely.
-- Restore a saved layout automatically only when confidence is high.
-- Offer a fast manual recovery path when confidence is low.
-- Keep the app lightweight, quiet, and menu-bar-first.
+- Restore automatically only when confidence is high enough to trust the action.
+- Keep manual recovery fast and understandable when automation is unsafe.
+- Make the menu bar surface trustworthy enough for daily use.
 
 ### Secondary goals
 
-- Persist recent diagnostics for troubleshooting.
-- Support launch at login.
-- Make the app reliable enough for daily use on common dual- and triple-monitor setups.
+- Preserve diagnostics that explain recent decisions and failures.
+- Keep setup friction manageable even when `displayplacer` is missing.
+- Support daily-driver quality for common dual- and triple-monitor desks.
 
-## 4. Non-Goals for MVP
+## 3. Current implemented baseline
 
-- A fully native display layout engine that replaces `displayplacer`
-- Cloud sync or multi-machine profile sync
-- Per-app window arrangement
-- Enterprise device policy support
-- Cross-platform support outside macOS
-- A complex onboarding flow or analytics pipeline
+The repository already includes the following real behavior:
 
-## 5. Current Repository Status
+### Runtime and recovery pipeline
 
-The current codebase already provides useful scaffolding:
+- live display snapshot capture using CoreGraphics
+- real display reconfiguration callback registration
+- wake notification monitoring
+- debounce before reevaluating a hardware change burst
+- confidence-based profile matching
+- automatic restore when the best match clears the active threshold
+- manual restore entrypoints for `Fix Now` and direct `Apply Layout`
+- post-restore verification against expected origins
 
-- domain models for display snapshots and profiles
-- profile matching and restore decision logic
-- profile persistence in Application Support
-- menu bar shell and settings window
-- a repo-owned verification entrypoint
+### Profile and diagnostics surface
 
-The repository is not yet functionally complete because these pieces are still missing or stubbed:
+- save current layout as a profile
+- rename and delete profiles
+- per-profile confidence threshold editing
+- per-profile auto-restore toggle
+- `Show Numbers` to map profile order to physical displays
+- persisted diagnostics with action, score, execution, and verification fields
+- runtime snapshot details in settings
 
-- real display snapshot capture from CoreGraphics
-- real display event monitoring and debounce
-- actual `displayplacer` execution
-- post-restore verification
-- persistent diagnostics history
-- launch-at-login integration
-- broader tests and CI coverage
+### General app capabilities
 
-## 6. MVP Definition
+- launch at login via `SMAppService`
+- global shortcuts
+- English / Korean / System language choice
+- update checks, skip-version handling, and install flow plumbing
+- automatic dependency installation path for `displayplacer`
 
-The MVP is complete when all of the following are true:
+## 4. Architecture snapshot
 
-- The app reads the real currently attached display set.
-- The app listens for real display reconfiguration events.
-- The app can save at least one usable profile from a live setup.
-- The app automatically restores a saved layout only when the match score exceeds the configured threshold.
-- The app exposes `Fix Now` and `Swap Left / Right` manual actions.
-- The app stores recent diagnostics and shows them in the UI.
-- The app can launch at login.
-- The repository has repeatable build/test verification and CI.
+### Main modules
 
-## 7. Target Users
+- `LayoutRecallApp`
+  - SwiftUI menu bar and settings surfaces
+  - `AppModel` orchestration and user-triggered actions
+  - presentation-state mapping for trust, confidence, and recovery affordances
+- `LayoutRecallKit`
+  - display models and persistence
+  - profile matching and restore decisions
+  - display event monitoring, snapshot reading, restore execution, verification, and diagnostics
 
-- Developers using laptop + dock + multiple external monitors
-- Creators who keep a stable primary/secondary monitor arrangement
-- Analysts or operators with layout-sensitive workstations
+### Key services
 
-## 8. Core User Flows
+- `DisplaySnapshotReader` — reads live display state from CoreGraphics
+- `CGDisplayEventMonitor` — listens for reconfiguration and wake events
+- `ProfileMatcher` — scores a live display set against saved profiles
+- `RestoreCoordinator` — decides whether to auto-restore, stay manual, or prompt profile creation
+- `DisplayplacerCommandBuilder` — generates restore commands from saved layouts
+- `DisplayplacerRestoreExecutor` — runs restore commands and captures command results
+- `RestoreVerifier` — re-reads displays after restore and compares expected origins
+- `DiagnosticsLogger` — persists a capped recent history
 
-### Flow A: First-time setup
+## 5. User-facing behavior
 
-1. User launches the app.
-2. User saves the current layout as a profile.
-3. The app captures live display metadata and a restore command.
-4. The profile is persisted.
+## 5.1 Menu bar surface
 
-### Flow B: Automatic recovery
+The menu bar is the primary runtime surface and should answer four questions quickly:
 
-1. macOS emits a display reconfiguration event.
-2. The app waits for the debounce window to settle.
-3. The app captures the current live display set.
-4. The app finds the best profile match.
-5. If the score is above the threshold and auto-restore is enabled, the app runs the restore command.
-6. The app verifies the result and records diagnostics.
+1. Is LayoutRecall healthy right now?
+2. Did it find a trustworthy profile match?
+3. If it did not auto-restore, why not?
+4. What is the next best action for the user?
 
-### Flow C: Manual recovery
+Current surface elements:
 
-1. A reconfiguration event happens but confidence is below threshold.
-2. The app does not auto-run a command.
-3. The user opens the menu and clicks `Fix Now` or `Swap Left / Right`.
-4. The app executes the chosen action and records diagnostics.
+- status title and subtitle
+- evidence pills for dependency, display count, and confidence
+- primary action when intervention is needed
+- quick actions for save, identify, manage profiles, and recovery
 
-## 9. Functional Requirements
+## 5.2 Settings information architecture
 
-### FR-1: Live display snapshot capture
+The settings window currently has five panes:
 
-The app must collect a live `DisplaySnapshot` array from CoreGraphics and related APIs.
+- **Restore** — automatic restore state, dependency readiness, recommended actions
+- **Profiles** — save/manage profiles, thresholds, apply layout, identify displays
+- **Shortcuts** — keyboard shortcuts for restore actions
+- **Diagnostics** — latest decision plus recent capped history
+- **General** — launch at login, updates, preferred language
 
-Required fields:
+This is already a reasonable foundation for 2.0 work; improvements should focus on clarity and trust rather than adding settings volume without evidence.
 
-- stable display identifier
-- vendor ID
-- product ID
-- serial number when available
-- fallback identifiers when serial is unavailable
-- resolution
-- refresh rate when available
-- scale factor when available
-- display bounds/origin
+## 6. Safety and trust model
 
-Acceptance criteria:
+The product is intentionally conservative.
 
-- A connected dual-monitor setup produces two snapshots with stable IDs across repeated reads.
-- Identical monitor models still remain distinguishable when any serial or persistent identifiers exist.
-- Snapshot capture failures are reported in diagnostics and do not crash the app.
+### Current safety rules
 
-### FR-2: Display event monitoring
+- no automatic restore when there are no displays or no profiles
+- no automatic restore when the best profile is below threshold
+- no automatic restore when app-level automatic restore is disabled
+- no automatic restore when `displayplacer` is unavailable
+- diagnostics should capture both successful actions and blocked decisions
 
-The app must observe display-related changes and trigger restore evaluation only after the display set stabilizes.
+### Product principle
 
-Requirements:
+Prefer safe false negatives over unsafe false positives.
 
-- use a real CoreGraphics reconfiguration callback
-- support wake-related reevaluation
-- debounce repeated change bursts into one evaluation
-- ignore obviously transient intermediate states when possible
+If the app is not confident enough to move monitors automatically, it should explain the reason and surface the most relevant manual action instead.
 
-Acceptance criteria:
+## 7. Known limitations
 
-- Reconnect or wake sequences do not produce repeated restore attempts within the debounce window.
-- Manual test logs show one evaluation for one meaningful display change burst.
+These are current boundaries, not necessarily bugs:
 
-### FR-3: Profile creation and persistence
+- `displayplacer` remains the execution engine for real layout changes.
+- Automatic dependency installation depends on Homebrew/bootstrap success.
+- `Swap Positions` is intentionally limited to simpler supported layouts.
+- Four-plus-display rearrangement remains a manual/review-heavy area.
+- Some live hardware and UI harness tests are opt-in because they require a real environment.
 
-The app must allow saving a profile from the current live layout and persist it safely.
+## 8. Code quality review
 
-Requirements:
+The current codebase is in good shape for incremental product work.
 
-- save the display set fingerprint
-- save the display metadata used for matching
-- save expected origins/positions
-- save the engine type and generated restore command
-- allow multiple profiles
-- allow toggling auto-restore and confidence threshold per profile
+### Strengths observed
 
-Acceptance criteria:
+- `AppModel` uses dependency injection consistently enough to keep app behavior testable.
+- Restore logic is separated into matcher, coordinator, executor, and verifier layers.
+- Diagnostics and persistence paths are isolated behind protocols.
+- Localization, update, restore, and settings behavior already have broad automated coverage.
 
-- Saving the current layout produces a profile file that survives app restart.
-- A newly saved profile is immediately eligible for matching.
+### Main quality concerns
 
-### FR-4: Matching and restore decision
+- Product documentation was materially behind implementation, which makes planning noisier than it should be.
+- Some user trust behaviors are spread across presentation logic and localization strings, so future edits should preserve terminology consistency.
+- Dependency bootstrap relies on shelling out to Homebrew install flows, which is practical but deserves careful user-facing explanation.
 
-The app must select the best saved profile safely and decide whether to auto-restore, offer manual recovery, or remain idle.
+## 9. Verification and coverage baseline
 
-Requirements:
+The repository already contains useful automated coverage in these areas:
 
-- preserve the existing weighted matching approach as a starting point
-- keep matching independent of physical display order
-- allow profile-specific confidence thresholds
-- never auto-restore below threshold
-- prefer safe false negatives over unsafe false positives
-
-Acceptance criteria:
-
-- A known saved setup with strong identifiers matches above threshold.
-- A partial or ambiguous setup does not auto-restore.
-- No profile match results in `saveNewProfile` when no profiles exist, otherwise `offerManualFix`.
-
-### FR-5: Restore execution
-
-The app must execute layout restoration through `displayplacer` first.
-
-Requirements:
-
-- discover whether `displayplacer` is installed and runnable
-- execute restore commands asynchronously
-- capture exit status, stderr, and timeout
-- support a manual `Fix Now`
-- support a manual `Swap Left / Right` fallback command
-
-Acceptance criteria:
-
-- A valid command executes successfully from the app process.
-- Missing `displayplacer` produces a clear UI and diagnostics message.
-- Fallback actions are backed by real commands rather than placeholder text.
-
-### FR-6: Post-restore verification
-
-The app must verify whether the requested layout appears to have been restored after command execution.
-
-Requirements:
-
-- re-read live snapshots after restore
-- compare restored origins against the expected profile origins
-- tolerate small timing delays with a short retry window
-- report verified success, unverified result, or failure
-
-Acceptance criteria:
-
-- A successful restore records verification success.
-- A failed or partial restore records the mismatch reason.
-
-### FR-7: Diagnostics
-
-The app must persist and display recent diagnostics to help debug matching and restore failures.
-
-Required fields:
-
-- timestamp
-- event type
-- matched profile name
-- match score
-- chosen action
-- execution result
-- verification result
-- human-readable details
-
-Acceptance criteria:
-
-- Diagnostics survive app relaunch.
-- The most recent entries are viewable from the settings UI.
-- Diagnostic volume is capped to avoid unbounded growth.
-
-### FR-8: Menu bar and settings UX
-
-The app must remain menu-bar-first and provide only the controls necessary for the MVP.
-
-Menu requirements:
-
-- current status line
-- latest decision line
-- latest executed command when relevant
-- `Fix Now`
-- `Save Current Layout`
-- `Swap Left / Right`
-- link to settings
-- quit button
-
-Settings requirements:
-
-- list profiles
-- edit profile name
-- toggle auto-restore
-- adjust confidence threshold
-- view recent diagnostics
-- explain when the app will or will not auto-restore
-
-Acceptance criteria:
-
-- A user can configure and recover from the menu bar without opening a developer console.
-
-### FR-9: Launch at login
-
-The app must support optional launch at login using `SMAppService`.
-
-Acceptance criteria:
-
-- The setting persists.
-- The app registers and unregisters cleanly without crashing.
-
-## 10. Non-Functional Requirements
-
-### NFR-1: Safety
-
-- Do not execute automatic restore when confidence is below threshold.
-- Do not restore when the display count is clearly incompatible.
-- Do not crash due to missing identifiers or missing external dependencies.
-
-### NFR-2: Performance
-
-- Snapshot capture should complete quickly enough for menu interactions to feel immediate.
-- Restore evaluation should happen within a short time after the debounce window ends.
-
-### NFR-3: Reliability
-
-- Burst display events should not trigger restore loops.
-- Persistence failures should degrade gracefully.
-
-### NFR-4: Observability
-
-- Diagnostic entries must be sufficient to reconstruct what the app decided and why.
-
-### NFR-5: Repository health
-
-- `./scripts/run-ai-verify --mode full` must remain the local completion gate.
-- GitHub Actions must run build and test on pull requests.
-
-## 11. Technical Design Direction
-
-### 11.1 Runtime pipeline
-
-1. Receive a display-related event.
-2. Start or refresh the debounce timer.
-3. Capture the live display set after the timer elapses.
-4. Load saved profiles.
-5. Match the current display set against profiles.
-6. Decide whether to auto-restore, offer manual recovery, save a profile, or stay idle.
-7. If a restore action is selected, execute the engine command.
-8. Re-read the display set and verify the result.
-9. Record diagnostics and update UI state.
-
-### 11.2 Proposed new or expanded components
-
-- `DisplaySnapshotReader`: reads live display data
-- `CGDisplayEventMonitor`: real monitor callback implementation
-- `RestoreExecutor`: runs external restore commands
-- `RestoreVerifier`: compares expected vs actual layout after execution
-- `DiagnosticsStore`: persists and loads recent diagnostics
-- `ProfileCommandBuilder`: generates `displayplacer` commands from live snapshots
-
-### 11.3 Existing components to keep and extend
-
-- `ProfileMatcher`: keep the weighted model and refine using fixture data
-- `RestoreCoordinator`: keep as the central decision boundary
-- `ProfileStore`: extend if profile schema evolves
-- `AppModel`: move from scaffold state to real orchestration state
-
-## 12. Delivery Roadmap
-
-### Phase 0: Foundation and repository health
-
-Goals:
-
-- stabilize verification
-- document the product clearly
-- prepare CI
-
-Deliverables:
-
-- this specification document
-- GitHub Actions workflow for build/test
-- small refactors that support dependency injection for live integrations
-
-Exit criteria:
-
-- every PR runs automated build/test
-- local verify and CI use the same basic success conditions
-
-### Phase 1: Live display capture
-
-Goals:
-
-- replace sample snapshots with real hardware reads
-
-Deliverables:
-
-- `DisplaySnapshotReader`
-- integration of live snapshots into `AppModel`
-- diagnostic handling for snapshot capture failures
-
-Exit criteria:
-
-- the app menu reflects live hardware state rather than sample data
-- saved profiles are created from real monitor metadata
-
-### Phase 2: Event monitoring and debounce
-
-Goals:
-
-- move from manual-only evaluation to event-driven evaluation
-
-Deliverables:
-
-- real display event monitor
-- debounce coordinator
-- wake/reconfigure handling
-
-Exit criteria:
-
-- reconnecting displays causes one restore evaluation at the end of the event burst
-
-### Phase 3: Real restore execution
-
-Goals:
-
-- make `Fix Now` and auto-restore actually restore layouts
-
-Deliverables:
-
-- `displayplacer` command execution
-- `Swap Left / Right` fallback implementation
-- dependency checks and failure surfacing
-- post-restore verification
-
-Exit criteria:
-
-- the app can restore a known layout end to end in a controlled test environment
-
-### Phase 4: Profile UX and diagnostics
-
-Goals:
-
-- make the app understandable and operable without developer help
-
-Deliverables:
-
-- editable profiles
-- confidence threshold controls
-- persisted diagnostics history
-- settings diagnostics view
-
-Exit criteria:
-
-- a user can inspect what the app decided and why
-
-### Phase 5: Login item, hardening, and beta readiness
-
-Goals:
-
-- make the app fit for external testing
-
-Deliverables:
-
-- launch at login
-- broader test coverage with recorded fixtures
-- packaging polish
-- known limitations documentation
-
-Exit criteria:
-
-- the app is stable enough for daily beta usage by a small set of external users
-
-## 13. Recommended GitHub Milestones
-
-### Milestone 1: Live capture and event pipeline
-
-- implement `DisplaySnapshotReader`
-- implement `CGDisplayEventMonitor`
-- add debounce coordinator
-- connect live snapshots to `AppModel`
-
-### Milestone 2: Restore execution MVP
-
-- add `displayplacer` executor
-- generate commands from saved profiles
-- implement post-restore verification
-- implement real `Fix Now`
-- implement real `Swap Left / Right`
-
-### Milestone 3: Productization
-
-- diagnostics persistence
-- profile editing UX
-- launch at login
-- CI hardening
-- fixture-based tests
-
-## 14. Recommended Issue Breakdown
-
-1. Add `DisplaySnapshotReader` backed by CoreGraphics.
-2. Add a real `DisplayEventMonitor` and debounce coordinator.
-3. Replace sample display injection in `AppModel` with live snapshots.
-4. Add a `displayplacer` dependency check and execution service.
-5. Add post-restore verification against expected origins.
-6. Generate restore commands from saved live layouts.
-7. Implement a real `Swap Left / Right` fallback action.
-8. Persist diagnostics to disk and expose them in settings.
-9. Add profile editing and threshold controls.
-10. Add `SMAppService` launch-at-login support.
-11. Add CI for build/test verification.
-12. Add recorded fixture tests for dual- and triple-monitor scenarios.
-
-## 15. Testing Strategy
-
-### Unit tests
-
-- profile matching score behavior
-- restore decision thresholds
+- app-model orchestration and UI presentation behavior
+- profile persistence and settings persistence
+- diagnostics truncation/persistence
+- profile matching and restore decisions
+- restore verification logic
+- localization
 - command generation
-- verification diff logic
-- diagnostics truncation and persistence
+- view snapshot smoke coverage
+- optional live hardware and UI harness smoke paths
 
-### Fixture tests
-
-- dual identical monitors with stable serials
-- identical monitors with missing serials
-- dock reconnect with reordered IDs
-- one display missing
-- low-confidence ambiguous setup
-
-### Manual hardware tests
-
-- disconnect and reconnect dock
-- sleep and wake while docked
-- power cycle one identical monitor
-- swap cable ports between identical monitors
-
-### Verification gate
-
-Local completion must continue to use:
+Local completion should continue to use:
 
 ```bash
 ./scripts/run-ai-verify --mode full
 ```
 
-CI must cover the same build and test path.
+## 10. 2.0 improvement priorities
 
-## 16. Risks and Mitigations
+The next waves should build on the current baseline instead of rewriting it.
 
-### Risk: unstable monitor identifiers
+### Priority 1: restore trust and explainability
 
-Mitigation:
+- make confidence and dependency state easier to understand at a glance
+- explain blocked auto-restore decisions more crisply
+- improve diagnostic summaries so users know what happened without reading raw details
 
-- score multiple identifiers rather than relying on one
-- use fixture data from several hardware setups
+### Priority 2: profile management ergonomics
 
-### Risk: restore loops during noisy event bursts
+- reduce friction when multiple profiles exist
+- make direct apply, identify, and threshold tuning feel more obvious
+- tighten profile naming and reference-layout cues
 
-Mitigation:
+### Priority 3: manual recovery clarity
 
-- strict debounce
-- cooldown after restore
-- skip re-triggering on self-induced changes where feasible
+- document exactly when `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` should be used
+- better communicate unsupported complex-layout cases
 
-### Risk: `displayplacer` availability or command drift
+### Priority 4: setup and resilience polish
 
-Mitigation:
+- make dependency setup messaging calmer and more explicit
+- continue hardening around restore verification failures and transient event bursts
+- improve user confidence in launch-at-login and update-management flows
 
-- explicit dependency detection
-- clear missing dependency messaging
-- isolate command generation and execution behind services
+## 11. Suggested acceptance criteria for the next program waves
 
-### Risk: false-positive auto-restore
+Any 2.0 wave should satisfy all of the following:
 
-Mitigation:
+- keep the branch shippable after the wave
+- preserve the conservative auto-restore safety model
+- update user-facing docs when behavior changes materially
+- keep automated verification green
+- improve user trust, clarity, or recoverability in a visible way
 
-- conservative default threshold
-- profile-specific thresholds
-- prefer manual recovery when uncertain
+## 12. Recommended documentation posture
 
-## 17. Open Questions
+Going forward, the docs should describe:
 
-- Which exact CoreGraphics and IOKit identifiers are most stable across the target hardware matrix?
-- Should the app support multiple fallback actions beyond `Swap Left / Right` in MVP?
-- Should the app auto-save diagnostics to a plain JSON file or a more human-readable log format?
-- How aggressively should post-restore verification retry before declaring uncertainty?
+- the **current implemented baseline**
+- the **current known limits**
+- the **next highest-value polish work**
 
-## 18. Immediate Next Step
-
-The highest-value next implementation task is:
-
-Add a real `DisplaySnapshotReader` and wire it into `AppModel`.
-
-Reason:
-
-- every remaining product behavior depends on live hardware state
-- without this step the app remains a scaffold regardless of UI or command work
+They should not drift back into describing the app as an unimplemented scaffold when the code already delivers real behavior.
