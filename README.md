@@ -1,69 +1,82 @@
 # LayoutRecall
 
-> Restore the monitor layout macOS keeps scrambling.
->
-> LayoutRecall is the open-source macOS menu bar app for MacBook + dock + 2+ display desks. Save a known-good layout once, then bring it back after sleep, wake, or reconnect — automatically when the match is confident, manually when it is not.
+> **Stop rebuilding your monitor layout every time macOS forgets it.**
 
-![LayoutRecall hero](docs/marketing/generated/final/readme-hero.png)
+LayoutRecall is an open-source macOS menu bar app for **MacBook + dock + multi-display desks**. Save a known-good layout once, then bring it back after sleep, wake, or reconnect — with **automatic restore when confidence is high** and **manual recovery when it is not**.
+
+![LayoutRecall hero showing menu bar recovery and settings proof](docs/marketing/generated/final/readme-hero.png)
 
 ## Install now
 
-- **Download the signed app:** [GitHub Releases](https://github.com/aroido/layoutrecall/releases)
-- **Install with Homebrew:** `brew install --cask aroido/layoutrecall/layoutrecall`
-- **See the short product story:** [demo GIF](docs/marketing/generated/final/layoutrecall-demo.gif) · [demo MP4](docs/marketing/generated/final/layoutrecall-demo.mp4)
+- **Download the signed app:** grab the latest `DMG` from [GitHub Releases](https://github.com/aroido/layoutrecall/releases), drag `LayoutRecall.app` into `/Applications`, then save your baseline layout from the menu bar.
+- **Install with Homebrew:**
 
-Quick reasons people install it:
+  ```bash
+  brew install --cask aroido/layoutrecall/layoutrecall
+  ```
 
-- **Save a desk once:** keep a known-good layout ready for the next reconnect.
-- **Restore only when safe:** automatic recovery is limited to strong profile matches.
-- **Stay in control when it is not safe:** `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics stay available.
+- **Dependency note:** LayoutRecall can guide you through installing `displayplacer` from inside the app when restore support is missing.
 
-## Built for the desk setup that keeps drifting
+## Who it is for
 
-LayoutRecall is aimed first at people who already know the exact monitor layout they want back:
+LayoutRecall is built first for people whose desk setup keeps drifting:
 
-- MacBook + dock + 2+ external display users
-- developers, creators, analysts, and operators with left/right monitor muscle memory
-- anyone tired of identical displays returning in the wrong order after sleep, wake, or reconnect
+- MacBook + dock users with 2+ external displays that return in the wrong order
+- developers, creators, analysts, and operators with strong left/right monitor muscle memory
+- Mac mini / Mac Studio users dealing with repeated KVM, dock, or cable reconnect churn
 
-If you want a full display-management suite or magical support for every complex four-plus-display rearrangement, this repo is intentionally narrower than that.
+## Why cautious desk users trust it
 
-## Why people trust LayoutRecall
+- **It does not guess blindly.** Automatic restore only happens when the connected display set is a strong match for a saved profile.
+- **It stays transparent.** Profile match status, confidence, dependency state, and diagnostics are visible from the menu bar and settings.
+- **It stays usable when confidence is lower.** `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` keep recovery practical instead of magical.
+- **It is easy to evaluate.** Signed releases, Homebrew install, OSS code, and a documented verify path are available today.
 
-- **It is conservative by design.** Automatic restore only runs when the connected display set strongly matches a saved profile.
-- **It stays transparent when it refuses to act.** If the match is weak or a dependency is missing, the app keeps recovery manual and shows why.
-- **It gives you direct recovery controls.** `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` are available when you want control.
-- **It exposes real diagnostics.** Confidence, dependency state, and recent restore evidence stay visible instead of being buried.
-- **It is easy to evaluate honestly.** Signed downloads, a Homebrew cask, and the open-source codebase make the install path lower-friction than a random display script.
+![LayoutRecall demo showing the recovery flow from scramble to restore](docs/marketing/generated/final/layoutrecall-demo.gif)
 
-## What happens when macOS scrambles your desk
+## What problem it solves
 
-| When macOS forgets your setup | What LayoutRecall does |
+macOS can bring external displays back with the wrong order, wrong origin, or wrong main-display state after:
+
+- sleep / wake
+- dock reconnect
+- cable churn
+- identical-monitor swaps
+
+LayoutRecall is intentionally narrow: it restores **known** layouts safely instead of trying to become a full display-management suite.
+
+## How recovery works
+
+1. Arrange your displays the way you want.
+2. Save the current arrangement as a profile.
+3. LayoutRecall watches for real display reconfiguration events.
+4. If the new display snapshot strongly matches a saved profile, it can restore automatically.
+5. If confidence is lower, it stays manual on purpose and shows the relevant recovery action and diagnostics.
+
+The current implementation is deliberately biased toward stable, practical recovery for common desk setups:
+
+- automatic restore focuses on exact or high-confidence matches against saved profiles
+- `Swap Positions` supports either two displays, or a main display plus two secondary displays
+- four-plus-display layouts stay manual on purpose until the app can expose a predictable repositioning model
+
+## Why use this instead of a one-off script?
+
+| When macOS scrambles the desk | What LayoutRecall adds |
 | --- | --- |
-| Identical monitors come back in the wrong order after sleep or wake | Restores a saved profile when the live display snapshot is a confident match |
-| Dock reconnect changes the main display or origin unexpectedly | Brings back the known-good arrangement you already saved |
-| Auto-restore would be risky | Stops short, shows diagnostics, and leaves recovery manual on purpose |
-| You want to recover immediately yourself | Gives you `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` |
+| You have to remember and re-run the right command at the right moment | Saved profiles and menu bar recovery actions are already in place |
+| Automation can feel risky if it fires at the wrong time | High-confidence matching keeps low-confidence cases manual |
+| It is hard to know why a restore did or did not happen | Diagnostics, dependency state, and recovery hints stay visible |
+| Setup can feel fragile | Signed app download, Homebrew install, and in-app dependency guidance lower the first-run cost |
 
-## Short demo
+## See the safety + control surfaces
 
-![LayoutRecall demo](docs/marketing/generated/final/layoutrecall-demo.gif)
+![LayoutRecall trust and diagnostics still](docs/marketing/generated/final/readme-feature-trust.png)
 
-The demo follows the real product story: a desk layout drifts, a saved profile is recognized, restore stays confidence-aware, and diagnostics/manual fallback remain visible.
+*Confidence, dependency, and recent restore evidence stay visible so LayoutRecall can explain what it did — or why it refused to act.*
 
-## Proof that the app is real, safe, and controllable
+![LayoutRecall profiles and controls still](docs/marketing/generated/final/readme-feature-profiles.png)
 
-### Trust before restore
-
-![LayoutRecall trust view](docs/marketing/generated/final/readme-feature-trust.png)
-
-LayoutRecall keeps the matched profile, dependency status, confidence signals, and recent restore evidence close to the action so users can tell what happened — or why the app refused to guess.
-
-### Profiles and recovery controls
-
-![LayoutRecall profiles view](docs/marketing/generated/final/readme-feature-profiles.png)
-
-Save more than one desk profile, tune how restore behaves on startup, and keep manual recovery actions within reach when you want a predictable fallback.
+*Save multiple desk profiles, tune recovery behavior, and fall back to direct controls when you want to stay hands-on.*
 
 ## Features
 
@@ -75,22 +88,6 @@ Save more than one desk profile, tune how restore behaves on startup, and keep m
 - Supports launch at login, keyboard shortcuts, in-app update checks, and explicit `System` / `English` / `Korean` language choice
 - Can install `displayplacer` through the app flow when the dependency is missing
 
-## Install details
-
-### Download the signed app
-
-1. Download the latest `DMG` from [GitHub Releases](https://github.com/aroido/layoutrecall/releases)
-2. Drag `LayoutRecall.app` into `/Applications`
-3. Launch the app and save a baseline layout from the menu bar
-
-### Install with Homebrew
-
-```bash
-brew install --cask aroido/layoutrecall/layoutrecall
-```
-
-If `displayplacer` is missing, LayoutRecall can guide installation from the app flow. You can evaluate the UI and save a baseline profile first, then enable actual restore commands once the dependency is available.
-
 ## Requirements
 
 - macOS 13 or later
@@ -99,19 +96,19 @@ If `displayplacer` is missing, LayoutRecall can guide installation from the app 
 
 LayoutRecall can build and run tests without `displayplacer`, but restoring a saved layout depends on it being available on `PATH`.
 
-## How it works
+## FAQ
 
-1. Arrange your displays the way you want.
-2. Save the current layout as a profile.
-3. LayoutRecall watches for display change events.
-4. If the current display snapshot strongly matches a saved profile, the app restores it automatically.
-5. If confidence is lower, the menu bar app keeps recovery manual and shows the relevant action and diagnostics.
+### Does it work without `displayplacer`?
 
-The current implementation is deliberately biased toward stable, practical recovery for common desk setups:
+The app runs without it, but actual layout restore requires `displayplacer` to be available. LayoutRecall surfaces missing dependency state and can guide the install flow.
 
-- automatic restore focuses on exact or high-confidence matches against saved profiles
-- `Swap Positions` supports either two displays, or a main display plus two secondary displays
-- four-plus-display layouts stay manual on purpose until the app can expose a predictable repositioning model
+### Will it move my monitors automatically every time?
+
+No. It only auto-restores when the saved profile match is strong enough. Lower-confidence cases stay manual on purpose.
+
+### Is it meant for very complex 4+ monitor setups?
+
+Not as a fully automatic promise yet. More complex layouts remain manual/review-heavy until the app can expose a predictable repositioning model.
 
 ## FAQ
 

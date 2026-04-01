@@ -74,6 +74,13 @@ When automatic restore is unsafe, LayoutRecall stays manual on purpose and shows
 
 ## Conversion blockers audit
 
+- README still needs to open with the broken-layout pain instead of a neutral utility description.
+- Trust framing needs to appear before deeper install and dependency caveats.
+- Visual proof has to appear near the top so the repo feels real within seconds.
+- The README should show why LayoutRecall is safer than a blind restore script.
+- Channel copy should reuse the same pain → safety → install story instead of rewriting it ad hoc.
+- Honest limits should be framed as safety boundaries, not as product weakness.
+
 | Rank | Blocker | Severity | Why people bounce |
 | --- | --- | --- | --- |
 | 1 | README opens with a factual description, not a sharp pain-to-outcome promise | Would bounce | Users do not immediately see why this is worth trying now |

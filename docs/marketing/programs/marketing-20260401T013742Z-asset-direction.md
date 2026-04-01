@@ -40,7 +40,7 @@ The hero should answer three questions at a glance:
 
 Hero caption direction:
 
-> Save a known-good monitor layout, then restore it after sleep, wake, or dock reconnect — without blindly guessing.
+> Stop rebuilding your monitor layout after every reconnect. Save a known-good setup once, then restore it only when LayoutRecall is confident.
 
 ### 2. Trust / diagnostics still
 
@@ -53,7 +53,7 @@ Purpose:
 
 Caption direction:
 
-> Confidence, dependency, and recent restore evidence stay visible so the app can explain what it did — or why it refused to act.
+> Confidence, dependency, and recent restore evidence stay visible so LayoutRecall can explain what it did — or why it refused to act.
 
 ### 3. Profiles / controls still
 
@@ -66,7 +66,7 @@ Purpose:
 
 Caption direction:
 
-> Save multiple desk profiles, tune restore confidence, and fall back to `Fix Now`, `Apply Layout`, or `Show Numbers` when you want control.
+> Save multiple desk profiles, tune recovery behavior, and fall back to `Fix Now`, `Apply Layout`, or `Show Numbers` when you want control.
 
 ## Screenshot treatment rules
 

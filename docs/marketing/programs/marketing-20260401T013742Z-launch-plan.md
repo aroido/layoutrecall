@@ -90,7 +90,7 @@ Trust proof already present in the repo and product:
 
 ### Core message
 
-**LayoutRecall restores a known monitor layout after macOS scrambles it — with automatic recovery when confidence is high, and clear manual recovery when it is not.**
+**Stop rebuilding your monitor layout every time macOS forgets it — LayoutRecall restores a known setup when confidence is high and stays manual when it is not.**
 
 ### Message pillars
 
@@ -172,11 +172,11 @@ Use a more problem-first, less "launch announcement" tone than HN.
 
 ### Title
 
-**LayoutRecall 2.0 — restore scrambled macOS monitor layouts from the menu bar**
+**LayoutRecall 2.0 — stop rebuilding your monitor layout after every reconnect**
 
 ### Body
 
-LayoutRecall is a macOS menu bar utility for people whose external monitor layout comes back wrong after sleep, wake, or reconnect.
+LayoutRecall is a macOS menu bar utility for people who are tired of rebuilding the same external monitor layout after sleep, wake, or reconnect.
 
 It lets you save a known-good display layout, then restore it automatically when confidence is high — or recover manually with clear controls when it is not.
 
@@ -188,19 +188,19 @@ What ships in the current baseline:
 - diagnostics and dependency visibility,
 - GitHub Releases and Homebrew install paths.
 
-If your desk setup keeps drifting and you want a focused fix instead of a giant display-management suite, LayoutRecall is ready to try.
+If your MacBook + dock setup keeps drifting and you want a focused fix instead of a giant display-management suite, LayoutRecall is ready to try.
 
 ## Reddit post
 
 ### Title
 
-I built a macOS menu bar app to restore monitor layouts after sleep/wake/dock reconnect breaks them
+I built a macOS menu bar app because macOS kept scrambling my monitor layout after sleep/wake/dock reconnect
 
 ### Body
 
 I kept hitting the same problem on my MacBook desk setup: after sleep, wake, or reconnecting a dock, identical monitors would come back in the wrong order or wrong position.
 
-So I built **LayoutRecall**, a small macOS menu bar utility that saves a known layout and restores it later.
+So I built **LayoutRecall**, a small macOS menu bar utility that saves a known layout and brings it back later instead of making me rebuild the desk from scratch.
 
 A few details that matter:
 
@@ -217,14 +217,14 @@ If you try tools like this, I would especially love feedback on install clarity 
 
 ### Title options
 
-- Show HN: LayoutRecall — restore scrambled macOS monitor layouts
-- Show HN: LayoutRecall, a menu bar app for broken macOS external display layouts
+- Show HN: LayoutRecall — stop rebuilding scrambled macOS monitor layouts
+- Show HN: LayoutRecall, a menu bar app for broken external display layouts on macOS
 
 ### Body
 
 I built LayoutRecall because macOS kept returning my external monitors in the wrong order after sleep, wake, and dock reconnects.
 
-The app is intentionally narrow: save a known-good display layout, detect when the connected monitor set matches it again, and restore that layout from a menu bar app.
+The app is intentionally narrow: save a known-good display layout, detect when the connected monitor set matches it again, and restore that layout from a menu bar app instead of making users manually rebuild the same desk every time.
 
 A few design decisions were important:
 

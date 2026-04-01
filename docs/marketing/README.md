@@ -44,6 +44,5 @@ To write to a different directory:
 ## Notes
 
 - The stills come from `renderMenuAndSettingsSnapshots()` so they track the actual app UI.
-- GIF and MP4 outputs are built from branded slide images rather than an opaque screen recording.
-- The copy should stay honest about current product boundaries: confident automatic restore when the match is strong, manual fallback when it is not.
+- GIF and MP4 outputs are built from branded slide images so the README can tell a short problem → trust → recovery story without an opaque screen recording.
 - If you want live-action demos later, keep this pipeline for README/social and add a separate live-capture script on top.
