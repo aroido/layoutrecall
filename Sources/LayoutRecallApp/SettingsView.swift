@@ -70,6 +70,8 @@ private struct SupportFileRow: View {
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
+    @State private var isShortcutsSectionExpanded = false
+    @State private var isDiagnosticsSectionExpanded = false
     @State private var profilePendingDeletion: DisplayProfile?
     @State private var expandedProfileIDs: Set<UUID> = []
     @State private var editingProfileID: UUID?
@@ -79,7 +81,9 @@ struct SettingsView: View {
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
         self.model = model
-        _selectedPane = State(initialValue: initialPane)
+        _selectedPane = State(initialValue: initialPane.navigationPane)
+        _isShortcutsSectionExpanded = State(initialValue: initialPane == .shortcuts)
+        _isDiagnosticsSectionExpanded = State(initialValue: initialPane == .diagnostics)
     }
 
     private var autoRestoreBinding: Binding<Bool> {
@@ -162,7 +166,7 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         List(selection: sidebarSelection) {
-            ForEach(SettingsPane.allCases) { pane in
+            ForEach(SettingsPane.primaryNavigationPanes) { pane in
                 Label(pane.title, systemImage: pane.systemImage)
                     .tag(Optional(pane))
                     .accessibilityIdentifier("settings.sidebar.\(pane.rawValue)")
@@ -186,11 +190,9 @@ struct SettingsView: View {
                     restorePane
                 case .profiles:
                     profilesPane
-                case .shortcuts:
-                    shortcutsPane
-                case .diagnostics:
-                    diagnosticsPane
                 case .general:
+                    generalPane
+                case .shortcuts, .diagnostics:
                     generalPane
                 }
             }
@@ -237,21 +239,6 @@ struct SettingsView: View {
                 Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
                     .toggleStyle(.switch)
                     .accessibilityIdentifier("settings.restore.autoRestore")
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(model.askBeforeRestoreControlTitle)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
-                        .toggleStyle(.switch)
-                        .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
-                        .accessibilityIdentifier("settings.restore.askBeforeRestore")
-
-                    FormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -315,7 +302,8 @@ struct SettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button {
-                            selectedPane = .diagnostics
+                            selectedPane = .general
+                            isDiagnosticsSectionExpanded = true
                         } label: {
                             Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
                                 .frame(maxWidth: .infinity)
@@ -325,17 +313,6 @@ struct SettingsView: View {
                     }
                 }
 
-                if model.canToggleCurrentSetupPause {
-                    Button {
-                        model.toggleIgnoreCurrentSetup()
-                    } label: {
-                        Label(model.currentSetupPauseActionTitle, systemImage: model.currentSetupPauseActionSystemImage)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(ActionButtonStyle(role: .secondary))
-                    .help(model.currentSetupPauseHint)
-                    .accessibilityIdentifier("settings.restore.currentSetupPause")
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -1270,6 +1247,61 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } label: {
                 Label(L10n.t("toggle.launchAtLogin"), systemImage: "switch.2")
+            }
+
+            GlassCard(padding: 18) {
+                VStack(alignment: .leading, spacing: 16) {
+                    SectionHeading(
+                        title: L10n.t("settings.advanced.title"),
+                        systemImage: "slider.horizontal.3"
+                    )
+
+                    FormHint(text: L10n.t("settings.advanced.hint"))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(model.askBeforeRestoreControlTitle)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
+                            .toggleStyle(.switch)
+                            .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
+                            .accessibilityIdentifier("settings.general.askBeforeRestore")
+
+                        FormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
+                    }
+
+                    DisclosureGroup(
+                        isExpanded: $isShortcutsSectionExpanded,
+                        content: {
+                            VStack(alignment: .leading, spacing: 16) {
+                                shortcutsPane
+                            }
+                            .padding(.top, 12)
+                        },
+                        label: {
+                            Label(SettingsPane.shortcuts.title, systemImage: SettingsPane.shortcuts.systemImage)
+                        }
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .tint(Color.primary)
+
+                    DisclosureGroup(
+                        isExpanded: $isDiagnosticsSectionExpanded,
+                        content: {
+                            VStack(alignment: .leading, spacing: 16) {
+                                diagnosticsPane
+                            }
+                            .padding(.top, 12)
+                        },
+                        label: {
+                            Label(SettingsPane.diagnostics.title, systemImage: SettingsPane.diagnostics.systemImage)
+                        }
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .tint(Color.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

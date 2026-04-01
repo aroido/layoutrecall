@@ -30,7 +30,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var restoreCommandInProgress = false
     @Published private(set) var shortcuts = ShortcutSettings()
     @Published private(set) var skippedReleaseVersion: String?
-    @Published private(set) var ignoredCurrentSetup: IgnoredCurrentSetup?
 
     private let store: any ProfileStoring
     private let settingsStore: any AppSettingsStoring
@@ -386,12 +385,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func toggleIgnoreCurrentSetup() {
-        launchTrackedTask {
-            await self.performToggleIgnoreCurrentSetup()
-        }
-    }
-
     private func launchTrackedTask(_ operation: @escaping @MainActor () async -> Void) {
         let taskID = UUID()
         let task = Task { @MainActor [weak self] in
@@ -441,59 +434,6 @@ final class AppModel: ObservableObject {
             let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
             currentDisplaySnapshots = currentDisplays
             detectedDisplayCount = currentDisplays.count
-            if manualLayoutOverrideActive(for: currentDisplays) {
-                latestDecision = RestoreDecision(
-                    action: .idle,
-                    profileName: match?.profile.name,
-                    score: match?.score,
-                    reason: L10n.t("restoreDecision.manualLayoutOverride"),
-                    context: .manualLayoutOverride
-                )
-                latestMatchedProfileName = match?.profile.name
-                latestMatchScore = match?.score
-                decisionLine = L10n.t("restoreDecision.manualLayoutOverride")
-                statusLine = L10n.connectedDisplayCount(currentDisplays.count)
-
-                if shouldRecordDecision {
-                    await recordDiagnostic(
-                        eventType: trigger.type.rawValue,
-                        profileName: match?.profile.name,
-                        score: match?.score,
-                        actionTaken: "manual-layout-override",
-                        executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                        verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                        details: L10n.t("restoreDecision.manualLayoutOverride")
-                    )
-                }
-                return
-            }
-
-            if await ignoredCurrentSetupMatches(for: currentDisplays) {
-                latestDecision = RestoreDecision(
-                    action: .offerManualFix,
-                    profileName: match?.profile.name,
-                    score: match?.score,
-                    reason: L10n.t("restoreDecision.currentSetupIgnored"),
-                    context: .currentSetupIgnored
-                )
-                latestMatchedProfileName = match?.profile.name
-                latestMatchScore = match?.score
-                decisionLine = L10n.t("restoreDecision.currentSetupIgnored")
-                statusLine = L10n.connectedDisplayCount(currentDisplays.count)
-
-                if shouldRecordDecision {
-                    await recordDiagnostic(
-                        eventType: trigger.type.rawValue,
-                        profileName: match?.profile.name,
-                        score: match?.score,
-                        actionTaken: "current-setup-ignored",
-                        executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                        verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                        details: L10n.t("restoreDecision.currentSetupIgnored")
-                    )
-                }
-                return
-            }
             let decision = coordinator.decide(
                 for: currentDisplays,
                 profiles: profiles,
@@ -792,38 +732,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func performToggleIgnoreCurrentSetup() async {
-        if ignoredCurrentSetup != nil {
-            ignoredCurrentSetup = nil
-            await persistSettings()
-            await refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.currentSetupIgnoreCleared")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-            return
-        }
-
-        do {
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            currentDisplaySnapshots = currentDisplays
-            detectedDisplayCount = currentDisplays.count
-            ignoredCurrentSetup = IgnoredCurrentSetup(
-                displayFingerprint: currentDisplays.fingerprint,
-                expectedOrigins: expectedOrigins(for: currentDisplays)
-            )
-            await persistSettings()
-            await refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.currentSetupIgnored")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: true
-            )
-        } catch {
-            statusLine = L10n.t("status.failedReadCurrentDisplaySet")
-            decisionLine = error.localizedDescription
-        }
-    }
-
     private func expectedOrigins(for displays: [DisplaySnapshot]) -> [DisplayOrigin] {
         let orderedDisplays = displays.sorted(by: DisplaySnapshot.positionComparator)
         return orderedDisplays.map { display in
@@ -837,32 +745,6 @@ final class AppModel: ObservableObject {
 
     private func shouldSuppressAutomaticRestore(for displays: [DisplaySnapshot]) -> Bool {
         matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
-    }
-
-    private func ignoredCurrentSetupMatches(for displays: [DisplaySnapshot]) async -> Bool {
-        guard let ignoredCurrentSetup else {
-            return false
-        }
-
-        let currentOrigins = normalizedExpectedOrigins(expectedOrigins(for: displays))
-        let ignoredOrigins = normalizedExpectedOrigins(ignoredCurrentSetup.expectedOrigins)
-        let matches = ignoredCurrentSetup.displayFingerprint == displays.fingerprint
-            && currentOrigins == ignoredOrigins
-
-        if !matches {
-            self.ignoredCurrentSetup = nil
-            await persistSettings()
-        }
-
-        return matches
-    }
-
-    private func manualLayoutOverrideActive(for displays: [DisplaySnapshot]) -> Bool {
-        guard manualRestoreActionTaken == "swap-left-right" else {
-            return false
-        }
-
-        return matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
     }
 
     private func matchesManualRestoreSuppression(
@@ -887,10 +769,11 @@ final class AppModel: ObservableObject {
 
     private func updateManualRestoreSuppression(
         for actionTaken: String,
-        expectedOrigins: [DisplayOrigin]
+        expectedOrigins: [DisplayOrigin],
+        displayFingerprint _: String?
     ) {
         switch actionTaken {
-        case "manual-fix", "restore-profile", "swap-left-right":
+        case "manual-fix", "restore-profile":
             manualRestoreExpectedOrigins = expectedOrigins
             manualRestoreActionTaken = actionTaken
         default:
@@ -1048,7 +931,8 @@ final class AppModel: ObservableObject {
                 actionTaken: "swap-left-right",
                 profileName: match?.profile.name,
                 score: match?.score,
-                details: L10n.t("details.userRequestedSwap")
+                details: L10n.t("details.userRequestedSwap"),
+                displayFingerprint: currentDisplays.fingerprint
             )
         } catch {
             latestDecision = nil
@@ -1075,7 +959,8 @@ final class AppModel: ObservableObject {
         actionTaken: String,
         profileName: String?,
         score: Int?,
-        details: String
+        details: String,
+        displayFingerprint: String? = nil
     ) async {
         restoreCommandInProgress = true
         defer {
@@ -1092,7 +977,9 @@ final class AppModel: ObservableObject {
         let executionResult = await executor.execute(command: command)
         var verificationResult = RestoreVerificationResult.skipped
 
-        if executionResult.outcome != .dependencyMissing {
+        if actionTaken == "swap-left-right" {
+            restoreCooldownUntil = nil
+        } else if executionResult.outcome != .dependencyMissing {
             restoreCooldownUntil = Date().addingTimeInterval(restoreCooldown)
         }
 
@@ -1100,7 +987,8 @@ final class AppModel: ObservableObject {
             verificationResult = await verifier.verify(expectedOrigins: expectedOrigins, using: snapshotReader)
             updateManualRestoreSuppression(
                 for: actionTaken,
-                expectedOrigins: expectedOrigins
+                expectedOrigins: expectedOrigins,
+                displayFingerprint: displayFingerprint
             )
         }
         await logStartup(
@@ -1110,18 +998,12 @@ final class AppModel: ObservableObject {
         let executionSummary = executionResult.outcome.rawValue
         let verificationSummary = verificationResult.outcome.rawValue
         if executionResult.outcome == .success {
-            let decisionContext: RestoreDecisionContext = actionTaken == "swap-left-right"
-                ? .manualLayoutOverride
-                : .ready
-            let decisionReason = actionTaken == "swap-left-right"
-                ? L10n.t("restoreDecision.manualLayoutOverride")
-                : verificationResult.details
             latestDecision = RestoreDecision(
                 action: .autoRestore(command: command),
                 profileName: profileName,
                 score: score,
-                reason: decisionReason,
-                context: decisionContext
+                reason: verificationResult.details,
+                context: .ready
             )
         } else {
             latestDecision = RestoreDecision(
@@ -1229,7 +1111,6 @@ final class AppModel: ObservableObject {
             automaticUpdateChecksEnabled = settings.automaticallyCheckForUpdates
             skippedReleaseVersion = settings.skippedReleaseVersion
             preferredLanguageOption = AppLanguageOption(preferredLanguageCode: settings.preferredLanguageCode)
-            ignoredCurrentSetup = settings.ignoredCurrentSetup
             L10n.setPreferredLanguageCodeOverride(settings.preferredLanguageCode)
         } catch {
             statusLine = L10n.t("status.failedLoadSettings")
@@ -1266,8 +1147,7 @@ final class AppModel: ObservableObject {
             shortcuts: shortcuts,
             automaticallyCheckForUpdates: automaticUpdateChecksEnabled,
             skippedReleaseVersion: skippedReleaseVersion,
-            preferredLanguageCode: preferredLanguageOption.preferredLanguageCode,
-            ignoredCurrentSetup: ignoredCurrentSetup
+            preferredLanguageCode: preferredLanguageOption.preferredLanguageCode
         )
     }
 
