@@ -36,6 +36,17 @@ Observed from daily desk-setup use:
 - richer onboarding walkthrough
 - more explicit restore history timeline in diagnostics
 
+## Designer recommendations and PM disposition
+
+| Designer recommendation | Input source | PM decision | Ship target |
+| --- | --- | --- | --- |
+| Add a **review-first restore state** that names the matched profile before anything moves | trust + clarity pain #1, #4 | **Accepted** | v2.0.1 messaging and v2.0.2 Ask Before Restore behavior |
+| Add a **pause / ignore this exact setup** control near recovery actions | temporary setup pain #2, #5 | **Accepted** | v2.0.2 |
+| Expand first-run / no-profile guidance so the first safe action is obvious | onboarding pain #3 | **Accepted** | v2.0.1 |
+| Add a richer restore-history timeline with stronger diagnostics storytelling | clarity pain #6 | **Deferred** | later, after release cut |
+| Add Undo Last Restore as a primary recovery affordance | trust / reversibility | **Rejected for this run** because it expands command-history scope too much | not in v2.0.1 or v2.0.2 |
+| Add Profile Rules UI now | multi-profile power-user need | **Rejected for this run** because precedence / UX needs stronger evidence | not in v2.0.1 or v2.0.2 |
+
 ## Version cuts
 
 ## v2.0.1 — trust, onboarding, clarity

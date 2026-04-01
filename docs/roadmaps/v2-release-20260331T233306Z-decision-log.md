@@ -13,6 +13,32 @@ Updated: 2026-04-01
 
 ## PM calls
 
+### Designer recommendations reviewed explicitly
+
+1. **Review-first restore state**  
+   - Recommendation: surface the matched profile and a clear “Restore Now” gate before displays move.  
+   - PM decision: **Accepted** because it directly addresses trust/mistrust from the virtual-user lane.
+
+2. **Pause / Ignore Current Setup**  
+   - Recommendation: let users suppress automatic restore for the exact arrangement currently connected.  
+   - PM decision: **Accepted** because temporary setups are a real desk-use case and global disable is too coarse.
+
+3. **Stronger first-run and no-profile guidance**  
+   - Recommendation: make the first safe action explicit in empty states and recovery cards.  
+   - PM decision: **Accepted** for v2.0.1 polish.
+
+4. **Richer diagnostics / restore-history storytelling**  
+   - Recommendation: turn diagnostics into a more narrative restore timeline.  
+   - PM decision: **Deferred** because it is helpful but not release-critical for the current cut.
+
+5. **Undo Last Restore**  
+   - Recommendation: give users an explicit reversal path after an automatic restore.  
+   - PM decision: **Rejected for this run** because it requires command-history and reverse-plan scope not justified for this cut.
+
+6. **Profile Rules**  
+   - Recommendation: let different contexts choose different restore rules or profiles automatically.  
+   - PM decision: **Rejected for this run** because rule precedence and UX semantics need more evidence before shipping.
+
 ### Accepted for v2.0.1
 - Add clearer trust-oriented status messaging for review-needed and paused-current-setup states
 - Keep recovery hints close to restore controls in both menu and settings
