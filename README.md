@@ -113,34 +113,6 @@ No. It only auto-restores when the saved profile match is strong enough. Lower-c
 
 Not as a fully automatic promise yet. More complex layouts remain manual/review-heavy until the app can expose a predictable repositioning model.
 
-## FAQ
-
-### Does LayoutRecall work without `displayplacer`?
-
-The app launches, saves profiles, and exposes diagnostics without it. Real layout restore still requires `displayplacer` on `PATH`.
-
-### Will it move my monitors automatically every time?
-
-No. LayoutRecall only auto-restores when the current display snapshot is an exact or high-confidence match for a saved profile.
-
-### Is this meant for very complex 4+ monitor setups?
-
-Not yet for full automatic recovery. More complex arrangements intentionally stay manual until the app can expose a predictable repositioning model.
-
-## FAQ
-
-### Does LayoutRecall work without `displayplacer`?
-
-The app launches, saves profiles, and exposes diagnostics without it. Real layout restore still requires `displayplacer` on `PATH`.
-
-### Will it move my monitors automatically every time?
-
-No. LayoutRecall only auto-restores when the current display snapshot is an exact or high-confidence match for a saved profile.
-
-### Is this meant for very complex 4+ monitor setups?
-
-Not yet for full automatic recovery. More complex arrangements intentionally stay manual until the app can expose a predictable repositioning model.
-
 ## Development
 
 ```bash

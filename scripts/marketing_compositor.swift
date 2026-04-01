@@ -48,12 +48,12 @@ struct MarketingAssetBuilder {
             drawOrb(x: 1280, y: 120, radius: 220, color: colors.mint.withAlphaComponent(0.14))
             drawOrb(x: 1420, y: 780, radius: 180, color: colors.amber.withAlphaComponent(0.16))
 
-            drawKicker("Open-source menu bar recovery for MacBook + dock desks", at: NSPoint(x: 96, y: 840))
-            drawHeadline("Restore the monitor layout macOS keeps scrambling.", at: NSPoint(x: 96, y: 690), width: 700)
+            drawKicker("Open-source menu bar recovery for MacBook + dock desks", at: NSPoint(x: 96, y: 862))
+            drawHeadline("Restore the monitor layout macOS keeps scrambling.", at: NSPoint(x: 96, y: 670), width: 680)
             drawBody(
-                "Save one known-good layout, then let LayoutRecall restore it after sleep, wake, or reconnect only when the current display set is a confident match.",
+                "Save one known-good layout, then bring it back after sleep, wake, or reconnect only when the current display set is a confident match.",
                 at: NSPoint(x: 96, y: 580),
-                width: 610
+                width: 560
             )
             drawPills([
                 "MacBook + dock + 2+ displays",
@@ -61,27 +61,27 @@ struct MarketingAssetBuilder {
                 "Manual fallback stays visible"
             ], origin: NSPoint(x: 96, y: 480))
 
-            drawScreenshotCard(menu, frame: NSRect(x: 840, y: 420, width: 360, height: 420), angle: -4)
-            drawScreenshotCard(settings, frame: NSRect(x: 1010, y: 180, width: 510, height: 580), angle: 5)
+            drawScreenshotCard(menu, frame: NSRect(x: 860, y: 430, width: 340, height: 398), angle: -3)
+            drawScreenshotCard(settings, frame: NSRect(x: 1018, y: 180, width: 500, height: 568), angle: 4)
         }
     }
 
     private func featureTrust(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawSectionLabel("Restore only when it is safe", at: NSPoint(x: 104, y: 728))
-            drawHeadline("See why LayoutRecall acted — or why it stayed manual.", at: NSPoint(x: 104, y: 608), width: 620)
+            drawKicker("Trust before restore", at: NSPoint(x: 104, y: 750))
+            drawHeadline("See why LayoutRecall acted — or why it stayed manual.", at: NSPoint(x: 104, y: 598), width: 600)
             drawBody(
-                "The app keeps profile match context, dependency state, and recent diagnostics close to the menu bar action so recovery never feels like a blind automation gamble.",
-                at: NSPoint(x: 104, y: 490),
-                width: 560
+                "Profile match context, dependency state, and recent diagnostics stay close to the menu bar action so recovery never feels like a blind automation gamble.",
+                at: NSPoint(x: 104, y: 470),
+                width: 540
             )
             drawChecklist([
                 "Matched profile and confidence",
                 "Manual fallback when confidence is low",
                 "Dependency state before recovery",
                 "Diagnostics evidence after every attempt"
-            ], origin: NSPoint(x: 104, y: 332))
+            ], origin: NSPoint(x: 104, y: 306))
 
             drawScreenshotCard(menu, frame: NSRect(x: 860, y: 420, width: 330, height: 380), angle: -2)
             drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 110, width: 470, height: 610), angle: 4)
@@ -91,19 +91,19 @@ struct MarketingAssetBuilder {
     private func featureProfiles(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawSectionLabel("Known desks, fast recovery", at: NSPoint(x: 104, y: 728))
-            drawHeadline("Keep saved layouts and recovery controls within reach.", at: NSPoint(x: 104, y: 608), width: 620)
+            drawKicker("Known desks, fast recovery", at: NSPoint(x: 104, y: 750))
+            drawHeadline("Keep saved layouts and recovery controls within reach.", at: NSPoint(x: 104, y: 598), width: 600)
             drawBody(
                 "Profiles, startup behavior, and manual restore tools stay in one workflow so repeat desks are easy to tune without hunting across the app.",
-                at: NSPoint(x: 104, y: 490),
-                width: 550
+                at: NSPoint(x: 104, y: 470),
+                width: 520
             )
             drawChecklist([
                 "Multiple saved desk profiles",
                 "Startup and launch-at-login controls",
                 "Fix Now and Apply Layout fallbacks",
                 "Predictable setup for repeat reconnects"
-            ], origin: NSPoint(x: 104, y: 332))
+            ], origin: NSPoint(x: 104, y: 306))
 
             drawScreenshotCard(profiles, frame: NSRect(x: 820, y: 300, width: 520, height: 500), angle: -3)
             drawScreenshotCard(general, frame: NSRect(x: 1070, y: 90, width: 420, height: 450), angle: 5)
@@ -114,16 +114,15 @@ struct MarketingAssetBuilder {
         try renderCanvas(size: NSSize(width: 1200, height: 630)) { rect in
             drawBackground(in: rect)
             drawOrb(x: 1060, y: 120, radius: 150, color: colors.mint.withAlphaComponent(0.18))
-            drawKicker("LayoutRecall for macOS", at: NSPoint(x: 76, y: 520))
             drawHeadline(
                 "Restore the monitor layout macOS keeps scrambling.",
-                at: NSPoint(x: 72, y: 282),
+                at: NSPoint(x: 72, y: 336),
                 width: 560,
                 fontSize: 32
             )
             drawBody(
                 "Open-source menu bar recovery for MacBook + dock + multi-display desks.",
-                at: NSPoint(x: 72, y: 166),
+                at: NSPoint(x: 72, y: 212),
                 width: 500,
                 fontSize: 20
             )
@@ -136,7 +135,9 @@ struct MarketingAssetBuilder {
     private func slideOne(menu: NSImage, settings: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("01", title: "Your desk comes back scrambled.", body: "After sleep, wake, or reconnect, identical displays can return in the wrong order or with the wrong main-display state.", at: NSPoint(x: 96, y: 690), width: 600)
+            drawKicker("Desk drift", at: NSPoint(x: 96, y: 748))
+            drawHeadline("Your desk comes back scrambled.", at: NSPoint(x: 96, y: 600), width: 560, fontSize: 46, height: 130)
+            drawBody("After sleep, wake, or reconnect, identical displays can return in the wrong order or with the wrong main-display state.", at: NSPoint(x: 96, y: 470), width: 540)
             drawScreenshotCard(settings, frame: NSRect(x: 860, y: 180, width: 560, height: 620), angle: 4)
             drawScreenshotCard(menu, frame: NSRect(x: 720, y: 360, width: 290, height: 350), angle: -6)
         }
@@ -145,7 +146,9 @@ struct MarketingAssetBuilder {
     private func slideTwo(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("02", title: "LayoutRecall recognizes the saved desk safely.", body: "The app shows the profile match, confidence, and diagnostics context before recovery so monitor moves never feel opaque or reckless.", at: NSPoint(x: 96, y: 690), width: 620)
+            drawKicker("Recognition", at: NSPoint(x: 96, y: 748))
+            drawHeadline("LayoutRecall recognizes the saved desk safely.", at: NSPoint(x: 96, y: 600), width: 580, fontSize: 46, height: 130)
+            drawBody("The app shows the profile match, confidence, and diagnostics context before recovery so monitor moves never feel opaque or reckless.", at: NSPoint(x: 96, y: 470), width: 560)
             drawScreenshotCard(menu, frame: NSRect(x: 840, y: 360, width: 320, height: 380), angle: -4)
             drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 120, width: 470, height: 610), angle: 4)
         }
@@ -154,7 +157,9 @@ struct MarketingAssetBuilder {
     private func slideThree(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("03", title: "Recover fast or stay manual on purpose.", body: "Profiles, startup behavior, and one-click fallback actions stay visible in one place so repeat desks remain predictable even when automation stops short.", at: NSPoint(x: 96, y: 690), width: 620)
+            drawKicker("Control", at: NSPoint(x: 96, y: 748))
+            drawHeadline("Recover fast or stay manual on purpose.", at: NSPoint(x: 96, y: 600), width: 580, fontSize: 46, height: 130)
+            drawBody("Profiles, startup behavior, and one-click fallback actions stay visible in one place so repeat desks remain predictable even when automation stops short.", at: NSPoint(x: 96, y: 470), width: 560)
             drawScreenshotCard(profiles, frame: NSRect(x: 780, y: 250, width: 520, height: 520), angle: -4)
             drawScreenshotCard(general, frame: NSRect(x: 1080, y: 110, width: 380, height: 420), angle: 5)
         }
@@ -177,12 +182,22 @@ struct MarketingAssetBuilder {
         ])!
         gradient.draw(in: rect, angle: -90)
 
-        let stripeColor = colors.cardStroke.withAlphaComponent(0.06)
-        for index in stride(from: 0, to: Int(rect.width + rect.height), by: 48) {
+        let stripeColor = colors.gridLine.withAlphaComponent(0.05)
+        for index in stride(from: 0, to: Int(rect.width + rect.height), by: 84) {
             let path = NSBezierPath()
             path.move(to: NSPoint(x: CGFloat(index) - 240, y: 0))
             path.line(to: NSPoint(x: CGFloat(index), y: rect.height))
             stripeColor.setStroke()
+            path.lineWidth = 1
+            path.stroke()
+        }
+
+        let horizonColor = colors.gridLine.withAlphaComponent(0.035)
+        for index in stride(from: 140, to: Int(rect.height), by: 120) {
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: 72, y: CGFloat(index)))
+            path.line(to: NSPoint(x: rect.width - 72, y: CGFloat(index)))
+            horizonColor.setStroke()
             path.lineWidth = 1
             path.stroke()
         }
@@ -308,23 +323,58 @@ struct MarketingAssetBuilder {
 
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.22)
-        shadow.shadowBlurRadius = 28
-        shadow.shadowOffset = NSSize(width: 0, height: -14)
+        shadow.shadowBlurRadius = 34
+        shadow.shadowOffset = NSSize(width: 0, height: -18)
         shadow.set()
 
+        let glowRect = frame.insetBy(dx: -8, dy: -8)
+        colors.cardGlow.withAlphaComponent(0.24).setFill()
+        NSBezierPath(roundedRect: glowRect, xRadius: 34, yRadius: 34).fill()
+
         colors.cardFill.setFill()
-        let cardPath = NSBezierPath(roundedRect: frame, xRadius: 28, yRadius: 28)
+        let cardPath = NSBezierPath(roundedRect: frame, xRadius: 30, yRadius: 30)
         cardPath.fill()
 
         colors.cardStroke.setStroke()
         cardPath.lineWidth = 1
         cardPath.stroke()
 
-        let imageRect = frame.insetBy(dx: 18, dy: 18)
-        let clipPath = NSBezierPath(roundedRect: imageRect, xRadius: 18, yRadius: 18)
+        let chromeRect = NSRect(x: frame.minX, y: frame.maxY - 52, width: frame.width, height: 52)
+        colors.chromeFill.setFill()
+        NSBezierPath(
+            roundedRect: chromeRect,
+            xRadius: 30,
+            yRadius: 30
+        ).fill()
+
+        let divider = NSBezierPath()
+        divider.move(to: NSPoint(x: frame.minX + 18, y: chromeRect.minY))
+        divider.line(to: NSPoint(x: frame.maxX - 18, y: chromeRect.minY))
+        colors.cardStroke.withAlphaComponent(0.9).setStroke()
+        divider.lineWidth = 1
+        divider.stroke()
+
+        drawWindowDots(origin: NSPoint(x: frame.minX + 22, y: frame.maxY - 31))
+
+        let imageRect = NSRect(
+            x: frame.minX + 18,
+            y: frame.minY + 18,
+            width: frame.width - 36,
+            height: frame.height - 70
+        )
+        let clipPath = NSBezierPath(roundedRect: imageRect, xRadius: 20, yRadius: 20)
         clipPath.addClip()
         image.draw(in: imageRect)
         NSGraphicsContext.current?.restoreGraphicsState()
+    }
+
+    private func drawWindowDots(origin: NSPoint) {
+        let dotColors: [NSColor] = [colors.dotRed, colors.dotAmber, colors.dotGreen]
+        for (index, color) in dotColors.enumerated() {
+            let rect = NSRect(x: origin.x + CGFloat(index) * 16, y: origin.y, width: 10, height: 10)
+            color.setFill()
+            NSBezierPath(ovalIn: rect).fill()
+        }
     }
 
     private func centeredParagraph() -> NSParagraphStyle {
@@ -352,17 +402,23 @@ struct MarketingAssetBuilder {
 }
 
 struct Palette {
-    let backgroundTop = NSColor(calibratedRed: 0.06, green: 0.10, blue: 0.18, alpha: 1.0)
-    let backgroundBottom = NSColor(calibratedRed: 0.14, green: 0.18, blue: 0.29, alpha: 1.0)
-    let cardFill = NSColor(calibratedRed: 0.10, green: 0.14, blue: 0.22, alpha: 0.88)
-    let cardStroke = NSColor(calibratedRed: 0.70, green: 0.79, blue: 0.96, alpha: 0.18)
-    let accentPanel = NSColor(calibratedRed: 0.80, green: 0.96, blue: 0.91, alpha: 0.16)
-    let accentText = NSColor(calibratedRed: 0.77, green: 0.98, blue: 0.90, alpha: 1.0)
-    let primaryText = NSColor(calibratedRed: 0.95, green: 0.97, blue: 0.99, alpha: 1.0)
-    let secondaryText = NSColor(calibratedRed: 0.78, green: 0.83, blue: 0.90, alpha: 1.0)
-    let mutedText = NSColor(calibratedRed: 0.59, green: 0.72, blue: 0.84, alpha: 1.0)
+    let backgroundTop = NSColor(calibratedRed: 0.05, green: 0.08, blue: 0.12, alpha: 1.0)
+    let backgroundBottom = NSColor(calibratedRed: 0.10, green: 0.15, blue: 0.23, alpha: 1.0)
+    let cardFill = NSColor(calibratedRed: 0.09, green: 0.13, blue: 0.20, alpha: 0.92)
+    let cardStroke = NSColor(calibratedRed: 0.78, green: 0.84, blue: 0.93, alpha: 0.16)
+    let cardGlow = NSColor(calibratedRed: 0.37, green: 0.86, blue: 0.80, alpha: 1.0)
+    let chromeFill = NSColor(calibratedRed: 0.13, green: 0.18, blue: 0.27, alpha: 0.96)
+    let accentPanel = NSColor(calibratedRed: 0.72, green: 0.95, blue: 0.90, alpha: 0.14)
+    let accentText = NSColor(calibratedRed: 0.77, green: 0.98, blue: 0.91, alpha: 1.0)
+    let primaryText = NSColor(calibratedRed: 0.96, green: 0.98, blue: 0.99, alpha: 1.0)
+    let secondaryText = NSColor(calibratedRed: 0.80, green: 0.85, blue: 0.91, alpha: 1.0)
+    let mutedText = NSColor(calibratedRed: 0.61, green: 0.72, blue: 0.82, alpha: 1.0)
+    let gridLine = NSColor(calibratedRed: 0.73, green: 0.82, blue: 0.92, alpha: 1.0)
     let mint = NSColor(calibratedRed: 0.46, green: 0.93, blue: 0.81, alpha: 1.0)
     let amber = NSColor(calibratedRed: 1.00, green: 0.78, blue: 0.39, alpha: 1.0)
+    let dotRed = NSColor(calibratedRed: 0.99, green: 0.38, blue: 0.33, alpha: 1.0)
+    let dotAmber = NSColor(calibratedRed: 1.00, green: 0.74, blue: 0.28, alpha: 1.0)
+    let dotGreen = NSColor(calibratedRed: 0.31, green: 0.84, blue: 0.44, alpha: 1.0)
 }
 
 extension NSImage {

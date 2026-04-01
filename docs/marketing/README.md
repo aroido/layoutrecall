@@ -12,7 +12,7 @@ Running the generator creates:
 - `docs/marketing/generated/final/social-card.png`
 - `docs/marketing/generated/final/layoutrecall-demo.mp4`
 - `docs/marketing/generated/final/layoutrecall-demo.gif`
-- `docs/marketing/generated/final/launch-copy.md`
+- `docs/marketing/generated/final/launch-copy-pack.md`
 
 The pipeline also stores the raw UI snapshots used as source material under:
 
@@ -27,7 +27,7 @@ Wave 2 treats the generated assets as one conversion story instead of isolated f
 3. `readme-feature-trust.png` — make confidence, blocked auto-restore, and diagnostics visible
 4. `readme-feature-profiles.png` — prove users keep direct control through profiles and manual recovery
 5. `social-card.png` — reuse the same pain → trust → action message in previews and shares
-6. `launch-copy.md` — keep GitHub / Reddit / HN copy aligned with the README framing
+6. `launch-copy-pack.md` — keep GitHub / Reddit / HN copy aligned with the README framing
 
 ## Regenerate
 
@@ -44,5 +44,5 @@ To write to a different directory:
 ## Notes
 
 - The stills come from `renderMenuAndSettingsSnapshots()` so they track the actual app UI.
-- GIF and MP4 outputs are built from branded slide images so the README can tell a short problem → trust → recovery story without an opaque screen recording.
+- GIF and MP4 outputs are built from real app UI snapshots so the README can show a short product walkthrough instead of a generic slide reel.
 - If you want live-action demos later, keep this pipeline for README/social and add a separate live-capture script on top.
