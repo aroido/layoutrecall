@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROGRAM_DIR="$ROOT_DIR/docs/marketing/programs"
 README_PATH="$ROOT_DIR/README.md"
 ASSET_DIR="$ROOT_DIR/docs/marketing/generated/final"
+COPY_PACK_PATH="$ASSET_DIR/launch-copy-pack.md"
 
 fail() {
     echo "marketing verify: $*" >&2
@@ -26,7 +27,7 @@ require_contains() {
     fi
 }
 
-count_following_bullets() {
+count_section_items() {
     local path="$1"
     local heading_pattern="$2"
     python3 - "$path" "$heading_pattern" <<'PY'
@@ -37,6 +38,7 @@ from pathlib import Path
 path = Path(sys.argv[1])
 heading = re.compile(sys.argv[2], re.I)
 count = 0
+table_rows = 0
 in_section = False
 for line in path.read_text().splitlines():
     if heading.search(line):
@@ -44,8 +46,15 @@ for line in path.read_text().splitlines():
         continue
     if in_section and re.match(r'^#{1,6}\s+', line):
         break
-    if in_section and re.match(r'^\s*(?:[-*]|\d+\.)\s+', line):
+    if not in_section:
+        continue
+    if re.match(r'^\s*(?:[-*]|\d+\.)\s+', line):
         count += 1
+        continue
+    if re.match(r'^\|', line) and not re.match(r'^\|(?:\s*:?-+:?\s*\|)+\s*$', line):
+        table_rows += 1
+if table_rows:
+    count += max(0, table_rows - 1)
 print(count)
 PY
 }
@@ -87,7 +96,7 @@ require_contains "$positioning_path" 'must' 'must priorities'
 require_contains "$positioning_path" 'should' 'should priorities'
 require_contains "$positioning_path" 'could' 'could priorities'
 
-conversion_blockers_count="$(count_following_bullets "$positioning_path" 'conversion blockers')"
+conversion_blockers_count="$(count_section_items "$positioning_path" 'conversion blockers')"
 if [[ "$conversion_blockers_count" -lt 5 ]]; then
     fail "expected at least 5 conversion blockers in ${positioning_path#$ROOT_DIR/}; found $conversion_blockers_count"
 fi
@@ -111,5 +120,15 @@ for asset in \
     layoutrecall-demo.mp4; do
     require_file "$ASSET_DIR/$asset"
 done
+
+require_file "$COPY_PACK_PATH"
+require_contains "$COPY_PACK_PATH" 'primary audience|MacBook \+ dock' 'copy-pack audience framing'
+require_contains "$COPY_PACK_PATH" 'confidence is high|confident' 'copy-pack trust framing'
+require_contains "$COPY_PACK_PATH" 'GitHub release|repo announcement' 'copy-pack GitHub section'
+require_contains "$COPY_PACK_PATH" 'Reddit post' 'copy-pack Reddit section'
+require_contains "$COPY_PACK_PATH" 'Hacker News|Show HN' 'copy-pack Hacker News section'
+require_contains "$COPY_PACK_PATH" 'readme-hero\.png' 'copy-pack hero asset reference'
+require_contains "$COPY_PACK_PATH" 'layoutrecall-demo\.(gif|mp4)' 'copy-pack demo asset reference'
+require_contains "$COPY_PACK_PATH" 'social-card\.png' 'copy-pack social asset reference'
 
 echo "marketing verify: PASS (${selected_prefix#$ROOT_DIR/})"
