@@ -1,3 +1,4 @@
+import AppKit
 import LayoutRecallKit
 import SwiftUI
 
@@ -29,48 +30,40 @@ private struct FormHint: View {
     }
 }
 
-private struct SidebarPaneButton: View {
-    let pane: SettingsPane
-    let selected: Bool
-    let action: () -> Void
+private struct SupportFileDescriptor: Identifiable {
+    let title: String
+    let url: URL
+
+    var id: String { title }
+    var exists: Bool { FileManager.default.fileExists(atPath: url.path) }
+}
+
+private struct SupportFileRow: View {
+    let item: SupportFileDescriptor
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: pane.systemImage)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
-                    .frame(width: 16)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
 
-                Text(pane.title)
-                    .font(.subheadline.weight(selected ? .semibold : .medium))
-                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                DiagnosticBadge(
+                    text: item.exists
+                        ? L10n.t("diagnostics.fileAvailable")
+                        : L10n.t("diagnostics.fileMissing"),
+                    tone: item.exists ? .positive : .caution
+                )
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(
-                        selected
-                            ? Color.accentColor.opacity(0.18)
-                            : Color(nsColor: .controlBackgroundColor).opacity(0.001)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(
-                        selected
-                            ? Color.accentColor.opacity(0.18)
-                            : Color.clear,
-                        lineWidth: 1
-                    )
-            )
+
+            Text(item.url.path)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("settings.sidebar.\(pane.rawValue)")
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -80,6 +73,10 @@ struct SettingsView: View {
     @State private var dangerousRestoreAction: DangerousRestoreAction?
     @State private var profilePendingDeletion: DisplayProfile?
     @State private var expandedProfileIDs: Set<UUID> = []
+    @State private var editingProfileID: UUID?
+    @State private var profileNameDraft = ""
+    @State private var diagnosticsReportCopied = false
+    @FocusState private var focusedProfileID: UUID?
 
     init(model: AppModel, initialPane: SettingsPane = .restore) {
         self.model = model
@@ -100,6 +97,15 @@ struct SettingsView: View {
             get: { model.launchAtLoginEnabled },
             set: { newValue in
                 model.setLaunchAtLogin(newValue)
+            }
+        )
+    }
+
+    private var askBeforeRestoreBinding: Binding<Bool> {
+        Binding(
+            get: { model.askBeforeAutomaticRestoreEnabled },
+            set: { newValue in
+                model.setAskBeforeAutomaticRestore(newValue)
             }
         )
     }
@@ -155,19 +161,26 @@ struct SettingsView: View {
         }
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(SettingsPane.allCases) { pane in
-                SidebarPaneButton(
-                    pane: pane,
-                    selected: selectedPane == pane,
-                    action: { selectedPane = pane }
-                )
+    private var sidebarSelection: Binding<SettingsPane?> {
+        Binding(
+            get: { selectedPane },
+            set: { newValue in
+                guard let newValue else { return }
+                selectedPane = newValue
             }
+        )
+    }
 
-            Spacer(minLength: 0)
+    private var sidebar: some View {
+        List(selection: sidebarSelection) {
+            ForEach(SettingsPane.allCases) { pane in
+                Label(pane.title, systemImage: pane.systemImage)
+                    .tag(Optional(pane))
+                    .accessibilityIdentifier("settings.sidebar.\(pane.rawValue)")
+            }
         }
-        .padding(12)
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .frame(width: 220)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .underPageBackgroundColor))
@@ -223,7 +236,7 @@ struct SettingsView: View {
         GlassCard(padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeading(
-                    title: L10n.t("menu.automaticRestore"),
+                    title: model.automaticRestoreControlTitle,
                     systemImage: "sparkles"
                 )
 
@@ -232,9 +245,24 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Toggle(L10n.t("toggle.enableAutomaticRestore"), isOn: autoRestoreBinding)
+                Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
                     .toggleStyle(.switch)
                     .accessibilityIdentifier("settings.restore.autoRestore")
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.askBeforeRestoreControlTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
+                        .toggleStyle(.switch)
+                        .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
+                        .accessibilityIdentifier("settings.restore.askBeforeRestore")
+
+                    FormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -274,7 +302,7 @@ struct SettingsView: View {
                     }
                 }
 
-                if model.canSwapDisplays {
+                if model.showsSwapDisplaysControl {
                     Button {
                         dangerousRestoreAction = .swapLeftRight
                     } label: {
@@ -282,7 +310,42 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .disabled(!model.canSwapDisplays)
+                    .help(model.swapAvailabilityLine)
                     .accessibilityIdentifier("settings.restore.swap")
+                }
+
+                if model.shouldOfferDiagnosticsShortcut {
+                    Divider()
+                        .padding(.vertical, 2)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(model.diagnosticsShortcutHint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button {
+                            selectedPane = .diagnostics
+                        } label: {
+                            Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                        .accessibilityIdentifier("settings.restore.diagnostics")
+                    }
+                }
+
+                if model.canToggleCurrentSetupPause {
+                    Button {
+                        model.toggleIgnoreCurrentSetup()
+                    } label: {
+                        Label(model.currentSetupPauseActionTitle, systemImage: model.currentSetupPauseActionSystemImage)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
+                    .help(model.currentSetupPauseHint)
+                    .accessibilityIdentifier("settings.restore.currentSetupPause")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -292,32 +355,99 @@ struct SettingsView: View {
 
     private var restoreOverviewCard: some View {
         GlassCard(padding: 18) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 18) {
-                    restoreOverviewContent
+            VStack(alignment: .leading, spacing: 18) {
+                restoreOverviewContent
 
-                    if !model.referenceDisplays.isEmpty {
-                        DisplayLayoutPreview(
-                            displays: model.referenceDisplays,
-                            primaryDisplayKey: model.referencePrimaryDisplayKey
-                        )
-                        .frame(width: 160, height: 100)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 16) {
-                    restoreOverviewContent
-
-                    if !model.referenceDisplays.isEmpty {
-                        DisplayLayoutPreview(
-                            displays: model.referenceDisplays,
-                            primaryDisplayKey: model.referencePrimaryDisplayKey
-                        )
-                        .frame(height: 112)
-                    }
-                }
+                restoreLayoutComparison
             }
         }
+    }
+
+    private var restoreLayoutComparison: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 14) {
+                currentLayoutPreviewCard
+                savedLayoutPreviewCard
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                currentLayoutPreviewCard
+                savedLayoutPreviewCard
+            }
+        }
+    }
+
+    private var currentLayoutPreviewCard: some View {
+        layoutPreviewCard(
+            title: L10n.t("settings.preview.currentLayout"),
+            subtitle: model.activeDisplayCountLine,
+            displays: model.liveDisplaysForPreview,
+            primaryDisplayKey: model.livePrimaryDisplayKey,
+            emptyMessage: L10n.t("settings.preview.currentLayoutEmpty")
+        )
+    }
+
+    private var savedLayoutPreviewCard: some View {
+        let subtitle: String
+        if let profile = model.referenceProfile {
+            subtitle = "\(profile.name) · \(L10n.t("settings.profileDisplayCountCompact", profile.displaySet.count))"
+        } else {
+            subtitle = model.referenceProfileLine
+        }
+
+        return layoutPreviewCard(
+            title: L10n.t("settings.preview.savedLayout"),
+            subtitle: subtitle,
+            displays: model.referenceDisplays,
+            primaryDisplayKey: model.referencePrimaryDisplayKey,
+            emptyMessage: model.referenceProfileLine
+        )
+    }
+
+    private func layoutPreviewCard(
+        title: String,
+        subtitle: String,
+        displays: [DisplaySnapshot],
+        primaryDisplayKey: String?,
+        emptyMessage: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(subtitle)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Group {
+                if displays.isEmpty {
+                    Text(emptyMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+                        .padding(12)
+                } else {
+                    DisplayLayoutPreview(
+                        displays: displays,
+                        primaryDisplayKey: primaryDisplayKey
+                    )
+                    .frame(height: 112)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .underPageBackgroundColor).opacity(0.72))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color(nsColor: .separatorColor).opacity(0.24), lineWidth: 1)
+                    )
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var restoreOverviewContent: some View {
@@ -375,6 +505,8 @@ struct SettingsView: View {
                             model.identifyDisplays(for: profile.id)
                         } label: {
                             Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
                         }
                         .buttonStyle(ActionButtonStyle(role: .secondary))
                     }
@@ -511,18 +643,12 @@ struct SettingsView: View {
                     )
 
                     StatusPill(
-                        text: profile.settings.autoRestore
-                            ? L10n.t("status.badge.autoRestoreOn")
-                            : L10n.t("status.badge.autoRestoreOff"),
-                        systemImage: "sparkles",
-                        emphasis: profile.settings.autoRestore
-                    )
-
-                    StatusPill(
                         text: L10n.t("confidence.threshold.short", profile.settings.confidenceThreshold),
                         systemImage: "dial.medium"
                     )
                 }
+
+                profileActionRow(for: profile)
 
                 DisclosureGroup(
                     isExpanded: profileExpansionBinding(for: profile),
@@ -617,37 +743,115 @@ struct SettingsView: View {
     }
 
     private func profileNameField(for profile: DisplayProfile) -> some View {
-        TextField(
-            L10n.t("field.profileName"),
-            text: Binding(
-                get: { profile.name },
-                set: { model.renameProfile(profile.id, to: $0) }
-            )
-        )
-        .textFieldStyle(.roundedBorder)
-        .frame(maxWidth: .infinity)
+        HStack(spacing: 10) {
+            if editingProfileID == profile.id {
+                TextField(L10n.t("field.profileName"), text: $profileNameDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedProfileID, equals: profile.id)
+                    .onSubmit { commitProfileRename(for: profile) }
+
+                Button(L10n.t("profiles.rename.confirm")) {
+                    commitProfileRename(for: profile)
+                }
+                .buttonStyle(InlineActionButtonStyle(accent: true))
+
+                Button(L10n.t("action.cancel")) {
+                    cancelProfileRename()
+                }
+                .buttonStyle(InlineActionButtonStyle())
+            } else {
+                Text(profile.name)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(L10n.t("profiles.rename.button")) {
+                    beginProfileRename(for: profile)
+                }
+                .buttonStyle(InlineActionButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func beginProfileRename(for profile: DisplayProfile) {
+        editingProfileID = profile.id
+        profileNameDraft = profile.name
+
+        DispatchQueue.main.async {
+            focusedProfileID = profile.id
+        }
+    }
+
+    private func cancelProfileRename() {
+        editingProfileID = nil
+        profileNameDraft = ""
+        focusedProfileID = nil
+    }
+
+    private func commitProfileRename(for profile: DisplayProfile) {
+        let trimmedName = profileNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            cancelProfileRename()
+            return
+        }
+
+        model.renameProfile(profile.id, to: trimmedName)
+        cancelProfileRename()
+    }
+
+    private func profileActionRow(for profile: DisplayProfile) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                applyLayoutButton(for: profile)
+                identifyDisplaysButton(for: profile)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                applyLayoutButton(for: profile)
+                identifyDisplaysButton(for: profile)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func applyLayoutButton(for profile: DisplayProfile) -> some View {
+        let actionState = model.profileCardActionState(for: profile)
+
+        return Button {
+            model.restoreProfile(profile.id)
+        } label: {
+            Label(actionState.applyTitle, systemImage: "bolt.fill")
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ActionButtonStyle(role: .primary))
+        .disabled(!actionState.canApplyLayout)
+        .help(actionState.applyHelp)
+        .accessibilityIdentifier("settings.profile.apply.\(profile.id.uuidString)")
+    }
+
+    private func identifyDisplaysButton(for profile: DisplayProfile) -> some View {
+        let actionState = model.profileCardActionState(for: profile)
+
+        return Button {
+            model.identifyDisplays(for: profile.id)
+        } label: {
+            Label(actionState.identifyTitle, systemImage: "number.square.fill")
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ActionButtonStyle(role: .secondary))
+        .disabled(!actionState.canIdentifyDisplays)
+        .help(actionState.identifyHelp)
+        .accessibilityIdentifier("settings.profile.identify.\(profile.id.uuidString)")
     }
 
     private func profileControls(for profile: DisplayProfile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Button {
-                model.identifyDisplays(for: profile.id)
-            } label: {
-                Label(L10n.t("action.identifyDisplays"), systemImage: "number.square.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ActionButtonStyle(role: .secondary))
-            .disabled(profile.displaySet.displays.isEmpty)
-
-            Toggle(
-                L10n.t("profiles.autoRestore.toggle"),
-                isOn: Binding(
-                    get: { profile.settings.autoRestore },
-                    set: { model.setProfileAutoRestore(profile.id, to: $0) }
-                )
-            )
-            .toggleStyle(.switch)
-
             VStack(alignment: .leading, spacing: 8) {
                 Text(L10n.t("profiles.confidence.label"))
                     .font(.subheadline.weight(.semibold))
@@ -757,10 +961,26 @@ struct SettingsView: View {
             if let latestEntry = model.diagnostics.first {
                 GlassCard(padding: 18) {
                     VStack(alignment: .leading, spacing: 14) {
-                        SectionHeading(
-                            title: L10n.t("diagnostics.latest"),
-                            systemImage: "waveform.path.ecg"
-                        )
+                        HStack(alignment: .top, spacing: 12) {
+                            SectionHeading(
+                                title: L10n.t("diagnostics.latest"),
+                                systemImage: "waveform.path.ecg"
+                            )
+
+                            Spacer(minLength: 0)
+
+                            Button {
+                                copyDiagnosticsReport()
+                            } label: {
+                                Label(
+                                    diagnosticsReportCopied
+                                        ? L10n.t("diagnostics.copyReportCopied")
+                                        : L10n.t("diagnostics.copyReport"),
+                                    systemImage: diagnosticsReportCopied ? "checkmark" : "doc.on.doc"
+                                )
+                            }
+                            .buttonStyle(ActionButtonStyle(role: .secondary))
+                        }
 
                         Text(latestEntry.displayTitle)
                             .font(.title3.weight(.semibold))
@@ -786,7 +1006,27 @@ struct SettingsView: View {
                             DiagnosticBadge(text: L10n.eventTypeName(latestEntry.eventType))
                             DiagnosticBadge(text: latestEntry.timestamp.formatted(date: .abbreviated, time: .shortened))
                         }
+
+                        if diagnosticsReportCopied {
+                            FormHint(text: L10n.t("diagnostics.copyReportHint"))
+                        }
                     }
+                }
+            } else {
+                HStack {
+                    Spacer(minLength: 0)
+
+                    Button {
+                        copyDiagnosticsReport()
+                    } label: {
+                        Label(
+                            diagnosticsReportCopied
+                                ? L10n.t("diagnostics.copyReportCopied")
+                                : L10n.t("diagnostics.copyReport"),
+                            systemImage: diagnosticsReportCopied ? "checkmark" : "doc.on.doc"
+                        )
+                    }
+                    .buttonStyle(ActionButtonStyle(role: .secondary))
                 }
             }
 
@@ -813,6 +1053,21 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } label: {
                 Label(L10n.t("diagnostics.runtimeSnapshot"), systemImage: "terminal")
+            }
+
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(supportFileDescriptors.enumerated()), id: \.element.id) { index, item in
+                        SupportFileRow(item: item)
+
+                        if index < supportFileDescriptors.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(L10n.t("diagnostics.supportFiles"), systemImage: "folder")
             }
 
             GroupBox {
@@ -871,6 +1126,45 @@ struct SettingsView: View {
                 Label(L10n.t("diagnostics.recentHistory"), systemImage: "stethoscope")
             }
         }
+    }
+
+    private func copyDiagnosticsReport() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(model.diagnosticsReportText, forType: .string)
+
+        diagnosticsReportCopied = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            diagnosticsReportCopied = false
+        }
+    }
+
+    private var supportFileDescriptors: [SupportFileDescriptor] {
+        let supportDirectory = LayoutRecallStorage.baseDirectory()
+
+        return [
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportFolder"),
+                url: supportDirectory
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportProfiles"),
+                url: LayoutRecallStorage.fileURL(named: "profiles.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportSettings"),
+                url: LayoutRecallStorage.fileURL(named: "settings.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportHistory"),
+                url: LayoutRecallStorage.fileURL(named: "diagnostics.json")
+            ),
+            SupportFileDescriptor(
+                title: L10n.t("diagnostics.supportStartupLog"),
+                url: supportDirectory.appendingPathComponent("startup.log", isDirectory: false)
+            ),
+        ]
     }
 
     private var generalPane: some View {
@@ -1029,6 +1323,8 @@ struct SettingsView: View {
     private func actionButton(for action: SurfaceAction, role: ActionButtonStyle.Role) -> some View {
         Button(action: { model.perform(action) }) {
             Label(title(for: action), systemImage: systemImage(for: action))
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(ActionButtonStyle(role: role))
@@ -1053,7 +1349,11 @@ struct SettingsView: View {
             return model.installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow, .enableAutoRestore, .saveNewProfile:
+        case .fixNow:
+            return action.title
+        case .enableAutoRestore:
+            return model.menuTitle(for: action)
+        case .saveNewProfile:
             return action.title
         }
     }
@@ -1074,7 +1374,7 @@ struct SettingsView: View {
         case .fixNow, .saveNewProfile:
             return false
         case .enableAutoRestore:
-            return model.autoRestoreEnabled || model.profiles.isEmpty
+            return !model.canEnableAutomaticRestoreAction
         }
     }
 }

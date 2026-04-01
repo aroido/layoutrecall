@@ -9,13 +9,22 @@ import Testing
 @MainActor
 @Test(.enabled(if: ProcessInfo.processInfo.environment["CI"] == nil, "AppKit snapshot rendering is only supported in local interactive runs."))
 func renderMenuAndSettingsSnapshots() async throws {
-    let outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        .appendingPathComponent("layoutrecall-ui-snapshots", isDirectory: true)
+    let outputDirectory: URL
+    if let configuredOutputDirectory = ProcessInfo.processInfo.environment["LAYOUTRECALL_SNAPSHOT_OUTPUT_DIR"],
+       configuredOutputDirectory.isEmpty == false {
+        outputDirectory = URL(fileURLWithPath: configuredOutputDirectory, isDirectory: true)
+    } else {
+        outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("layoutrecall-ui-snapshots", isDirectory: true)
+    }
     try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 
     let model = AppModel(
         store: SnapshotProfileStore(profiles: [DisplayProfile.officeDock]),
-        settingsStore: SnapshotSettingsStore(settings: AppSettings(launchAtLogin: true)),
+        settingsStore: SnapshotSettingsStore(settings: AppSettings(
+            launchAtLogin: true,
+            preferredLanguageCode: "en"
+        )),
         diagnosticsStore: SnapshotDiagnosticsStore(entries: [
             DiagnosticsEntry(
                 eventType: DisplayEventType.reconfigured.rawValue,
@@ -254,10 +263,10 @@ private struct SnapshotCommandBuilder: DisplayCommandBuilding, Sendable {
 
     func swapLeftRightPlan(for displays: [DisplaySnapshot]) throws -> GeneratedLayoutPlan {
         GeneratedLayoutPlan(
-            command: "displayplacer 'id:persistent-left origin:(2560,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right origin:(0,0) res:2560x1440 hz:60 scaling:off'",
+            command: "displayplacer 'id:persistent-left origin:(0,0) res:2560x1440 hz:60 scaling:off' 'id:persistent-right origin:(-2560,0) res:2560x1440 hz:60 scaling:off'",
             expectedOrigins: [
-                DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 2560, y: 0),
-                DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: 0, y: 0)
+                DisplayOrigin(key: DisplaySnapshot.sampleLeft.preferredMatchKey, x: 0, y: 0),
+                DisplayOrigin(key: DisplaySnapshot.sampleRight.preferredMatchKey, x: -2560, y: 0)
             ],
             primaryDisplayKey: DisplaySnapshot.sampleLeft.preferredMatchKey
         )

@@ -194,8 +194,8 @@ public enum LayoutRecallRuntimeError: LocalizedError, Sendable {
     }
 }
 
-enum LayoutRecallStorage {
-    static func baseDirectory() -> URL {
+public enum LayoutRecallStorage {
+    public static func baseDirectory() -> URL {
         if let overrideRoot = commandLineValue(for: "--storage-root"),
            !overrideRoot.isEmpty
         {
@@ -218,7 +218,7 @@ enum LayoutRecallStorage {
             .appendingPathComponent("LayoutRecall", isDirectory: true)
     }
 
-    static func fileURL(named name: String) -> URL {
+    public static func fileURL(named name: String) -> URL {
         baseDirectory().appendingPathComponent(name, isDirectory: false)
     }
 

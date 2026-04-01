@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/omx-lab-start <slug> [lab note]
+  ./scripts/omx-lab-start --release-program <slug> [lab note]
+
+What it does:
+  1. Tags the current HEAD as a local baseline snapshot.
+  2. Saves uncommitted changes as patch files when the source worktree is dirty.
+  3. Creates a dedicated git worktree and branch for the OMX experiment.
+  4. Generates a starter OMX context brief inside the lab worktree.
+
+Examples:
+  ./scripts/omx-lab-start current-ui-pass
+  ./scripts/omx-lab-start current-ui-pass "menu bar UX improvement experiment"
+  ./scripts/omx-lab-start --release-program v2-release "PM-led v2.0.1 and v2.0.2 release program"
+EOF
+}
+
+sanitize_slug() {
+  printf '%s' "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g'
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+LAB_MODE="standard"
+if [[ "${1:-}" == "--release-program" ]]; then
+  LAB_MODE="release_program"
+  shift || true
+fi
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 1
+fi
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "Not inside a git repository: $ROOT_DIR" >&2
+  exit 1
+fi
+
+RAW_SLUG="$1"
+shift || true
+SLUG="$(sanitize_slug "$RAW_SLUG")"
+
+if [[ -z "$SLUG" ]]; then
+  echo "The slug must contain at least one letter or number." >&2
+  exit 1
+fi
+
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  LAB_NOTE="${*:-LayoutRecall PM-led OMX release program}"
+else
+  LAB_NOTE="${*:-LayoutRecall cross-functional OMX lab}"
+fi
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+REPO_NAME="$(basename "$ROOT_DIR")"
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+HEAD_COMMIT="$(git rev-parse HEAD)"
+SHORT_COMMIT="$(git rev-parse --short HEAD)"
+
+LAB_ID="${SLUG}-${TIMESTAMP}"
+BASELINE_TAG="baseline/${LAB_ID}"
+LAB_BRANCH="lab/${LAB_ID}"
+LAB_ROOT="$ROOT_DIR/.omx/labs/${LAB_ID}"
+PATCH_DIR="$LAB_ROOT/patches"
+WORKTREE_PARENT="${OMX_LAB_PARENT:-$(dirname "$ROOT_DIR")}"
+WORKTREE_PATH="${OMX_LAB_PATH:-$WORKTREE_PARENT/${REPO_NAME}-${LAB_ID}}"
+BRIEF_PATH="$WORKTREE_PATH/.omx/context/${LAB_ID}.md"
+
+if [[ -e "$WORKTREE_PATH" ]]; then
+  echo "The target worktree path already exists: $WORKTREE_PATH" >&2
+  exit 1
+fi
+
+mkdir -p "$PATCH_DIR"
+
+DIRTY=0
+if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+  DIRTY=1
+  git diff --binary > "$PATCH_DIR/working-tree.patch"
+  git diff --cached --binary > "$PATCH_DIR/index.patch"
+fi
+
+git tag -a "$BASELINE_TAG" -m "OMX lab baseline for ${REPO_NAME}: ${LAB_ID}" "$HEAD_COMMIT"
+git worktree add -b "$LAB_BRANCH" "$WORKTREE_PATH" "$HEAD_COMMIT"
+
+mkdir -p "$(dirname "$BRIEF_PATH")"
+
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  cat > "$BRIEF_PATH" <<EOF
+# OMX Release Program Brief
+
+## Goal
+
+Run a PM-led LayoutRecall release program that produces two scoped milestones:
+
+- v2.0.1: trust, clarity, onboarding, and UX polish
+- v2.0.2: net-new user-facing functionality
+
+## Snapshot
+
+- Source repository: ${REPO_NAME}
+- Source branch at snapshot: ${CURRENT_BRANCH}
+- Source commit at snapshot: ${SHORT_COMMIT}
+- Baseline tag: ${BASELINE_TAG}
+- Lab branch: ${LAB_BRANCH}
+- Lab worktree: ${WORKTREE_PATH}
+- Note: ${LAB_NOTE}
+
+## Release contract
+
+Treat this run as a product program, not a single narrow implementation spike.
+
+- PM owns the master backlog, scope cuts, acceptance criteria, and release call.
+- Virtual user / critic owns pain-point discovery and missing-feature proposals.
+- Designer turns accepted pain points into macOS UX/UI changes.
+- Developers implement only the scopes approved by PM.
+- QA verifies each release cut before the next one starts.
+
+## Planning artifact locations
+
+Do not rely on \`.omx/plans/\` as the primary planning home for worker output.
+Instead, store PM artifacts in tracked files under \`docs/roadmaps/\`.
+
+Required artifacts:
+
+- \`docs/roadmaps/${LAB_ID}-release-plan.md\`
+- \`docs/roadmaps/${LAB_ID}-decision-log.md\`
+
+## Required sequence
+
+1. Inspect the current app and gather at least 5 user pains or missing capabilities.
+2. Virtual user / critic must explicitly propose those pains from real desk-setup usage.
+3. PM must rank them into must / should / could and decide what ships in v2.0.1 vs v2.0.2.
+4. v2.0.1 must focus on trust, onboarding, empty states, and clearer recovery controls.
+5. v2.0.2 must add at least 2 net-new user-facing features.
+6. PM should prefer this shortlist for v2.0.2 unless stronger evidence appears:
+   - Ask Before Restore
+   - Undo Last Restore
+   - Pause / Ignore Current Setup
+   - Profile Rules
+7. Keep the branch shippable after each version cut.
+8. Run \`./scripts/run-ai-verify --mode full\` for each release cut before claiming completion.
+
+## Guardrails
+
+- Start from the current product, not a rewrite.
+- PM decides scope; developers do not silently broaden it.
+- Virtual-user discomfort is an input; PM decides whether it is product-critical.
+- Designer recommendations are not auto-shipped; PM must explicitly accept or reject them.
+- If two worker branches overlap, integrate deliberately and verify on the leader branch.
+
+## Suggested team prompt
+
+Run a LayoutRecall PM-led release program described in .omx/context/${LAB_ID}.md.
+Use six lanes:
+1. PM / release owner
+2. Planner / backlog structuring
+3. Designer / macOS UX audit
+4. Developer A
+5. Developer B
+6. QA plus skeptical virtual user
+
+First, produce docs/roadmaps/${LAB_ID}-release-plan.md and docs/roadmaps/${LAB_ID}-decision-log.md.
+Have the virtual user propose pain points and missing features first.
+Have PM decide v2.0.1 scope and v2.0.2 scope explicitly.
+Ship v2.0.1 for polish/trust, then ship v2.0.2 with at least two net-new user-facing features.
+Verify each release cut with ./scripts/run-ai-verify --mode full.
+EOF
+else
+  cat > "$BRIEF_PATH" <<EOF
+# OMX Lab Brief
+
+## Goal
+
+Improve the current LayoutRecall product in a controlled experiment branch so the result can be compared against the current baseline.
+
+## Snapshot
+
+- Source repository: ${REPO_NAME}
+- Source branch at snapshot: ${CURRENT_BRANCH}
+- Source commit at snapshot: ${SHORT_COMMIT}
+- Baseline tag: ${BASELINE_TAG}
+- Lab branch: ${LAB_BRANCH}
+- Lab worktree: ${WORKTREE_PATH}
+- Note: ${LAB_NOTE}
+
+## Squad contract
+
+Treat this run as a cross-functional product squad for LayoutRecall.
+
+- PM / product lead: planner + analyst behavior
+- Designer: macOS menu bar UX, settings IA, copy, and interaction polish
+- Developer: executor behavior for the chosen implementation
+- QA: test-engineer + verifier behavior
+- Virtual user: critic behavior acting as a skeptical power user
+
+## Guardrails
+
+- Start from the current product, not a rewrite.
+- Propose 3 improvement candidates first.
+- Rank them by user impact, implementation risk, and verification cost.
+- Choose one narrow improvement for the first execution loop.
+- Save planning artifacts under .omx/plans/.
+- Verify with ./scripts/run-ai-verify --mode full before claiming completion.
+- End with a before/after summary, changed files, and remaining risks.
+
+## Suggested Ralph prompt
+
+Use this when you want one persistent leader loop with specialist delegation:
+
+Run a cross-functional LayoutRecall squad experiment on the current version.
+Act as PM, product planner, designer, developer, QA, and skeptical virtual user.
+First inspect the existing app and propose exactly 3 improvement candidates.
+Score each candidate for user impact, engineering risk, and verification cost.
+Pick the highest-ROI candidate that can be delivered in one focused iteration.
+Create the PRD and execution plan, implement only that candidate, and verify with ./scripts/run-ai-verify --mode full.
+Do not rewrite the app or broaden scope beyond the chosen candidate.
+
+## Suggested team prompt
+
+Use this when you want visible tmux workers:
+
+Run a LayoutRecall product squad with 5 lanes:
+1. PM/product strategy
+2. macOS UX/design audit
+3. implementation
+4. QA/regression verification
+5. skeptical virtual-user critique
+
+First converge on 3 concrete improvement candidates for the current app.
+Then select one narrow candidate, implement it, verify with ./scripts/run-ai-verify --mode full, and report the before/after delta.
+EOF
+fi
+
+cat > "$LAB_ROOT/README.txt" <<EOF
+OMX lab created: ${LAB_ID}
+
+Baseline tag: ${BASELINE_TAG}
+Lab branch: ${LAB_BRANCH}
+Lab worktree: ${WORKTREE_PATH}
+Brief: ${BRIEF_PATH}
+Mode: ${LAB_MODE}
+EOF
+
+if [[ "$DIRTY" -eq 1 ]]; then
+  cat >> "$LAB_ROOT/README.txt" <<EOF
+
+The source worktree had uncommitted changes when the lab was created.
+Saved patches:
+- ${PATCH_DIR}/index.patch
+- ${PATCH_DIR}/working-tree.patch
+EOF
+fi
+
+echo "Created OMX lab."
+echo "  baseline tag : $BASELINE_TAG"
+echo "  lab branch   : $LAB_BRANCH"
+echo "  lab worktree : $WORKTREE_PATH"
+echo "  brief file   : $BRIEF_PATH"
+
+if [[ "$DIRTY" -eq 1 ]]; then
+  echo
+  echo "The source worktree was dirty."
+  echo "Saved uncommitted changes as patch files:"
+  echo "  $PATCH_DIR/index.patch"
+  echo "  $PATCH_DIR/working-tree.patch"
+  echo
+  echo "To reproduce the exact current WIP inside the lab worktree:"
+  if [[ -s "$PATCH_DIR/index.patch" ]]; then
+    echo "  git -C \"$WORKTREE_PATH\" apply --index \"$PATCH_DIR/index.patch\""
+  fi
+  if [[ -s "$PATCH_DIR/working-tree.patch" ]]; then
+    echo "  git -C \"$WORKTREE_PATH\" apply \"$PATCH_DIR/working-tree.patch\""
+  fi
+fi
+
+echo
+echo "Suggested next steps:"
+echo "  cd \"$WORKTREE_PATH\""
+echo "  omx doctor --team"
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  echo "  omx team 6:executor \"Run the LayoutRecall PM-led release program described in .omx/context/${LAB_ID}.md\""
+else
+  echo "  omx ralph --prd \"Run the cross-functional LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
+  echo "  # or"
+  echo "  omx team 5:team-executor \"Run the LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
+fi

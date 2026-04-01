@@ -23,6 +23,15 @@ func layoutRecallStorageDefaultsToCanonicalUserApplicationSupportDirectory() {
 }
 
 @Test
+func layoutRecallStorageBuildsNamedFilesInsideBaseDirectory() {
+    let baseDirectory = LayoutRecallStorage.baseDirectory()
+
+    #expect(LayoutRecallStorage.fileURL(named: "profiles.json").path == baseDirectory.appendingPathComponent("profiles.json").path)
+    #expect(LayoutRecallStorage.fileURL(named: "settings.json").path == baseDirectory.appendingPathComponent("settings.json").path)
+    #expect(LayoutRecallStorage.fileURL(named: "diagnostics.json").path == baseDirectory.appendingPathComponent("diagnostics.json").path)
+}
+
+@Test
 func profileStoreReloadsProfilesSavedWithIso8601Dates() async throws {
     let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     let fileURL = tempDirectory.appendingPathComponent("profiles.json", isDirectory: false)

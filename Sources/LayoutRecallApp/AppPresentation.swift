@@ -8,7 +8,10 @@ enum MenuPrimaryState: Equatable {
     case dependencyMissing
     case noMatch
     case lowConfidence
+    case reviewBeforeRestore
     case autoRestoreDisabled
+    case pausedCurrentSetup
+    case manualLayoutOverride
     case manualRecovery
     case healthy
 }
@@ -19,7 +22,10 @@ enum MenuStatePresentation: Equatable {
     case dependencyMissing
     case noMatch
     case lowConfidence
+    case reviewBeforeRestore
     case autoRestoreDisabled
+    case pausedCurrentSetup
+    case manualLayoutOverride
     case manualRecovery
     case healthy
 
@@ -35,8 +41,14 @@ enum MenuStatePresentation: Equatable {
             return L10n.t("menu.state.badge.noMatch")
         case .lowConfidence:
             return L10n.t("menu.state.badge.lowConfidence")
+        case .reviewBeforeRestore:
+            return L10n.t("menu.state.badge.reviewBeforeRestore")
         case .autoRestoreDisabled:
             return L10n.t("menu.state.badge.autoRestoreDisabled")
+        case .pausedCurrentSetup:
+            return L10n.t("menu.state.badge.pausedCurrentSetup")
+        case .manualLayoutOverride:
+            return L10n.t("menu.state.badge.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.state.badge.manualRecovery")
         case .healthy:
@@ -56,8 +68,14 @@ enum MenuStatePresentation: Equatable {
             return "questionmark.folder"
         case .lowConfidence:
             return "checkmark.seal"
+        case .reviewBeforeRestore:
+            return "questionmark.circle"
         case .autoRestoreDisabled:
-            return "sparkles.slash"
+            return "sparkles"
+        case .pausedCurrentSetup:
+            return "pause.circle"
+        case .manualLayoutOverride:
+            return "arrow.left.and.right.square"
         case .manualRecovery:
             return "bolt.badge.clock"
         case .healthy:
@@ -98,7 +116,7 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
         case .fixNow:
             return L10n.t("action.fixNow")
         case .enableAutoRestore:
-            return L10n.t("action.enableAutoRestore")
+            return L10n.t("action.enableAppAutoRestore")
         case .saveNewProfile:
             return L10n.t("action.save")
         }
@@ -200,9 +218,39 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
     }
 }
 
+struct ProfileCardActionState: Equatable {
+    let canApplyLayout: Bool
+    let canIdentifyDisplays: Bool
+    let applyTitle: String
+    let identifyTitle: String
+    let applyHelp: String
+    let identifyHelp: String
+}
+
 extension AppModel {
+    var automaticRestoreControlTitle: String {
+        L10n.t("menu.appAutomaticRestore")
+    }
+
+    var automaticRestoreToggleTitle: String {
+        L10n.t("toggle.enableAppAutomaticRestore")
+    }
+
     var canRestoreSavedProfiles: Bool {
         dependencyAvailable && !installationInProgress && !profiles.isEmpty
+    }
+
+    var autoRestoreDisabledContext: RestoreDecisionContext? {
+        switch latestDecision?.context {
+        case .automaticRestoreDisabled:
+            return latestDecision?.context
+        default:
+            return nil
+        }
+    }
+
+    var canEnableAutomaticRestoreAction: Bool {
+        !autoRestoreEnabled && !profiles.isEmpty
     }
 
     var menuStatePresentation: MenuStatePresentation {
@@ -217,8 +265,14 @@ extension AppModel {
             return .noMatch
         case .lowConfidence:
             return .lowConfidence
+        case .reviewBeforeRestore:
+            return .reviewBeforeRestore
         case .autoRestoreDisabled:
             return .autoRestoreDisabled
+        case .pausedCurrentSetup:
+            return .pausedCurrentSetup
+        case .manualLayoutOverride:
+            return .manualLayoutOverride
         case .manualRecovery:
             return .manualRecovery
         case .healthy:
@@ -261,8 +315,21 @@ extension AppModel {
             .sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:))
     }
 
+    var liveDisplaysForPreview: [DisplaySnapshot] {
+        currentDisplaySnapshots.sorted(by: DisplaySnapshot.positionComparator(lhs:rhs:))
+    }
+
     var referencePrimaryDisplayKey: String? {
         referenceProfile.flatMap(primaryDisplayKey(for:))
+    }
+
+    var livePrimaryDisplayKey: String? {
+        guard !liveDisplaysForPreview.isEmpty else {
+            return nil
+        }
+
+        return liveDisplaysForPreview.mainDisplayKey
+            ?? liveDisplaysForPreview.first.map { liveDisplaysForPreview.uniqueMatchKey(for: $0) }
     }
 
     func primaryDisplayKey(for profile: DisplayProfile) -> String? {
@@ -282,9 +349,15 @@ extension AppModel {
     }
 
     var autoRestoreBadgeText: String {
-        autoRestoreEnabled
-            ? L10n.t("status.badge.autoRestoreOn")
-            : L10n.t("status.badge.autoRestoreOff")
+        if !autoRestoreEnabled {
+            return L10n.t("status.badge.autoRestoreOff")
+        }
+
+        if askBeforeAutomaticRestoreEnabled {
+            return L10n.t("status.badge.askBeforeRestore")
+        }
+
+        return L10n.t("status.badge.autoRestoreOn")
     }
 
     var dependencyBadgeText: String {
@@ -338,9 +411,47 @@ extension AppModel {
     }
 
     var restoreModeLine: String {
-        autoRestoreEnabled
-            ? L10n.t("restore.automatic")
-            : L10n.t("restore.manualOnly")
+        if !autoRestoreEnabled {
+            return L10n.t("restore.manualOnly")
+        }
+
+        if askBeforeAutomaticRestoreEnabled {
+            return L10n.t("restore.askBeforeAutomatic")
+        }
+
+        return L10n.t("restore.automatic")
+    }
+
+    var askBeforeRestoreControlTitle: String {
+        L10n.t("settings.restore.askBeforeRestore")
+    }
+
+    var askBeforeRestoreToggleTitle: String {
+        L10n.t("toggle.askBeforeAutomaticRestore")
+    }
+
+    var canToggleCurrentSetupPause: Bool {
+        !profiles.isEmpty && !currentDisplaySnapshots.isEmpty
+    }
+
+    var isCurrentSetupIgnored: Bool {
+        ignoredCurrentSetup != nil
+    }
+
+    var currentSetupPauseActionTitle: String {
+        isCurrentSetupIgnored
+            ? L10n.t("action.resumeCurrentSetup")
+            : L10n.t("action.ignoreCurrentSetup")
+    }
+
+    var currentSetupPauseActionSystemImage: String {
+        isCurrentSetupIgnored ? "play.circle" : "pause.circle"
+    }
+
+    var currentSetupPauseHint: String {
+        isCurrentSetupIgnored
+            ? L10n.t("settings.restore.resumeCurrentSetupHint")
+            : L10n.t("settings.restore.ignoreCurrentSetupHint")
     }
 
     var menuTransitionKey: String {
@@ -417,6 +528,17 @@ extension AppModel {
         return components.isEmpty ? nil : components.joined(separator: " · ")
     }
 
+    func profileCardActionState(for profile: DisplayProfile) -> ProfileCardActionState {
+        ProfileCardActionState(
+            canApplyLayout: canRestoreSavedProfiles,
+            canIdentifyDisplays: !profile.displaySet.displays.isEmpty,
+            applyTitle: L10n.t("action.applyProfile"),
+            identifyTitle: L10n.t("action.identifyDisplays"),
+            applyHelp: L10n.t("profiles.apply.hint", profile.name),
+            identifyHelp: L10n.t("profiles.identify.hint", profile.name)
+        )
+    }
+
     func perform(_ action: SurfaceAction) {
         switch action {
         case .installDependency:
@@ -457,8 +579,14 @@ extension AppModel {
             return .noMatch
         case .belowThreshold:
             return .lowConfidence
-        case .autoRestoreDisabled:
+        case .awaitingUserConfirmation:
+            return .reviewBeforeRestore
+        case .automaticRestoreDisabled:
             return .autoRestoreDisabled
+        case .currentSetupIgnored:
+            return .pausedCurrentSetup
+        case .manualLayoutOverride:
+            return .manualLayoutOverride
         case .dependencyBlocked:
             return .dependencyMissing
         case .ready, .savedProfileReady:
@@ -486,8 +614,14 @@ extension AppModel {
             return .saveNewProfile
         case .lowConfidence:
             return .fixNow
+        case .reviewBeforeRestore:
+            return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
+        case .pausedCurrentSetup:
+            return nil
+        case .manualLayoutOverride:
+            return nil
         case .manualRecovery:
             return .fixNow
         case .healthy:
@@ -497,11 +631,28 @@ extension AppModel {
 
     var menuQuickActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .healthy, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .installingDependency, .dependencyMissing:
+        case .healthy, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery, .installingDependency, .dependencyMissing:
             return [.saveNewProfile]
         case .noProfiles, .noMatch:
             return []
         }
+    }
+
+    var diagnosticsNeedsAttention: Bool {
+        guard let latestEntry = diagnostics.first else {
+            return false
+        }
+
+        switch latestEntry.outcomeTone {
+        case .caution, .negative:
+            return true
+        case .positive, .neutral:
+            return false
+        }
+    }
+
+    var shouldOfferDiagnosticsShortcut: Bool {
+        menuPrimaryState != .healthy || diagnosticsNeedsAttention
     }
 
     var restorePrimaryAction: SurfaceAction? {
@@ -516,8 +667,14 @@ extension AppModel {
             return .saveNewProfile
         case .lowConfidence:
             return .fixNow
+        case .reviewBeforeRestore:
+            return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
+        case .pausedCurrentSetup:
+            return nil
+        case .manualLayoutOverride:
+            return nil
         case .manualRecovery:
             return .fixNow
         case .healthy:
@@ -527,7 +684,7 @@ extension AppModel {
 
     var restoreSecondaryActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .lowConfidence, .manualRecovery:
+        case .lowConfidence, .reviewBeforeRestore, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery:
             return [.saveNewProfile]
         case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .autoRestoreDisabled, .healthy:
             return []
@@ -546,13 +703,25 @@ extension AppModel {
             return L10n.t("settings.restore.noMatchHint")
         case .lowConfidence:
             return L10n.t("settings.restore.lowConfidenceHint")
+        case .reviewBeforeRestore:
+            return L10n.t("settings.restore.reviewBeforeRestoreHint")
         case .autoRestoreDisabled:
-            return L10n.t("settings.restore.autoRestoreDisabledHint")
+            return L10n.t("settings.restore.globalAutoRestoreDisabledHint")
+        case .pausedCurrentSetup:
+            return L10n.t("settings.restore.currentSetupIgnoredHint")
+        case .manualLayoutOverride:
+            return L10n.t("settings.restore.manualLayoutOverrideHint")
         case .manualRecovery:
             return L10n.t("settings.restore.manualHint")
         case .healthy:
             return L10n.t("settings.restore.noImmediateAction")
         }
+    }
+
+    var diagnosticsShortcutHint: String {
+        diagnosticsNeedsAttention
+            ? L10n.t("settings.restore.reviewDiagnosticsHint")
+            : L10n.t("settings.restore.openDiagnosticsHint")
     }
 
     var dependencySummaryLine: String {
@@ -566,7 +735,17 @@ extension AppModel {
     }
 
     var canSwapDisplays: Bool {
-        dependencyAvailable && !installationInProgress && detectedDisplayCount == 2
+        dependencyAvailable
+            && !installationInProgress
+            && !restoreCommandInProgress
+            && (detectedDisplayCount == 2 || detectedDisplayCount == 3)
+    }
+
+    var showsSwapDisplaysControl: Bool {
+        restoreCommandInProgress
+            || installationInProgress
+            || dependencyAvailable
+            || detectedDisplayCount > 0
     }
 
     var swapAvailabilityLine: String {
@@ -578,7 +757,7 @@ extension AppModel {
             return L10n.t("settings.swap.dependencyHint")
         }
 
-        if detectedDisplayCount != 2 {
+        if detectedDisplayCount != 2 && detectedDisplayCount != 3 {
             return L10n.t("runtime.swapRequiresTwo")
         }
 
@@ -597,8 +776,14 @@ extension AppModel {
             return L10n.t("menu.state.noMatch")
         case .lowConfidence:
             return L10n.t("menu.state.lowConfidence")
+        case .reviewBeforeRestore:
+            return L10n.t("menu.state.reviewBeforeRestore")
         case .autoRestoreDisabled:
-            return L10n.t("menu.state.autoRestoreDisabled")
+            return L10n.t("menu.state.globalAutoRestoreDisabled")
+        case .pausedCurrentSetup:
+            return L10n.t("menu.state.pausedCurrentSetup")
+        case .manualLayoutOverride:
+            return L10n.t("menu.state.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.state.manualRecovery")
         case .healthy:
@@ -622,8 +807,14 @@ extension AppModel {
             return L10n.t("menu.subtitle.noMatch")
         case .lowConfidence:
             return L10n.t("menu.subtitle.lowConfidence")
+        case .reviewBeforeRestore:
+            return L10n.t("menu.subtitle.reviewBeforeRestore")
         case .autoRestoreDisabled:
-            return L10n.t("menu.subtitle.autoRestoreDisabled")
+            return L10n.t("menu.subtitle.globalAutoRestoreDisabled")
+        case .pausedCurrentSetup:
+            return L10n.t("menu.subtitle.pausedCurrentSetup")
+        case .manualLayoutOverride:
+            return L10n.t("menu.subtitle.manualLayoutOverride")
         case .manualRecovery:
             return L10n.t("menu.subtitle.manualRecovery")
         case .healthy:
@@ -657,13 +848,15 @@ extension AppModel {
             return installationInProgress
                 ? L10n.t("dependency.installingDisplayplacer")
                 : action.title
-        case .fixNow, .enableAutoRestore:
+        case .fixNow:
             return action.title
+        case .enableAutoRestore:
+            return L10n.t("action.enableAppAutoRestore")
         case .saveNewProfile:
             switch menuPrimaryState {
             case .noProfiles:
                 return L10n.t("menu.action.saveFirstBaseline")
-            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .autoRestoreDisabled, .manualRecovery, .healthy:
+            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery, .healthy:
                 return L10n.t("menu.action.saveAnotherBaseline")
             }
         }
@@ -690,6 +883,36 @@ extension AppModel {
 
     var latestDiagnosticDetails: String? {
         diagnostics.first?.details
+    }
+
+    var diagnosticsReportText: String {
+        var lines: [String] = [
+            L10n.t("diagnostics.report.title"),
+            ""
+        ]
+
+        lines.append("\(L10n.t("section.status")): \(statusLine)")
+        lines.append("\(L10n.t("settings.referenceDependency")): \(dependencyLine)")
+        lines.append("\(L10n.t("settings.referenceDisplays")): \(activeDisplayCountLine)")
+        lines.append("\(L10n.t("settings.referenceProfile")): \(referenceProfileLine)")
+
+        if !lastCommand.isEmpty {
+            lines.append("\(L10n.t("section.lastCommand")): \(lastCommand)")
+        }
+
+        lines.append("")
+        lines.append("\(L10n.t("diagnostics.recentHistory")):")
+
+        if diagnostics.isEmpty {
+            lines.append(L10n.t("diagnostics.empty"))
+        } else {
+            for entry in diagnostics.prefix(5) {
+                lines.append(entry.supportReportSummaryLine)
+                lines.append("  \(entry.details)")
+            }
+        }
+
+        return lines.joined(separator: "\n")
     }
 
     var updateStatusTitle: String {
