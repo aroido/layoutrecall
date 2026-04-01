@@ -7,6 +7,7 @@ usage() {
 Usage:
   ./scripts/omx-lab-start <slug> [lab note]
   ./scripts/omx-lab-start --release-program <slug> [lab note]
+  ./scripts/omx-lab-start --marketing-program <slug> [lab note]
 
 What it does:
   1. Tags the current HEAD as a local baseline snapshot.
@@ -18,6 +19,7 @@ Examples:
   ./scripts/omx-lab-start current-ui-pass
   ./scripts/omx-lab-start current-ui-pass "menu bar UX improvement experiment"
   ./scripts/omx-lab-start --release-program v2-release "PM-led v2.0.1 and v2.0.2 release program"
+  ./scripts/omx-lab-start --marketing-program marketing "OSS marketing, README, and launch asset program"
 EOF
 }
 
@@ -35,6 +37,9 @@ fi
 LAB_MODE="standard"
 if [[ "${1:-}" == "--release-program" ]]; then
   LAB_MODE="release_program"
+  shift || true
+elif [[ "${1:-}" == "--marketing-program" ]]; then
+  LAB_MODE="marketing_program"
   shift || true
 fi
 
@@ -62,6 +67,8 @@ fi
 
 if [[ "$LAB_MODE" == "release_program" ]]; then
   LAB_NOTE="${*:-LayoutRecall PM-led OMX release program}"
+elif [[ "$LAB_MODE" == "marketing_program" ]]; then
+  LAB_NOTE="${*:-LayoutRecall OSS marketing OMX program}"
 else
   LAB_NOTE="${*:-LayoutRecall cross-functional OMX lab}"
 fi
@@ -180,6 +187,97 @@ Have PM decide v2.0.1 scope and v2.0.2 scope explicitly.
 Ship v2.0.1 for polish/trust, then ship v2.0.2 with at least two net-new user-facing features.
 Verify each release cut with ./scripts/run-ai-verify --mode full.
 EOF
+elif [[ "$LAB_MODE" == "marketing_program" ]]; then
+  cat > "$BRIEF_PATH" <<EOF
+# OMX Marketing Program Brief
+
+## Goal
+
+Run a marketing-only LayoutRecall program that upgrades how the project looks,
+reads, and converts as an open-source product.
+
+This is not a feature-delivery sprint. It is a cross-functional marketing,
+brand, README, and launch-material program.
+
+## Snapshot
+
+- Source repository: ${REPO_NAME}
+- Source branch at snapshot: ${CURRENT_BRANCH}
+- Source commit at snapshot: ${SHORT_COMMIT}
+- Baseline tag: ${BASELINE_TAG}
+- Lab branch: ${LAB_BRANCH}
+- Lab worktree: ${WORKTREE_PATH}
+- Note: ${LAB_NOTE}
+
+## Marketing contract
+
+Treat this run as an OSS product-marketing team with design support.
+
+- Product marketing lead owns positioning, audience, hierarchy, launch priorities,
+  and final asset acceptance.
+- Brand / visual designer owns art direction and visual consistency.
+- Copywriter owns crisp README, headline, subheadline, and launch copy.
+- Docs / conversion editor owns install clarity, FAQ, comparison, and trust copy.
+- Growth / launch strategist owns channel choices and launch sequencing.
+- Skeptical user / conversion critic owns "would I download this?" feedback.
+
+## Required outputs
+
+Create tracked artifacts under \`docs/marketing/programs/\`:
+
+- \`docs/marketing/programs/${LAB_ID}-positioning.md\`
+- \`docs/marketing/programs/${LAB_ID}-asset-direction.md\`
+- \`docs/marketing/programs/${LAB_ID}-launch-plan.md\`
+
+The team must also update or create:
+
+- README hero section and top-of-page structure
+- at least one improved screenshot direction
+- at least one improved GIF/video concept or concrete asset update
+- launch-ready copy for GitHub / Reddit / Hacker News style posts
+
+## Required sequence
+
+1. Audit the current README, screenshots, GIF/video assets, docs, and project positioning.
+2. Explicitly answer:
+   - who should use LayoutRecall first
+   - why they should trust it
+   - why they should download it now
+3. Identify at least 5 conversion blockers across aesthetics, clarity, trust, and installation friction.
+4. The skeptical user must rank those blockers by "would bounce" severity.
+5. Product marketing lead must convert them into must / should / could priorities.
+6. Designer and copywriter must propose a cohesive visual + messaging direction, not isolated fixes.
+7. Prioritize README, hero, screenshots, GIF/video, FAQ, and launch copy as one funnel.
+8. Prefer real-app visuals refined with better art direction over fake mockups.
+9. If assets are regenerated, keep outputs under \`docs/marketing/generated/\`.
+10. Verify repository integrity with \`./scripts/run-ai-verify --mode full\` before claiming completion.
+
+## Guardrails
+
+- Optimize for "looks good enough to click" plus "clear enough to trust".
+- Do not drift into feature design or app implementation unless marketing evidence
+  proves a missing product behavior blocks honest marketing.
+- Keep claims grounded in what the app actually does today.
+- For OSS, installation clarity and troubleshooting are part of conversion, not an afterthought.
+
+## Suggested team prompt
+
+Run the LayoutRecall OSS marketing program described in .omx/context/${LAB_ID}.md.
+Use six lanes:
+1. Product marketing lead / positioning owner
+2. Brand and visual designer
+3. Copywriter / headline and README lead
+4. Docs and conversion editor
+5. OSS launch strategist
+6. Skeptical user / download critic
+
+Start by auditing the current README, screenshots, GIF/video assets, and install/trust docs.
+Produce docs/marketing/programs/${LAB_ID}-positioning.md,
+docs/marketing/programs/${LAB_ID}-asset-direction.md, and
+docs/marketing/programs/${LAB_ID}-launch-plan.md.
+Then improve the README and marketing assets so the project looks better,
+reads more clearly, and feels safer to try as an open-source download.
+EOF
 else
   cat > "$BRIEF_PATH" <<EOF
 # OMX Lab Brief
@@ -294,6 +392,8 @@ echo "  cd \"$WORKTREE_PATH\""
 echo "  omx doctor --team"
 if [[ "$LAB_MODE" == "release_program" ]]; then
   echo "  omx team 6:executor \"Run the LayoutRecall PM-led release program described in .omx/context/${LAB_ID}.md\""
+elif [[ "$LAB_MODE" == "marketing_program" ]]; then
+  echo "  omx team 6:executor \"Run the LayoutRecall OSS marketing program described in .omx/context/${LAB_ID}.md\""
 else
   echo "  omx ralph --prd \"Run the cross-functional LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
   echo "  # or"

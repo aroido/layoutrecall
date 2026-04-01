@@ -126,6 +126,27 @@ What changes in this mode:
 
 See [`omx-release-program.md`](./omx-release-program.md) for the detailed contract.
 
+## Marketing mode
+
+If you want a marketing-only OMX team for README, screenshots, GIF/video,
+launch copy, and OSS conversion work, use marketing-program mode.
+
+```bash
+./scripts/omx-lab-start --marketing-program marketing "LayoutRecall OSS marketing, README, and launch asset program"
+cd ../layoutrecall-marketing-<timestamp>
+omx doctor --team
+omx team 6:executor "Run the LayoutRecall OSS marketing program described in .omx/context/<lab-id>.md"
+```
+
+What changes in this mode:
+
+- the team is scoped to marketing, brand, copy, docs, and launch work
+- tracked strategy artifacts go under [`docs/marketing/programs`](./marketing/programs/README.md)
+- README, screenshots, GIF/video, FAQ, and launch copy are treated as one funnel
+- the skeptical user is asked to rank bounce reasons and trust gaps explicitly
+
+See [`omx-marketing-program.md`](./omx-marketing-program.md) for the detailed contract.
+
 ## Repo-specific rules
 
 - Work from the repository root so OMX picks up the project `AGENTS.md`.
