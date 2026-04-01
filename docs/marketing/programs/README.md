@@ -9,3 +9,9 @@ Typical outputs:
 - launch-channel plans and copy packs
 
 Generated images, GIFs, and videos should stay under [`../generated`](../generated).
+
+## 2026-04-01 program artifacts
+
+- [`marketing-20260401T013742Z-positioning.md`](./marketing-20260401T013742Z-positioning.md)
+- [`marketing-20260401T013742Z-asset-direction.md`](./marketing-20260401T013742Z-asset-direction.md)
+- [`marketing-20260401T013742Z-launch-plan.md`](./marketing-20260401T013742Z-launch-plan.md)
