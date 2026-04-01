@@ -58,8 +58,8 @@
 "action.enableAutoRestore" = "자동 복구 켜기";
 "action.enableAppAutoRestore" = "앱 자동 복구 켜기";
 "action.openDiagnostics" = "진단 열기";
-"action.ignoreCurrentSetup" = "이 환경에서 멈추기";
-"action.resumeCurrentSetup" = "이 환경 다시 보호";
+"action.ignoreCurrentSetup" = "현재 배치 유지";
+"action.resumeCurrentSetup" = "자동 복구 다시 사용";
 "action.save" = "프로필 저장";
 "action.swap" = "위치 바꾸기";
 "section.status" = "상태";
@@ -99,6 +99,8 @@
 "settings.profileDisplaySummary" = "연결된 프로필 디스플레이 %lld대";
 "section.general" = "일반";
 "general.summary.title" = "현재 환경";
+"settings.advanced.title" = "고급 도구";
+"settings.advanced.hint" = "단축키와 진단은 필요할 때만 여기서 확인하세요.";
 "general.badge.updatesOn" = "업데이트 자동 확인 켜짐";
 "general.badge.updatesOff" = "업데이트 수동 확인";
 "general.badge.launchOn" = "로그인 시 실행 켜짐";
@@ -128,7 +130,7 @@
 "settings.restore.autoRestoreDisabledHint" = "자동 복구가 꺼져 있습니다. 이 환경을 자동으로 복구하려면 다시 켜세요.";
 "settings.restore.globalAutoRestoreDisabledHint" = "앱의 자동 복구가 꺼져 있습니다. 이 환경을 자동으로 복구하려면 다시 켜세요.";
 "settings.restore.ignoreCurrentSetupHint" = "지금 연결된 정확한 배치에 대해서만 자동 복구를 잠시 멈춥니다.";
-"settings.restore.resumeCurrentSetupHint" = "이 정확한 배치에서도 다시 자동 복구를 허용합니다.";
+"settings.restore.resumeCurrentSetupHint" = "이 배치에서도 다시 자동 복구를 사용합니다.";
 "settings.restore.currentSetupIgnoredHint" = "이 정확한 배치는 환경이 바뀌거나 여기서 다시 켜기 전까지 자동 복구 대상에서 제외됩니다.";
 "settings.restore.manualLayoutOverrideHint" = "지금은 수동으로 바꾼 배치를 유지하고 있습니다. 이 배치를 계속 쓰려면 프로필로 저장하세요.";
 "settings.restore.manualHint" = "현재 상태를 확인한 뒤 필요할 때만 수동 복구를 실행하세요.";

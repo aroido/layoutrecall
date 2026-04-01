@@ -98,16 +98,6 @@ public struct ShortcutSettings: Codable, Equatable, Sendable {
     }
 }
 
-public struct IgnoredCurrentSetup: Codable, Equatable, Sendable {
-    public var displayFingerprint: String
-    public var expectedOrigins: [DisplayOrigin]
-
-    public init(displayFingerprint: String, expectedOrigins: [DisplayOrigin]) {
-        self.displayFingerprint = displayFingerprint
-        self.expectedOrigins = expectedOrigins
-    }
-}
-
 public enum AppLanguageOption: String, CaseIterable, Codable, Sendable, Identifiable {
     case system
     case english
@@ -146,7 +136,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var automaticallyCheckForUpdates: Bool
     public var skippedReleaseVersion: String?
     public var preferredLanguageCode: String?
-    public var ignoredCurrentSetup: IgnoredCurrentSetup?
 
     enum CodingKeys: String, CodingKey {
         case automaticRestoreEnabled
@@ -156,7 +145,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case automaticallyCheckForUpdates
         case skippedReleaseVersion
         case preferredLanguageCode
-        case ignoredCurrentSetup
     }
 
     public init(
@@ -166,8 +154,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         shortcuts: ShortcutSettings = ShortcutSettings(),
         automaticallyCheckForUpdates: Bool = true,
         skippedReleaseVersion: String? = nil,
-        preferredLanguageCode: String? = nil,
-        ignoredCurrentSetup: IgnoredCurrentSetup? = nil
+        preferredLanguageCode: String? = nil
     ) {
         self.automaticRestoreEnabled = automaticRestoreEnabled
         self.askBeforeAutomaticRestore = askBeforeAutomaticRestore
@@ -176,7 +163,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.automaticallyCheckForUpdates = automaticallyCheckForUpdates
         self.skippedReleaseVersion = skippedReleaseVersion
         self.preferredLanguageCode = preferredLanguageCode
-        self.ignoredCurrentSetup = ignoredCurrentSetup
     }
 
     public init(from decoder: Decoder) throws {
@@ -188,7 +174,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         automaticallyCheckForUpdates = try container.decodeIfPresent(Bool.self, forKey: .automaticallyCheckForUpdates) ?? true
         skippedReleaseVersion = try container.decodeIfPresent(String.self, forKey: .skippedReleaseVersion)
         preferredLanguageCode = try container.decodeIfPresent(String.self, forKey: .preferredLanguageCode)
-        ignoredCurrentSetup = try container.decodeIfPresent(IgnoredCurrentSetup.self, forKey: .ignoredCurrentSetup)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -200,6 +185,5 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(automaticallyCheckForUpdates, forKey: .automaticallyCheckForUpdates)
         try container.encodeIfPresent(skippedReleaseVersion, forKey: .skippedReleaseVersion)
         try container.encodeIfPresent(preferredLanguageCode, forKey: .preferredLanguageCode)
-        try container.encodeIfPresent(ignoredCurrentSetup, forKey: .ignoredCurrentSetup)
     }
 }

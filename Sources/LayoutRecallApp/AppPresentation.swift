@@ -10,7 +10,6 @@ enum MenuPrimaryState: Equatable {
     case lowConfidence
     case reviewBeforeRestore
     case autoRestoreDisabled
-    case pausedCurrentSetup
     case manualLayoutOverride
     case manualRecovery
     case healthy
@@ -24,7 +23,6 @@ enum MenuStatePresentation: Equatable {
     case lowConfidence
     case reviewBeforeRestore
     case autoRestoreDisabled
-    case pausedCurrentSetup
     case manualLayoutOverride
     case manualRecovery
     case healthy
@@ -45,8 +43,6 @@ enum MenuStatePresentation: Equatable {
             return L10n.t("menu.state.badge.reviewBeforeRestore")
         case .autoRestoreDisabled:
             return L10n.t("menu.state.badge.autoRestoreDisabled")
-        case .pausedCurrentSetup:
-            return L10n.t("menu.state.badge.pausedCurrentSetup")
         case .manualLayoutOverride:
             return L10n.t("menu.state.badge.manualLayoutOverride")
         case .manualRecovery:
@@ -72,8 +68,6 @@ enum MenuStatePresentation: Equatable {
             return "questionmark.circle"
         case .autoRestoreDisabled:
             return "sparkles"
-        case .pausedCurrentSetup:
-            return "pause.circle"
         case .manualLayoutOverride:
             return "arrow.left.and.right.square"
         case .manualRecovery:
@@ -144,6 +138,19 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
     case general
 
     var id: Self { self }
+
+    static var primaryNavigationPanes: [SettingsPane] {
+        [.restore, .profiles, .general]
+    }
+
+    var navigationPane: SettingsPane {
+        switch self {
+        case .shortcuts, .diagnostics:
+            return .general
+        case .restore, .profiles, .general:
+            return self
+        }
+    }
 
     var title: String {
         switch self {
@@ -242,8 +249,6 @@ extension AppModel {
             return .reviewBeforeRestore
         case .autoRestoreDisabled:
             return .autoRestoreDisabled
-        case .pausedCurrentSetup:
-            return .pausedCurrentSetup
         case .manualLayoutOverride:
             return .manualLayoutOverride
         case .manualRecovery:
@@ -403,30 +408,6 @@ extension AppModel {
         L10n.t("toggle.askBeforeAutomaticRestore")
     }
 
-    var canToggleCurrentSetupPause: Bool {
-        !profiles.isEmpty && !currentDisplaySnapshots.isEmpty
-    }
-
-    var isCurrentSetupIgnored: Bool {
-        ignoredCurrentSetup != nil
-    }
-
-    var currentSetupPauseActionTitle: String {
-        isCurrentSetupIgnored
-            ? L10n.t("action.resumeCurrentSetup")
-            : L10n.t("action.ignoreCurrentSetup")
-    }
-
-    var currentSetupPauseActionSystemImage: String {
-        isCurrentSetupIgnored ? "play.circle" : "pause.circle"
-    }
-
-    var currentSetupPauseHint: String {
-        isCurrentSetupIgnored
-            ? L10n.t("settings.restore.resumeCurrentSetupHint")
-            : L10n.t("settings.restore.ignoreCurrentSetupHint")
-    }
-
     var menuTransitionKey: String {
         [
             String(describing: menuPrimaryState),
@@ -549,8 +530,6 @@ extension AppModel {
             return .reviewBeforeRestore
         case .automaticRestoreDisabled:
             return .autoRestoreDisabled
-        case .currentSetupIgnored:
-            return .pausedCurrentSetup
         case .manualLayoutOverride:
             return .manualLayoutOverride
         case .dependencyBlocked:
@@ -584,8 +563,6 @@ extension AppModel {
             return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
-        case .pausedCurrentSetup:
-            return nil
         case .manualLayoutOverride:
             return nil
         case .manualRecovery:
@@ -597,7 +574,7 @@ extension AppModel {
 
     var menuQuickActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .healthy, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery, .installingDependency, .dependencyMissing:
+        case .healthy, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .manualLayoutOverride, .manualRecovery, .installingDependency, .dependencyMissing:
             return [.saveNewProfile]
         case .noProfiles, .noMatch:
             return []
@@ -637,8 +614,6 @@ extension AppModel {
             return .fixNow
         case .autoRestoreDisabled:
             return .enableAutoRestore
-        case .pausedCurrentSetup:
-            return nil
         case .manualLayoutOverride:
             return nil
         case .manualRecovery:
@@ -650,7 +625,7 @@ extension AppModel {
 
     var restoreSecondaryActions: [SurfaceAction] {
         switch menuPrimaryState {
-        case .lowConfidence, .reviewBeforeRestore, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery:
+        case .lowConfidence, .reviewBeforeRestore, .manualLayoutOverride, .manualRecovery:
             return [.saveNewProfile]
         case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .autoRestoreDisabled, .healthy:
             return []
@@ -673,8 +648,6 @@ extension AppModel {
             return L10n.t("settings.restore.reviewBeforeRestoreHint")
         case .autoRestoreDisabled:
             return L10n.t("settings.restore.globalAutoRestoreDisabledHint")
-        case .pausedCurrentSetup:
-            return L10n.t("settings.restore.currentSetupIgnoredHint")
         case .manualLayoutOverride:
             return L10n.t("settings.restore.manualLayoutOverrideHint")
         case .manualRecovery:
@@ -746,8 +719,6 @@ extension AppModel {
             return L10n.t("menu.state.reviewBeforeRestore")
         case .autoRestoreDisabled:
             return L10n.t("menu.state.globalAutoRestoreDisabled")
-        case .pausedCurrentSetup:
-            return L10n.t("menu.state.pausedCurrentSetup")
         case .manualLayoutOverride:
             return L10n.t("menu.state.manualLayoutOverride")
         case .manualRecovery:
@@ -777,8 +748,6 @@ extension AppModel {
             return L10n.t("menu.subtitle.reviewBeforeRestore")
         case .autoRestoreDisabled:
             return L10n.t("menu.subtitle.globalAutoRestoreDisabled")
-        case .pausedCurrentSetup:
-            return L10n.t("menu.subtitle.pausedCurrentSetup")
         case .manualLayoutOverride:
             return L10n.t("menu.subtitle.manualLayoutOverride")
         case .manualRecovery:
@@ -822,7 +791,7 @@ extension AppModel {
             switch menuPrimaryState {
             case .noProfiles:
                 return L10n.t("menu.action.saveFirstBaseline")
-            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .pausedCurrentSetup, .manualLayoutOverride, .manualRecovery, .healthy:
+            case .installingDependency, .dependencyMissing, .noMatch, .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .manualLayoutOverride, .manualRecovery, .healthy:
                 return L10n.t("menu.action.saveAnotherBaseline")
             }
         }

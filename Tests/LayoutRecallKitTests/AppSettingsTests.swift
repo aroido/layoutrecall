@@ -18,11 +18,10 @@ func appSettingsDecodeLegacyPayloadWithNewRestoreControlsDisabledByDefault() thr
     let settings = try JSONDecoder().decode(AppSettings.self, from: data)
 
     #expect(settings.askBeforeAutomaticRestore == false)
-    #expect(settings.ignoredCurrentSetup == nil)
 }
 
 @Test
-func appSettingsRoundTripRestoreConfirmationAndIgnoredSetup() throws {
+func appSettingsRoundTripRestoreConfirmation() throws {
     let original = AppSettings(
         automaticRestoreEnabled: true,
         askBeforeAutomaticRestore: true,
@@ -30,11 +29,7 @@ func appSettingsRoundTripRestoreConfirmationAndIgnoredSetup() throws {
         shortcuts: ShortcutSettings(),
         automaticallyCheckForUpdates: true,
         skippedReleaseVersion: nil,
-        preferredLanguageCode: "en",
-        ignoredCurrentSetup: IgnoredCurrentSetup(
-            displayFingerprint: DisplaySnapshot.developmentDesk.fingerprint,
-            expectedOrigins: DisplayProfile.officeDock.layout.expectedOrigins
-        )
+        preferredLanguageCode: "en"
     )
 
     let data = try JSONEncoder().encode(original)

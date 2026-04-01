@@ -16,15 +16,6 @@ struct MenuContentView: View {
         )
     }
 
-    private var askBeforeRestoreBinding: Binding<Bool> {
-        Binding(
-            get: { model.askBeforeAutomaticRestoreEnabled },
-            set: { newValue in
-                model.setAskBeforeAutomaticRestore(newValue)
-            }
-        )
-    }
-
     var body: some View {
         ZStack {
             AppChromeBackground()
@@ -81,74 +72,52 @@ struct MenuContentView: View {
 
     private var statusBlock: some View {
         GlassCard(padding: 14) {
-            ZStack(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 12) {
-                    statusBanner
+            VStack(alignment: .leading, spacing: 10) {
+                StatusPill(
+                    text: model.menuStatePresentation.badgeText,
+                    systemImage: model.menuStatePresentation.systemImage,
+                    emphasis: model.menuPrimaryState != .healthy
+                )
 
-                    VStack(alignment: .leading, spacing: 6) {
-                Text(model.menuStatusTitle)
-                            .font(.title3.weight(.semibold))
-                            .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(model.menuStatusTitle)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
 
-                        Text(model.menuStatusSubtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if let profile = model.referenceProfile {
-                            compactReferenceSummary(for: profile)
-                                .padding(.top, 4)
-                        }
-                    }
-
-                    if model.menuShouldShowEvidencePills {
-                        evidencePills
-                    }
-
-                    if let metadataLine = model.menuReferenceMetadataLine,
-                       model.referenceProfile == nil
-                    {
-                        Text(metadataLine)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(model.menuStatusSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .id(model.menuTransitionKey)
-                .transition(.asymmetric(insertion: .move(edge: .top).combined(with: .opacity), removal: .opacity))
+
+                if let profile = model.referenceProfile, model.menuPrimaryState != .healthy {
+                    compactReferenceSummary(for: profile)
+                }
             }
+            .id(model.menuTransitionKey)
+            .transition(.asymmetric(insertion: .move(edge: .top).combined(with: .opacity), removal: .opacity))
         }
     }
 
     private var autoRestoreControl: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(model.automaticRestoreControlTitle)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.automaticRestoreControlTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-                        Text(model.restoreModeLine)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .disabled(model.profiles.isEmpty)
-                        .accessibilityIdentifier("menu.toggle.autoRestore")
-                }
-
-                Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
-                    .toggleStyle(.switch)
-                    .disabled(model.profiles.isEmpty || !model.autoRestoreEnabled)
-                    .font(.caption)
-                    .accessibilityIdentifier("menu.toggle.askBeforeRestore")
+                Text(model.restoreModeLine)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer(minLength: 0)
+
+            Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .disabled(model.profiles.isEmpty)
+                .accessibilityIdentifier("menu.toggle.autoRestore")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -162,28 +131,6 @@ struct MenuContentView: View {
         )
     }
 
-    private var statusBanner: some View {
-        HStack(alignment: .center, spacing: 10) {
-            StatusPill(
-                text: model.menuStatePresentation.badgeText,
-                systemImage: model.menuStatePresentation.systemImage,
-                emphasis: model.menuPrimaryState != .healthy
-            )
-
-            Spacer(minLength: 0)
-
-            if model.menuShowsRecentActivity,
-               let recentActivityLine = model.menuRecentActivityLine
-            {
-                Text(recentActivityLine)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
     private func compactReferenceSummary(for profile: DisplayProfile) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.t("menu.reference"))
@@ -194,39 +141,6 @@ struct MenuContentView: View {
                 .font(.subheadline.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
 
-            if model.profiles.count > 1 {
-                Text(L10n.t("menu.meta.profileCount", model.profiles.count))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private var evidencePills: some View {
-        AdaptiveGroup {
-            if model.menuShowsDependencyBadge {
-                StatusPill(
-                    text: model.dependencyBadgeText,
-                    systemImage: model.installationInProgress ? "hourglass" : "shippingbox",
-                    emphasis: false
-                )
-            }
-
-            if model.menuShowsDisplayBadge {
-                StatusPill(
-                    text: model.displayBadgeText,
-                    systemImage: "rectangle.on.rectangle"
-                )
-            }
-
-            if let confidenceBadgeText = model.menuConfidenceBadgeTextForMenu {
-                StatusPill(
-                    text: confidenceBadgeText,
-                    systemImage: "checkmark.seal",
-                    emphasis: model.confidencePresentation == .high
-                )
-            }
         }
     }
 
@@ -251,7 +165,7 @@ struct MenuContentView: View {
 
     private var shouldShowSecondaryActionsRow: Bool {
         shouldShowInlineFixNowButton
-            || model.referenceProfile != nil
+            || model.showsSwapDisplaysControl
             || shouldShowAdvancedActionsMenu
     }
 
@@ -261,8 +175,8 @@ struct MenuContentView: View {
 
     private var shouldShowAdvancedActionsMenu: Bool {
         !model.menuQuickActions.isEmpty
-            || model.showsSwapDisplaysControl
             || model.profiles.count > 1
+            || model.referenceProfile != nil
             || model.shouldOfferDiagnosticsShortcut
     }
 
@@ -273,12 +187,8 @@ struct MenuContentView: View {
                     fixNowButton
                 }
 
-                if model.canToggleCurrentSetupPause {
-                    currentSetupPauseButton
-                }
-
-                if model.referenceProfile != nil {
-                    identifyDisplaysButton
+                if model.showsSwapDisplaysControl {
+                    swapPositionsButton
                 }
 
                 if shouldShowAdvancedActionsMenu {
@@ -291,12 +201,8 @@ struct MenuContentView: View {
                     fixNowButton
                 }
 
-                if model.canToggleCurrentSetupPause {
-                    currentSetupPauseButton
-                }
-
-                if model.referenceProfile != nil {
-                    identifyDisplaysButton
+                if model.showsSwapDisplaysControl {
+                    swapPositionsButton
                 }
 
                 if shouldShowAdvancedActionsMenu {
@@ -330,28 +236,31 @@ struct MenuContentView: View {
         .accessibilityIdentifier("menu.action.identify")
     }
 
-    private var currentSetupPauseButton: some View {
+    private var identifyDisplaysMenuItem: some View {
         Button {
-            model.toggleIgnoreCurrentSetup()
+            if let profile = model.referenceProfile {
+                model.identifyDisplays(for: profile.id)
+            }
         } label: {
-            actionLabel(
-                model.currentSetupPauseActionTitle,
-                systemImage: model.currentSetupPauseActionSystemImage
-            )
+            Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
+        }
+        .disabled(model.referenceProfile == nil)
+    }
+
+    private var swapPositionsButton: some View {
+        Button {
+            model.swapLeftRight()
+        } label: {
+            actionLabel(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!model.canToggleCurrentSetupPause)
-        .help(model.currentSetupPauseHint)
-        .accessibilityIdentifier("menu.action.currentSetupPause")
+        .disabled(!model.canSwapDisplays)
+        .help(model.swapAvailabilityLine)
+        .accessibilityIdentifier("menu.action.swap")
     }
 
     private var advancedActionsMenu: some View {
         Menu {
-            let showsOtherAdvancedItems =
-                !model.menuQuickActions.isEmpty
-                || model.showsSwapDisplaysControl
-                || model.profiles.count > 1
-
             ForEach(model.menuQuickActions) { action in
                 Button {
                     model.perform(action)
@@ -359,29 +268,6 @@ struct MenuContentView: View {
                     Label(model.menuTitle(for: action), systemImage: action.systemImage)
                 }
                 .disabled(isDisabled(action))
-            }
-
-            if model.showsSwapDisplaysControl {
-                if !model.menuQuickActions.isEmpty {
-                    Divider()
-                }
-
-                if model.canToggleCurrentSetupPause {
-                    Button {
-                        model.toggleIgnoreCurrentSetup()
-                    } label: {
-                        Label(model.currentSetupPauseActionTitle, systemImage: model.currentSetupPauseActionSystemImage)
-                    }
-
-                    Divider()
-                }
-
-                Button {
-                    model.swapLeftRight()
-                } label: {
-                    Label(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
-                }
-                .disabled(!model.canSwapDisplays)
             }
 
             if model.profiles.count > 1 {
@@ -409,8 +295,20 @@ struct MenuContentView: View {
                 }
             }
 
+            let showsUtilityActions =
+                model.referenceProfile != nil
+                || model.shouldOfferDiagnosticsShortcut
+
+            if showsUtilityActions && (!model.menuQuickActions.isEmpty || model.profiles.count > 1) {
+                Divider()
+            }
+
+            if model.referenceProfile != nil {
+                identifyDisplaysMenuItem
+            }
+
             if model.shouldOfferDiagnosticsShortcut {
-                if showsOtherAdvancedItems {
+                if model.referenceProfile != nil {
                     Divider()
                 }
 

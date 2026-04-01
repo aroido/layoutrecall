@@ -58,8 +58,8 @@
 "action.enableAutoRestore" = "Enable Automatic Restore";
 "action.enableAppAutoRestore" = "Enable App Automatic Restore";
 "action.openDiagnostics" = "Open Diagnostics";
-"action.ignoreCurrentSetup" = "Pause on This Setup";
-"action.resumeCurrentSetup" = "Resume on This Setup";
+"action.ignoreCurrentSetup" = "Keep Current Layout";
+"action.resumeCurrentSetup" = "Resume Auto Restore";
 "action.save" = "Save Profile";
 "action.swap" = "Swap Positions";
 "section.status" = "Status";
@@ -99,6 +99,8 @@
 "settings.profileDisplaySummary" = "%lld displays in this profile";
 "section.general" = "General";
 "general.summary.title" = "Current environment";
+"settings.advanced.title" = "Advanced tools";
+"settings.advanced.hint" = "Shortcuts and diagnostics stay here until you need them.";
 "general.badge.updatesOn" = "Automatic updates on";
 "general.badge.updatesOff" = "Manual update checks";
 "general.badge.launchOn" = "Launch at login on";
@@ -128,7 +130,7 @@
 "settings.restore.autoRestoreDisabledHint" = "Automatic restore is turned off. Turn it back on if this setup should recover automatically.";
 "settings.restore.globalAutoRestoreDisabledHint" = "Automatic restore is turned off for the app. Turn it back on if this setup should recover automatically.";
 "settings.restore.ignoreCurrentSetupHint" = "Pause automatic restore for the exact arrangement that is connected right now.";
-"settings.restore.resumeCurrentSetupHint" = "Resume automatic restore for this exact arrangement and let future matches recover automatically again.";
+"settings.restore.resumeCurrentSetupHint" = "Let this exact arrangement participate in automatic restore again.";
 "settings.restore.currentSetupIgnoredHint" = "This exact arrangement is intentionally ignored until the setup changes or you resume protection here.";
 "settings.restore.manualLayoutOverrideHint" = "A manually changed layout is active right now. Save it as a profile if you want to keep using it.";
 "settings.restore.manualHint" = "Check the current state first, then run manual restore only when needed.";
