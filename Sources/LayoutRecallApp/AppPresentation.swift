@@ -136,33 +136,6 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
     }
 }
 
-enum DangerousRestoreAction: String, Identifiable, Equatable {
-    case swapLeftRight
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .swapLeftRight:
-            return L10n.t("action.swapConfirm.title")
-        }
-    }
-
-    var message: String {
-        switch self {
-        case .swapLeftRight:
-            return L10n.t("action.swapConfirm.message")
-        }
-    }
-
-    var confirmationTitle: String {
-        switch self {
-        case .swapLeftRight:
-            return L10n.t("action.swapConfirm.run")
-        }
-    }
-}
-
 enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
     case restore
     case profiles
@@ -549,13 +522,6 @@ extension AppModel {
             setAutoRestore(true)
         case .saveNewProfile:
             saveCurrentLayout()
-        }
-    }
-
-    func perform(_ action: DangerousRestoreAction) {
-        switch action {
-        case .swapLeftRight:
-            swapLeftRight()
         }
     }
 

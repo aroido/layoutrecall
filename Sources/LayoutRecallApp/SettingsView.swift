@@ -128,19 +128,16 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        ZStack {
-            HStack(spacing: 0) {
-                sidebar
+        HStack(spacing: 0) {
+            sidebar
 
-                Divider()
+            Divider()
 
-                detailPane(for: selectedPane)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .background(Color(nsColor: .windowBackgroundColor))
-            }
-            .frame(width: 760, height: 560)
-
+            detailPane(for: selectedPane)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color(nsColor: .windowBackgroundColor))
         }
+        .frame(width: 760, height: 560)
         .alert(item: $profilePendingDeletion) { profile in
             Alert(
                 title: Text(L10n.t("profiles.delete.title")),
@@ -296,7 +293,7 @@ struct SettingsView: View {
 
                 if model.showsSwapDisplaysControl {
                     Button {
-                        presentDangerousRestoreConfirmation(for: .swapLeftRight)
+                        model.swapLeftRight()
                     } label: {
                         Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
                             .frame(maxWidth: .infinity)
@@ -713,25 +710,6 @@ struct SettingsView: View {
                 }
             }
         )
-    }
-
-    private func presentDangerousRestoreConfirmation(for action: DangerousRestoreAction) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = action.title
-        alert.informativeText = action.message
-        alert.addButton(withTitle: action.confirmationTitle)
-        alert.addButton(withTitle: L10n.t("action.cancel"))
-
-        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
-            alert.beginSheetModal(for: window) { response in
-                if response == .alertFirstButtonReturn {
-                    model.perform(action)
-                }
-            }
-        } else if alert.runModal() == .alertFirstButtonReturn {
-            model.perform(action)
-        }
     }
 
     private func profileLayoutDetails(
