@@ -1,126 +1,163 @@
-# LayoutRecall Launch Plan
+# LayoutRecall OSS Launch Plan
 
-## Launch objective
-Ship a small OSS launch that makes LayoutRecall easier to trust, easier to install, and easier to share without overclaiming beyond the current baseline.
+_Date: 2026-04-01_
 
-## Launch promise
-A focused macOS menu bar utility that helps people recover a known display layout after sleep, wake, dock reconnects, and identical-monitor shuffling.
+## Launch goal
 
-## Release funnel
-1. README refresh lands first
-2. Regenerated hero / stills / GIF land second
-3. GitHub release post uses the new headline, trust framing, and install CTAs
-4. Social/community posts follow with channel-specific copy
-5. Early replies gather objections around trust, setup, and supported layouts
+Increase qualified OSS interest from multi-monitor macOS users by pairing a clearer README with assets and posts that emphasize pain specificity, safety, and fast evaluation.
 
-## Pre-launch checklist
-- README hero clearly names the problem and first audience
-- Install paths show signed DMG and Homebrew near the top
-- Safety model appears before deep implementation details
-- At least one proof GIF/video and one proof screenshot are up to date
-- FAQ/limitations explain `displayplacer`, confidence thresholds, and manual controls honestly
-- `./scripts/run-ai-verify --mode full` passes before shipping
+## Launch thesis
 
-## Channel priorities
+LayoutRecall is most compelling when introduced as:
 
-### Must-launch channels
-1. **GitHub README + Releases** — canonical conversion surface
-2. **GitHub release notes / project post** — best place for install/update framing
-3. **Hacker News / Show HN style post** — good for “I built a focused tool for a specific recurring pain”
+- a practical macOS recovery tool
+- for repeat display-layout breakage
+- with safe automation and visible manual fallback
+- ready to try from a signed DMG or Homebrew
 
-### Should-launch channels
-1. **Relevant Reddit communities** (macOS, setup/productivity, developer-workstation audiences)
-2. **Personal/social post thread** with problem, solution, and install CTA
+## Target audience order
 
-### Could-launch channels
-1. Short demo clip reposts
-2. Direct outreach to multi-monitor power users already complaining about identical-display churn
+1. Developers with MacBook + dock + external monitors
+2. Power users already using `displayplacer`, BetterDisplay, or shell scripts
+3. Creators and operators whose desk layout must stay stable
+4. Broader Mac productivity / menu bar utility audiences
 
-## Core objections and response strategy
+## Channel sequencing
 
-| Objection | Response |
-| --- | --- |
-| “Why not just use a script?” | LayoutRecall wraps the recovery flow in a menu bar utility with saved profiles, confidence gating, diagnostics, and manual fallback. |
-| “Will it rearrange my desk incorrectly?” | The product is intentionally conservative and favors not acting over acting unsafely when confidence is low. |
-| “Do I need terminal setup?” | Real restore uses `displayplacer`, but the app can guide setup and the README explains the dependency clearly. |
-| “Is this a full window manager?” | No. It is a focused tool for restoring known display layouts after monitor churn. |
-| “Does it work for every complex desk?” | Honest answer: the safest common dual-/triple-monitor paths are the focus today; some complex layouts remain manual by design. |
+### Phase 1 — Repository conversion
 
-## GitHub release copy
+Ship first:
 
-### Release title
-LayoutRecall: restore your Mac display layout after sleep, wake, and dock reconnects
+- updated positioning doc
+- updated asset direction doc
+- updated launch copy
+- README hero / top-of-page improvements from other implementation lanes
 
-### Release body
-If macOS keeps bringing your monitors back in the wrong order, wrong position, or wrong main-display state, LayoutRecall is built for that exact problem.
+Reason:
 
-LayoutRecall is a macOS menu bar utility that lets you save a known-good display layout, watch for real display changes, and restore the matching layout when confidence is high.
+Do not send traffic before the repo explains itself clearly.
 
-Why try it now:
-- save one or more known-good monitor layouts
-- restore automatically only when the match is trustworthy
-- use manual recovery tools like `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions`
-- inspect diagnostics, confidence, and dependency status directly in the app
-- install via signed DMG or Homebrew
+### Phase 2 — Owned launch surfaces
 
-Install:
-- Download the latest signed DMG from GitHub Releases
-- Or run `brew install --cask aroido/layoutrecall/layoutrecall`
+Primary channels:
 
-Honest boundary:
-LayoutRecall uses `displayplacer` for real layout changes and stays conservative when confidence is low.
+1. GitHub release notes / repository announcement
+2. README + social card refresh
+3. short GIF/MP4 demo on repo and social surfaces
 
-## Hacker News / Show HN draft
+### Phase 3 — Community launch surfaces
 
-**Title:** Show HN: LayoutRecall — a macOS menu bar app for fixing scrambled external monitor layouts
+Priority order:
 
-**Body:**
-I built LayoutRecall for a specific desk problem: macOS sometimes brings identical or frequently reconnected monitors back in the wrong order or position after sleep, wake, or dock reconnects.
+1. Reddit communities for Mac productivity / setup / developer workflows
+2. Hacker News “Show HN” style launch if the framing stays technical and honest
+3. X / Mastodon / Bluesky follow-up posts using the social card and short demo
 
-The app lets you save a known-good layout, watches for real display changes, and restores automatically only when the profile match is confident enough. When it is not confident, it stays manual and surfaces tools like `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics instead of guessing.
+## Launch blockers to clear before broad posting
 
-It is intentionally narrow: not a general window manager, just a focused menu bar utility for restoring known monitor layouts more safely.
+- README must clearly explain `displayplacer` instead of burying it.
+- Trust language must explain conservative auto-restore behavior.
+- Install path must look easy enough to try in minutes.
+- Screenshot/GIF captions must explain the product without requiring a full README read.
 
-You can install it from a signed DMG or with Homebrew:
-`brew install --cask aroido/layoutrecall/layoutrecall`
+## Message pillars
 
-I would especially love feedback from people with laptop + dock + 2–3 monitor setups, or from anyone who has been relying on ad-hoc `displayplacer` scripts.
+### Pillar 1 — Pain specificity
 
-## Reddit draft
+This is for people whose monitor layout keeps breaking—not for general window management.
 
-**Title:** I made a macOS menu bar app for when external monitors come back in the wrong layout
+### Pillar 2 — Safe recovery
 
-**Body:**
-If your Mac keeps scrambling monitor positions after sleep, wake, or reconnecting a dock, I made a focused tool for that.
+LayoutRecall does not pretend to be magic. It restores automatically when confidence is high and stays manual when it is not.
 
-LayoutRecall lets you save a known-good display layout and restore it later when the connected monitor set matches with high confidence. It also keeps manual recovery visible, so it does not silently guess when the match looks risky.
+### Pillar 3 — Low-friction trial
 
-Current highlights:
-- save/manage multiple monitor layout profiles
-- auto-restore only on trusted matches
-- manual `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions`
-- diagnostics and dependency status in-app
-- signed DMG + Homebrew install
+Install it, save one layout, and wait for the next display scramble.
 
-It is open source and built specifically for the “my desk was right yesterday, why is it broken again?” problem.
+## Recommended proof points to repeat
 
-## GitHub social / personal post draft
-
-MacBook + dock + external monitors, and macOS keeps putting them back wrong?
-
-I built LayoutRecall: a focused macOS menu bar utility that saves your known-good display layout and restores it when your monitor setup comes back scrambled after sleep, wake, or reconnects.
-
-Why it feels safer than a one-off script:
-- conservative auto-restore
-- manual recovery tools when confidence is low
-- visible diagnostics and dependency state
+- macOS menu bar utility for multi-display recovery
+- saves known-good layouts
+- reacts to sleep, wake, and dock reconnect scenarios
+- `Fix Now`, `Apply Layout`, `Show Numbers`, diagnostics
 - signed DMG and Homebrew install paths
+- open source, explicit about using `displayplacer`
 
-Repo + downloads: GitHub Releases / README
+## Launch copy pack
 
-## Post-launch watchpoints
-- Questions about `displayplacer` setup
-- Fear around wrong automatic restores
-- Requests for more complex 4+ display heuristics
-- Confusion about whether the tool manages windows vs. display layout only
-- Feedback on whether the top README visual proves the outcome fast enough
+### GitHub / release announcement
+
+**Title**
+
+LayoutRecall: open-source macOS display-layout recovery from the menu bar
+
+**Body**
+
+If your Mac keeps bringing external displays back in the wrong order after sleep, wake, or dock reconnect, I built LayoutRecall to make recovery much less annoying.
+
+LayoutRecall is a macOS menu bar app that lets you save a known-good monitor layout and restore it later—automatically when the match is confident, or manually with clear recovery tools when you want control.
+
+What it already does:
+
+- save and manage display layout profiles
+- attempt high-confidence automatic restore
+- surface `Fix Now`, `Apply Layout`, and `Show Numbers`
+- keep diagnostics so you can see what happened
+- install `displayplacer` through the app flow when needed
+
+If you have a desk setup that macOS scrambles often, I would love feedback on your workflow, hardware mix, and where recovery still feels unclear.
+
+### Reddit post
+
+**Title**
+
+I made an open-source macOS menu bar app to restore broken monitor layouts after dock reconnects
+
+**Body**
+
+macOS occasionally brings my external displays back in the wrong order after sleep/wake or reconnecting a dock, so I built LayoutRecall.
+
+It is a small menu bar utility that saves a known-good display layout and restores it later. The part I cared about most was not making it feel reckless: it only auto-restores when the match is confident, and otherwise it keeps recovery manual with `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics.
+
+It is open source, supports a signed DMG and Homebrew install path, and uses `displayplacer` for the actual layout commands.
+
+If you have a multi-monitor Mac desk and this problem drives you crazy too, I would really appreciate feedback.
+
+### Hacker News / Show HN post
+
+**Title**
+
+Show HN: LayoutRecall, a macOS menu bar utility for restoring broken multi-monitor layouts
+
+**Body**
+
+I built LayoutRecall after getting tired of macOS bringing identical or frequently reconnected monitors back in the wrong arrangement.
+
+It is a menu bar app that saves known display layouts and restores them when the connected monitor set matches a saved profile. It is intentionally conservative: automatic restore only happens when confidence is high, and otherwise the app stays manual and shows recovery actions plus diagnostics.
+
+The project is open source, installs via DMG or Homebrew, and uses `displayplacer` for actual restore execution.
+
+I would especially love feedback from people with laptop + dock + multi-monitor desk setups.
+
+### Short social post
+
+Your Mac should not make you rebuild your monitor layout after every dock reconnect.
+
+LayoutRecall is an open-source menu bar app for macOS that saves known-good display layouts and restores them later—with safe automation when confidence is high and clear manual recovery when it is not.
+
+## Community-response plan
+
+When comments arrive, prioritize answering:
+
+1. What hardware setup was LayoutRecall built for?
+2. Why use `displayplacer` instead of hiding it?
+3. Can the app be trusted not to move displays blindly?
+4. What happens when the match is uncertain?
+5. Does it work without `displayplacer` installed?
+
+## Success criteria for the first launch wave
+
+- README conversion improves: clearer who/why/trust/try-now messaging
+- launch posts generate feedback from real multi-monitor users, not generic “looks neat” reactions
+- the most common replies are about workflow fit or hardware edge cases, not confusion about what the app does
+- follow-up issues or discussions produce actionable trust/setup feedback

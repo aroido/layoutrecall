@@ -1,99 +1,213 @@
 # LayoutRecall Asset Direction
 
-## Goal
-Turn the project from “credible text README” into “credible product page” using real app visuals, tighter art direction, and a clearer before/after story.
+_Date: 2026-04-01_
 
-## What the current assets already do well
-- They use real UI snapshots instead of fake mockups.
-- The existing compositor already outputs a README hero, feature stills, a social card, and a short demo GIF/MP4.
-- The menu bar and settings views are visually clean enough to support polished marketing treatment.
+## Creative brief
 
-## What the current assets still miss
-- The story is not obvious enough at thumbnail size.
-- The strongest visual payoff is the desk problem being corrected, not just the app chrome.
-- Hero treatment needs clearer headline-safe space and stronger contrast between pain and recovery.
-- The GIF concept is still “slide deck demo,” not yet “instant recovery narrative.”
+Use the real app UI to make LayoutRecall feel like a calm, reliable recovery tool for serious desk setups.
 
-## Visual direction
+The aesthetic target is:
 
-### Art direction keywords
-- calm utility
-- trustworthy recovery
-- macOS-native polish
-- technical, but not hacker-noisy
-- real desk problem, visibly resolved
+- practical, not flashy
+- premium enough to trust
+- system-native enough to feel safe
+- focused on “recovery from monitor chaos,” not generic productivity branding
 
-### Visual principles
-1. Prefer real app UI over synthetic device mockups.
-2. Show the problem state and the recovery state as a sequence, not isolated screenshots.
-3. Keep captions short and outcome-focused.
-4. Use display-layout diagrams, highlight callouts, and subtle zoom/crop to make the utility obvious.
-5. Treat diagnostics and confidence badges as trust proof, not clutter.
+## Core visual narrative
 
-## Improved README screenshot direction
+Every top-level asset should support one funnel:
 
-### Screenshot 1: Hero / “macOS scrambled my monitors again”
-**Purpose:** make the problem legible in one glance.
+1. **Problem:** macOS scrambled the desk again.
+2. **Decision:** LayoutRecall recognized a known layout and shows why it can help.
+3. **Recovery:** the user restores confidently without dragging displays around manually.
 
-**Composition:**
-- Left: abstracted “wrong layout” mini-diagram or highlighted mismatched screen ordering
-- Right: real LayoutRecall menu with confidence/status visible
-- Caption: `Save a known-good layout, then restore it when macOS brings your displays back wrong.`
+## What to preserve from current assets
 
-**Why it converts:** it links the abstract desk pain to a concrete UI that already exists.
+Existing assets already have strong inputs:
 
-### Screenshot 2: Profiles / “save the desk you actually want”
-**Purpose:** prove the app is not a one-shot script.
+- real menu bar UI from `docs/marketing/generated/raw-ui/menu.png`
+- real settings panes for profiles, diagnostics, shortcuts, and general controls
+- branded stills and short demo media under `docs/marketing/generated/final/`
 
-**Composition:**
-- Real Profiles pane
-- Highlight saved profile name, threshold, and direct apply controls
-- Caption: `Keep one or more known-good layouts and tune how confidently each should auto-restore.`
+Keep those as the base; refine narrative, captions, crop hierarchy, and trust framing before inventing new visuals.
 
-### Screenshot 3: Trust / “show me why it did or did not act”
-**Purpose:** reduce fear of black-box automation.
+## Art-direction principles
 
-**Composition:**
-- Real Restore or Diagnostics pane
-- Highlight dependency readiness, decision state, and recent diagnostic history
-- Caption: `See dependency status, recovery options, and recent restore decisions before you trust it with your desk.`
+### 1. Show a real Mac utility, not a concept mockup
 
-## Improved GIF / short-video concept
+Prefer authentic menu/settings UI crops over fake devices or abstract dashboards.
 
-### Recommended concept: Problem → detection → recovery → proof
+### 2. Show evidence-rich moments
 
-**Length:** 8–12 seconds
+Prioritize UI states that communicate:
 
-**Storyboard:**
-1. Title frame: “macOS put your monitors back wrong?”
-2. Wrong-layout diagram appears beside a live LayoutRecall menu snapshot
-3. Quick cut to saved profile in Profiles pane
-4. Menu state shows trusted match / recovery action
-5. Final frame shows corrected layout diagram + CTA: `Download the signed app or install with Homebrew`
+- saved profile exists
+- confidence is visible
+- recovery actions are obvious
+- diagnostics prove the app is not guessing blindly
 
-**Why this is better than a generic slideshow:**
-It shows outcome logic, not just polished UI.
+### 3. Use calm contrast
+
+The product promise is “desk chaos becomes controlled.”
+
+Recommended contrast pattern:
+
+- neutral dark or graphite shell
+- bright blue accent for primary recovery state
+- restrained green only for verified success / trust moments
+- avoid alarm-red as the dominant theme unless highlighting the “before” problem
+
+### 4. Caption what the user is seeing
+
+A screenshot should not rely on the reader understanding the menu bar app by inspection alone. Each still needs a short label that explains the value in plain English.
+
+## Screenshot direction
+
+### Screenshot 1: README hero
+
+**Goal:** establish desk-recovery value in one glance.
+
+Use:
+
+- `docs/marketing/generated/final/readme-hero.png` as the base direction
+- a crop that keeps the menu bar panel readable and the settings/profile context visible
+
+Caption territory:
+
+- Save a known-good layout, then restore it after sleep, wake, or dock reconnect.
+
+Required emphasis:
+
+- menu bar utility
+- profile awareness
+- recovery action readiness
+
+### Screenshot 2: Trust / diagnostics still
+
+**Goal:** prove the app is conservative and explainable.
+
+Use:
+
+- `docs/marketing/generated/final/readme-feature-trust.png`
+- diagnostics or confidence-related UI states with readable labels
+
+Caption territory:
+
+- LayoutRecall restores automatically only when the match is confident—and shows you the evidence when it is not.
+
+Required emphasis:
+
+- confidence
+- diagnostics history or verification context
+- no-blind-automation story
+
+### Screenshot 3: Profiles / control still
+
+**Goal:** prove the app is useful even when the user wants manual control.
+
+Use:
+
+- `docs/marketing/generated/final/readme-feature-profiles.png`
+- profile-management pane with direct controls visible
+
+Caption territory:
+
+- Keep one or more desk layouts ready, apply them directly, and identify displays without digging through System Settings.
+
+Required emphasis:
+
+- saved profiles
+- `Apply Layout`
+- `Show Numbers` / practical control
+
+## Concrete screenshot improvements to make in the next asset pass
+
+1. Increase the readability of any small menu text in hero crops.
+2. Add a tighter caption system so each still is tied to one promise only.
+3. Prefer one primary promise per asset instead of mixing setup, trust, and diagnostics together.
+4. If a badge/pill treatment is used, make “confidence” and “manual fallback” the hero proof points.
+5. Keep shadows and background treatments subtle; the UI itself should do most of the selling.
+
+## GIF / video direction
+
+### Current baseline
+
+The repo already has:
+
+- `docs/marketing/generated/final/layoutrecall-demo.mp4`
+- `docs/marketing/generated/final/layoutrecall-demo.gif`
+
+These are useful because they are built from branded slides rather than noisy screen recordings.
+
+### Recommended demo concept
+
+**Concept:** “Three beats to get your desk back.”
+
+#### Beat 1 — Save the layout
+
+Text:
+
+- Save your known-good monitor arrangement once.
+
+Visual:
+
+- profile/settings UI with a calm, clean crop
+
+#### Beat 2 — macOS scrambles the desk
+
+Text:
+
+- After sleep, wake, or dock reconnect, LayoutRecall checks what changed.
+
+Visual:
+
+- menu/status state with confidence and profile context
+
+#### Beat 3 — Recover safely
+
+Text:
+
+- Restore automatically when confidence is high—or use `Fix Now` when you want control.
+
+Visual:
+
+- recovery-ready menu bar view plus diagnostics/trust still
+
+## Demo pacing guidance
+
+- 6 to 8 seconds total is enough for README/GitHub/social usage.
+- Keep transitions simple fade or push transitions; avoid “product ad” theatrics.
+- Every frame should be readable without sound.
+- Assume the GIF will autoplay muted and loop.
 
 ## Social-card direction
-- Use the product name, one-line promise, and a simple multi-display diagram.
-- Favor one strong claim: `Restore your Mac display layout after sleep, wake, and dock reconnects.`
-- Do not overload with feature bullets.
 
-## README top-of-page structure recommendation
-1. Hero image with problem/recovery framing
-2. Headline + subheadline
-3. Trust strip: Signed DMG · Homebrew · Conservative auto-restore · Manual recovery
-4. Install CTA block
-5. “How it works” mini-sequence
+Use `docs/marketing/generated/final/social-card.png` as the starting point, but ensure the final copy emphasizes:
 
-## Concrete asset update recommendations
-- Regenerate the hero with a more explicit wrong-layout → recovered-layout visual contrast.
-- Update one feature still to foreground profile thresholds and direct apply.
-- Update one trust still to foreground diagnostics and dependency readiness.
-- Keep final exports under `docs/marketing/generated/`.
+- problem specificity: Mac display layouts breaking
+- recovery promise: save + restore
+- trust lens: safe automation / manual control
 
-## Copy rules for captions and overlays
-- Lead with the outcome, not the feature name.
-- Avoid vague UI labels as headline text.
-- Keep overlay copy to one sentence or one clause.
-- Make the UI do the proof; let the caption do the interpretation.
+Recommended copy territory:
+
+- Stop rebuilding your monitor layout after every dock reconnect.
+- Save a known-good setup. Restore it from the menu bar.
+
+## README top-of-page structure this asset system should support
+
+1. Headline + subheadline
+2. Primary hero image
+3. Three proof bullets
+4. Install CTA
+5. Trust / profiles screenshots with short captions
+6. Demo GIF/video
+
+## Asset handoff checklist
+
+Before accepting a marketing asset pass, confirm:
+
+- the visual is clearly from the real app
+- the caption states one benefit, not three
+- trust is visible, not implied
+- `displayplacer` is not hidden or misrepresented
+- the asset helps a first-time visitor decide whether to try the app now
