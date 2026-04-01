@@ -26,6 +26,11 @@ swift test --no-parallel --scratch-path "$SCRATCH_PATH" \
     --skip renderMenuAndSettingsSnapshots
 swift test --filter renderMenuAndSettingsSnapshots --scratch-path "$SCRATCH_PATH"
 
+if find "$ROOT_DIR/docs/marketing/programs" -maxdepth 1 -type f -name '*-positioning.md' | grep -q .; then
+    echo "running marketing verification"
+    "$ROOT_DIR/scripts/verify-marketing-program"
+fi
+
 run_live_test_if_requested() {
     local flag_name="$1"
     local test_filter="$2"
