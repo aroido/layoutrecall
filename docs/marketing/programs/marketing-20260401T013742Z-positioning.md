@@ -1,173 +1,124 @@
-# LayoutRecall OSS Marketing Program — Positioning
+# LayoutRecall marketing positioning
 
 _Last updated: 2026-04-01_
 
-## Review scope
+## Product frame
 
-This document records the positioning output for the 2026-04-01 OSS marketing program.
-The review used:
+LayoutRecall is the open-source macOS menu bar app for people whose monitor layout gets scrambled after sleep, wake, dock reconnect, or identical-display churn.
 
-- `README.md:1-110`
-- `docs/PRD.md:1-107`
-- `docs/SPEC.md:1-220`
-- `docs/marketing/README.md:1-36`
-- generated assets under `docs/marketing/generated/final/`
-- raw UI captures under `docs/marketing/generated/raw-ui/`
-- prior UX audit in `docs/roadmaps/v2-release-20260331T233306Z-designer-audit.md:17-178`
-- release proof in `.github/workflows/release.yml:74-167` and `scripts/build-release-archive:137-255`
-
-## Executive positioning
-
-LayoutRecall should be marketed first as:
-
-> **The calm menu bar utility for Mac users whose external monitor layout keeps coming back wrong.**
-
-The product is strongest when presented as a practical recovery tool for people who already understand the pain of dock/sleep/reconnect display churn and want a safer, lower-effort way to get back to a known-good desk layout.
+It should be presented as a **practical desk-recovery utility**, not as a speculative window manager, experimental display hacker toy, or future roadmap promise.
 
 ## Who should use LayoutRecall first
 
-### Primary launch ICP
+### Primary audience
 
-1. **MacBook + dock + 2–3 external display users**
-   - developers
-   - designers
-   - analysts / operators
-   - creators with layout-sensitive desks
-2. People who repeatedly hit the same pain:
-   - left/right monitor order changes after wake or reconnect
-   - main display flips unexpectedly
-   - identical displays become hard to distinguish
-   - manual recovery is annoying enough to want a background helper
+**MacBook + dock + 2+ external display users who repeatedly lose a known-good desk layout.**
 
-### Secondary audiences
+Typical first adopters:
 
-- multi-monitor Homebrew power users who already know `displayplacer`
-- Mac utility enthusiasts who prefer menu bar tools over larger dashboard apps
-- people comparing “remember my desk layout” utilities and want a more conservative / explainable option
+- developers working between a laptop and identical external monitors
+- creators with layout-sensitive preview or editing workspaces
+- operators, analysts, or traders who depend on stable left/right screen placement
+- remote workers who reconnect to the same desk multiple times per day
 
-### Audiences to de-prioritize in the first wave
+### Secondary audience
 
-- users expecting per-app window placement or full workspace automation
-- users with complex 4+ display choreography as the main use case
-- cross-platform users looking for Windows support
+- Mac mini or Mac Studio users with recurring cable / KVM / dock churn
+- power users already using `displayplacer` who want a safer menu bar workflow on top
 
-## Why they should trust it
+### Users to de-prioritize in the hero
 
-The trust case is stronger than the current README communicates.
+- single-display laptop users
+- users looking for window tiling or app-placement automation
+- users expecting magical recovery for every four-plus-display edge case
 
-### Product proof already present in the repo
+## Why they should trust LayoutRecall
 
-- The app is conservative by design: it restores automatically only on high-confidence matches and stays manual otherwise (`README.md:39-51`, `docs/SPEC.md:89-129`).
-- The app exposes diagnostics, confidence, dependency state, and verification context instead of hiding decisions (`README.md:9-15`, `docs/PRD.md:49-71`).
-- Marketing assets are generated from real app snapshots, not fake mockups (`docs/marketing/README.md:3-36`, `scripts/generate-marketing-assets:1-38`).
-- Release docs already support a signed / notarized distribution story plus Homebrew distribution (`README.md:17-37`, `README.md:82-98`, `.github/workflows/release.yml:74-167`, `scripts/build-release-archive:137-255`).
-- Code organization and tests are already framed as mature baseline work rather than a thin prototype (`docs/PRD.md:89-107`, `docs/SPEC.md:141-211`).
+LayoutRecall earns trust when the marketing consistently shows that the app is:
 
-### Trust claims we can honestly make
-
-- It is a **menu bar app, not a giant display manager**.
-- It is **safer than blind auto-restore** because it explains confidence and blocked states.
-- It gives the user **proof after the action**, not just a promise before it.
-- It supports a practical install path even when `displayplacer` is initially missing.
+1. **Built around a real pain** — monitor order and main-display state breaking after reconnects.
+2. **Conservative by design** — automatic restore happens only when confidence is high.
+3. **Transparent when it does not act** — the app explains blocked auto-restore decisions and surfaces manual recovery actions.
+4. **Grounded in real workflows** — saved profiles, `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics already exist today.
+5. **Low-friction to try** — signed app download, Homebrew cask, and OSS code visibility reduce adoption fear.
 
 ## Why they should download it now
 
-Users need a reason stronger than “it exists.”
+- The current branch already ships a usable baseline instead of a concept demo.
+- The app solves a specific, recurring desk problem that users feel immediately after install.
+- It already includes trust signals that competing quick hacks usually skip: confidence gating, diagnostics, and manual fallbacks.
+- OSS users can evaluate the code, install path, and current product boundaries before committing.
 
-### Download-now angle
+## Core message hierarchy
 
-- It already solves the annoying everyday desk-reset problem without requiring users to keep manual shell commands around.
-- The current build already includes automatic restore, manual recovery paths, diagnostics history, settings, localization, launch at login, and update plumbing (`README.md:7-15`, `docs/PRD.md:14-28`, `docs/SPEC.md:28-62`).
-- The generated marketing assets already show a product that looks real, current, and actively maintained.
-- OSS users can inspect the implementation, install via releases or Homebrew, and verify how the restore safety model works.
+### One-line positioning
 
-### Recommended urgency framing
+**Stop re-fixing your monitor layout every time macOS forgets it.**
 
-Use:
+### Supporting message
 
-> “If your monitor layout breaks often enough to annoy you every week, LayoutRecall is ready to save you repeated recovery time now.”
+LayoutRecall saves a known-good display setup, watches for real reconfiguration events, and restores only when the connected monitor set is a confident match.
 
-Avoid:
+### Trust message
 
-- “perfect display automation”
-- “works for every monitor setup”
-- “native replacement for displayplacer”
+When automatic restore is unsafe, LayoutRecall stays manual on purpose and shows the next best recovery action instead of guessing.
 
-## Positioning statement
+## Proof points to surface repeatedly
 
-### Internal positioning statement
+- menu bar utility with saved layout profiles
+- confidence-based automatic restore
+- manual recovery tools: `Fix Now`, `Apply Layout`, `Show Numbers`, `Swap Positions`
+- diagnostics history for recent restore decisions
+- signed app + Homebrew install path
+- open-source codebase with current docs and verification workflow
 
-For Mac users with recurring external-display layout churn, LayoutRecall is the menu bar recovery utility that restores a known-good desk layout with visible confidence and diagnostics, unlike opaque display tools or manual command workflows that leave users guessing what just happened.
+## Conversion blockers audit
 
-### Category language
+| Rank | Blocker | Severity | Why people bounce |
+| --- | --- | --- | --- |
+| 1 | README opens with a factual description, not a sharp pain-to-outcome promise | Would bounce | Users do not immediately see why this is worth trying now |
+| 2 | Trust model is buried instead of being framed as a product advantage | Would bounce | Automatic monitor movement feels risky without an explicit safety story |
+| 3 | Install + dependency caveats appear before confidence-building proof | Would bounce | OSS visitors can misread the app as fragile or high-maintenance |
+| 4 | README does not currently lead with the strongest generated visuals | Major | The repo undersells polish even though branded assets already exist |
+| 5 | There is no obvious quick comparison between “what macOS does” and “what LayoutRecall fixes” | Major | Users may assume the problem is too niche or not solved clearly |
+| 6 | Launch copy is not packaged for channel-specific reuse | Medium | Momentum slows because the team has to rewrite the story for every post |
+| 7 | Limits are documented, but not framed as intentional safety boundaries | Medium | Honest constraints can sound like weakness instead of discipline |
 
-Prefer:
+## Skeptical user ranking
 
-- menu bar utility
-- display layout recovery tool
-- multi-display restore helper
-- monitor layout recall for macOS
+### “Would bounce” list from a doubtful downloader
 
-Avoid leading with:
+1. **I still do not know if this is for my exact setup.**
+2. **I do not trust an app that moves monitors unless it proves it is conservative.**
+3. **If `displayplacer` is required, tell me why this is still worth installing.**
+4. **The screenshots need to make the app feel real and current within five seconds.**
+5. **I need one fast example of the failure mode it fixes.**
 
-- display manager
-- window manager
-- workstation automation platform
+## Product marketing prioritization
 
-## Messaging hierarchy
+### Must
 
-### Core promise
+- Lead README and launch copy with the broken-layout pain and the “restore only when confident” promise.
+- Make safety / trust a headline-level concept, not a buried implementation detail.
+- Keep install instructions short near the top and move deeper caveats below proof and visuals.
+- Reuse polished generated assets in the README funnel immediately.
 
-**Put your display layout back where it belongs.**
+### Should
 
-### Supporting points
+- Add a crisp “Why trust it” section with diagnostics, manual controls, and OSS transparency.
+- Add a short “Is this for me?” audience fit section for multi-display desk users.
+- Add a comparison snippet between macOS scramble behavior and LayoutRecall recovery behavior.
 
-1. Save a known-good desk layout once.
-2. Restore automatically when the match is trustworthy.
-3. Review confidence, dependency status, and diagnostics when it is not.
+### Could
 
-### Proof bullets to reuse
+- Add user-problem scenarios by role (developer, creator, analyst).
+- Add short testimonials later once real usage quotes exist.
+- Add a follow-up comparison page versus bare `displayplacer` workflows.
 
-- Confidence-based automatic restore
-- Manual recovery tools when the match is uncertain
-- Diagnostics history and restore verification
-- Signed release builds and Homebrew install path
-- Real screenshots generated from the app itself
+## Messaging guardrails
 
-## Recommended README / hero narrative
-
-### Hero headline direction
-
-- **Put your display layout back where it belongs.**
-- Alternative: **When macOS scrambles your monitors, get your desk back fast.**
-
-### Subheadline direction
-
-LayoutRecall is a macOS menu bar utility for people whose external displays come back in the wrong order after sleep, wake, dock reconnect, or identical-monitor churn.
-
-### Three hero proof chips
-
-- Save a baseline once
-- Confidence-based restore
-- Diagnostics you can inspect
-
-## Message guardrails
-
-### Lean into
-
-- calmness
-- trust
-- recoverability
-- real Mac desk pain
-- “safe enough to leave running”
-
-### Do not lean into
-
-- speculative future features
-- enterprise/admin language
-- aggressive claims about preventing every macOS display bug
-- abstract “AI” or “smart automation” framing
-
-## PM recommendation
-
-For the first public-facing funnel, LayoutRecall should be presented as a trustworthy utility for a painfully specific Mac problem, not as a broad display-management platform. Specificity is the conversion advantage.
+- Do not promise perfect prevention of every display glitch.
+- Do not imply LayoutRecall replaces `displayplacer` internally.
+- Do not market unsupported four-plus-display behavior as automatic.
+- Do not invent growth claims or user counts.
+- Do market the app as safe, practical, and already useful today.

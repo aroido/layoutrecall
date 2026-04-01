@@ -1,201 +1,146 @@
-# LayoutRecall OSS Marketing Program — Asset Direction
+# LayoutRecall asset direction
 
 _Last updated: 2026-04-01_
 
-## Audit summary
+## Objective
 
-Current funnel inputs reviewed:
+Make LayoutRecall feel polished enough to click, trustworthy enough to install, and concrete enough to understand in under 15 seconds.
 
-- README top-of-page copy in `README.md:1-51`
-- asset pipeline notes in `docs/marketing/README.md:1-36`
-- final stills / motion assets in `docs/marketing/generated/final/`
-- raw UI captures in `docs/marketing/generated/raw-ui/`
-- release / trust documentation in `README.md:17-98`, `docs/PRD.md`, and `docs/SPEC.md`
-- prior UX review in `docs/roadmaps/v2-release-20260331T233306Z-designer-audit.md:23-154`
+## Creative direction
 
-## Funnel verdict
+### Visual thesis
 
-The project already looks more real than a typical early OSS utility because the screenshots come from the app itself and the hero art direction is coherent. The weak point is not visual polish alone; it is **conversion hierarchy**.
+Show **real app UI with cleaner framing**, not fake futuristic mockups.
 
-The funnel currently makes the reader work too hard to understand:
+The visual system should communicate:
 
-1. whether they are the target user
-2. whether the app is safe to trust
-3. what the first-run path actually is
-4. why this is better than just living with the problem or using `displayplacer` manually
+- desk recovery, not generic productivity
+- menu bar simplicity, not dashboard complexity
+- safety and proof, not “AI magic” or opaque automation
 
-## Explicit answers required by the program
+### Tone
 
-### Who should use LayoutRecall first
+- calm
+- technical but not cold
+- practical
+- Mac-native
+- trustworthy
 
-Mac users with a laptop/dock/external-monitor setup whose layout repeatedly breaks after reconnect, wake, or identical-monitor shuffling.
+## Funnel-wide asset story
 
-### Why they should trust it
+### 1. Hero still
 
-Because the app shows confidence, dependency readiness, matched profile context, and diagnostics history instead of silently moving displays.
+Primary asset: `docs/marketing/generated/final/readme-hero.png`
 
-### Why they should download it now
+The hero should answer three questions at a glance:
 
-Because the repo already ships a practical, real utility with releases, Homebrew distribution, diagnostics, and real screenshots—not just a concept README.
+1. What broke? — the desk layout got scrambled
+2. What does LayoutRecall do? — it restores a saved layout
+3. Why trust it? — it only auto-restores when confidence is high
 
-## Conversion blockers
+Hero caption direction:
 
-### Skeptical user ranking (“would bounce” severity)
+> Save a known-good monitor layout, then restore it after sleep, wake, or dock reconnect — without blindly guessing.
 
-| Rank | Blocker | Severity | Why a skeptical user bounces |
-| --- | --- | --- | --- |
-| 1 | README opens with a generic definition instead of a painful scenario (`README.md:1-5`) | Would bounce immediately | The reader may not realize the app is for *their exact desk problem*. |
-| 2 | First-run/install trust chain is scattered across README and settings concepts (`README.md:17-37`, prior audit lines 23-50) | Would bounce hard | Users worry about background behavior and dependency setup before trying a menu bar utility. |
-| 3 | Trust proof is buried below features instead of surfaced near the hero (`README.md:7-15`, `39-51`) | Would bounce | “Will this do something risky to my monitors?” is unanswered too late. |
-| 4 | The hero stills are strong, but the README top section does not explain the screenshots quickly enough | Medium-high | Attractive visuals are not doing enough conversion work because the surrounding copy is too generic. |
-| 5 | The project lacks a crisp comparison angle versus manual `displayplacer` workflows | Medium | Power users do not immediately see why they should install a GUI utility. |
-| 6 | The GIF/video concept is polished but still slide-based, so it does not fully demonstrate “save → scramble → recover” | Medium | Motion exists, but the payoff loop is not yet obvious. |
-| 7 | Installation/troubleshooting reassurance is present but not framed as “safe to try, easy to back out” | Medium | OSS users still expect more setup friction than the project actually requires. |
+### 2. Trust / diagnostics still
 
-## Product marketing lead priorities
+Primary asset: `docs/marketing/generated/final/readme-feature-trust.png`
 
-### Must
+Purpose:
 
-1. Rewrite the README hero so the pain and audience are obvious within the first screen.
-2. Surface trust proof directly under the hero: confidence-based restore, diagnostics, signed/Homebrew distribution.
-3. Show a clear first-run path: install, save baseline, let LayoutRecall watch, inspect proof.
-4. Make the screenshots and GIF/video tell one narrative instead of acting like isolated assets.
+- show that LayoutRecall exposes confidence, dependency state, and diagnostics
+- make safety visible instead of abstract
 
-### Should
+Caption direction:
 
-1. Add a comparison / “why not just use `displayplacer`?” section.
-2. Add a short FAQ/trust section that answers safety and dependency questions.
-3. Make the demo concept show the before/after loop more explicitly.
+> Confidence, dependency, and recent restore evidence stay visible so the app can explain what it did — or why it refused to act.
 
-### Could
+### 3. Profiles / controls still
 
-1. Add desk-context photography or lifestyle framing later.
-2. Add optional live-capture demos for launch day social use.
-3. Add longer-form install walkthrough content after the README funnel is fixed.
+Primary asset: `docs/marketing/generated/final/readme-feature-profiles.png`
 
-## Cohesive creative direction
+Purpose:
 
-### Visual direction
+- show the app is not only automatic; users retain direct control
+- reinforce saved layouts, thresholds, and manual actions
 
-Use a **calm, desktop-night, confidence-dashboard aesthetic**:
+Caption direction:
 
-- dark navy / graphite backgrounds
-- real app UI as the hero subject
-- soft accent glows and thin line texture only as support
-- badges / chips that read like proof, not decoration
-- restrained motion and no fake “exploding monitor” gimmicks
+> Save multiple desk profiles, tune restore confidence, and fall back to `Fix Now`, `Apply Layout`, or `Show Numbers` when you want control.
 
-The visuals should communicate: **quiet utility, controlled recovery, real macOS-native product**.
+## Screenshot treatment rules
 
-### Copy direction
+- Prefer cropped real UI over full-window noise.
+- Keep one focal story per image.
+- Put benefit-led captions next to each still.
+- Preserve macOS visual authenticity; avoid neon overlays or fake device bezels.
+- Use annotations sparingly and only to clarify confidence, profile, or action state.
 
-Use copy that is:
+## README asset sequence
 
-- concrete
-- pain-first
-- proof-backed
-- conservative in claims
+Recommended top-of-page visual order:
 
-Good tone:
+1. hero still (`readme-hero.png`)
+2. short benefit bullets
+3. demo GIF/video
+4. trust still (`readme-feature-trust.png`)
+5. profiles still (`readme-feature-profiles.png`)
 
-- “When macOS scrambles your monitors…”
-- “Restore a saved layout when the match is trustworthy.”
-- “See confidence, profile context, and diagnostics before you trust automation.”
+This order makes the repo read like a funnel:
 
-Avoid tone that feels:
-
-- flashy
-- hacker-jokey
-- overpromising
-- too abstract about “productivity”
-
-## Recommended README top-of-page structure
-
-1. Hero headline with the desk problem in plain language
-2. One-sentence subheadline naming the audience and trigger events
-3. Hero image
-4. Three proof chips
-5. “Why people install it” bullets
-6. “How it works” 3-step strip
-7. Trust / install FAQ
-8. Feature screenshots
-9. Motion demo
-10. Install options and development details after conversion content
-
-## Screenshot direction
-
-### Screenshot 1 — Hero / promise
-
-Use the existing `readme-hero.png` as the base direction, but keep the copy tightly pain-first:
-
-- headline about macOS scrambling monitor layouts
-- subheadline naming sleep, wake, and dock reconnect
-- chips limited to proof, not feature laundry list
-
-### Screenshot 2 — Trust / proof
-
-Lead with the diagnostics + matched-profile story:
-
-- show matched profile name
-- show high-confidence or blocked state
-- show a short “why” caption
-- caption theme: “See why LayoutRecall did—or did not—restore.”
-
-The existing `readme-feature-trust.png` is the right base visual direction.
-
-### Screenshot 3 — Profiles / setup
-
-Show the profile model as “save once, reuse later” rather than “manage records.”
-
-Caption theme:
-
-- save a baseline once
-- tune thresholds only if you want
-- keep multiple desk profiles ready
-
-### Screenshot treatment rules
-
-- Prefer one headline + one caption + 3–4 proof bullets max.
-- Crop for readability first; do not show more UI just because it exists.
-- Keep screenshots grounded in the real app and real copy.
-- Use consistent chip vocabulary across README and social assets.
+- hook with the problem + outcome
+- prove the app is real
+- prove the app is safe
+- prove the app is controllable
 
 ## GIF / video direction
 
-### Recommended concept
+Primary assets:
 
-Replace the abstract “slide deck only” impression with a loop that tells this exact story:
+- `docs/marketing/generated/final/layoutrecall-demo.mp4`
+- `docs/marketing/generated/final/layoutrecall-demo.gif`
 
-1. A stable desk layout is saved.
-2. A reconnect/swap event breaks the arrangement.
-3. LayoutRecall identifies the matched profile.
-4. The restore state and proof are shown.
-5. The layout returns to normal.
+### Demo concept
 
-### Minimum viable structure
+Keep the motion asset short and structured around a single story arc:
 
-- Scene 1: “Mac wakes up to the wrong layout.”
-- Scene 2: “LayoutRecall matches the right desk profile.”
-- Scene 3: “Restore with visible confidence and diagnostics.”
+1. scrambled desk state / reconnect problem
+2. saved profile recognized
+3. confidence-aware restore
+4. diagnostics + fallback controls visible
 
-### Motion rules
+### Demo rules
 
-- Keep total loop under 8 seconds.
-- Favor legibility over complex transitions.
-- Use the real UI captures as anchors, then add only lightweight branded framing.
+- keep under 20 seconds
+- prioritize readability over flair
+- use branded slides only when they clarify the flow faster than live capture
+- if later live captures are added, keep this composited version for README/social reuse
 
-## Comparison angle to include in assets / README
+## Social card direction
 
-A short reusable comparison line:
+Primary asset: `docs/marketing/generated/final/social-card.png`
 
-> LayoutRecall gives `displayplacer` users a saved-profile workflow, a safer restore gate, and visible diagnostics instead of a manual command habit.
+Use the social card to sell a single promise:
 
-## Asset acceptance checklist
+> macOS forgot your monitor layout. LayoutRecall brings it back.
 
-An asset is good enough for launch if it:
+The social card should avoid tiny UI details and instead emphasize:
 
-- clearly names the target pain
-- shows the real app UI
-- includes at least one trust proof
-- avoids inflated claims
-- helps the next funnel step rather than repeating the previous one
+- app name
+- monitor-layout pain
+- menu bar / macOS context
+- restore-with-confidence positioning
+
+## Concrete asset improvements to keep pursuing
+
+- tighten hero subtitle copy so it speaks to desk users, not only technical readers
+- ensure the trust still visually highlights blocked auto-restore and diagnostics evidence
+- if annotations are added, make confidence and fallback actions the only labeled callouts
+- add one future still that contrasts “scrambled layout” versus “restored layout” with the same monitors
+
+## Asset guardrails
+
+- no fake app states that the shipped app does not support
+- no fake testimonials or usage numbers
+- no Windows-style hardware mockups for a Mac utility
+- no dense text baked into images that should live in Markdown copy
