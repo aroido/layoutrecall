@@ -9,6 +9,7 @@ import Testing
 @MainActor
 @Test(.enabled(if: ProcessInfo.processInfo.environment["CI"] == nil, "AppKit snapshot rendering is only supported in local interactive runs."))
 func renderMenuAndSettingsSnapshots() async throws {
+    let fixedSnapshotTimestamp = Date(timeIntervalSince1970: 1_775_019_900)
     let outputDirectory: URL
     if let configuredOutputDirectory = ProcessInfo.processInfo.environment["LAYOUTRECALL_SNAPSHOT_OUTPUT_DIR"],
        configuredOutputDirectory.isEmpty == false {
@@ -27,6 +28,7 @@ func renderMenuAndSettingsSnapshots() async throws {
         )),
         diagnosticsStore: SnapshotDiagnosticsStore(entries: [
             DiagnosticsEntry(
+                timestamp: fixedSnapshotTimestamp,
                 eventType: DisplayEventType.reconfigured.rawValue,
                 profileName: "Office Dock",
                 score: 92,

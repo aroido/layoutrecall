@@ -24,6 +24,15 @@ struct MarketingAssetBuilder {
         try socialCard(menu: menu, settings: settings)
             .savePNG(to: outputDirectory.appendingPathComponent("social-card.png"))
 
+        try demoFrameSettings(settings: settings)
+            .savePNG(to: outputDirectory.appendingPathComponent("demo-frame-01.png"))
+        try demoFrameMenu(menu: menu)
+            .savePNG(to: outputDirectory.appendingPathComponent("demo-frame-02.png"))
+        try demoFrameDiagnostics(diagnostics: diagnostics)
+            .savePNG(to: outputDirectory.appendingPathComponent("demo-frame-03.png"))
+        try demoFrameProfiles(profiles: profiles)
+            .savePNG(to: outputDirectory.appendingPathComponent("demo-frame-04.png"))
+
         try slideOne(menu: menu, settings: settings)
             .savePNG(to: outputDirectory.appendingPathComponent("slide-01.png"))
         try slideTwo(menu: menu, diagnostics: diagnostics)
@@ -45,68 +54,117 @@ struct MarketingAssetBuilder {
     private func hero(menu: NSImage, settings: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 1000)) { rect in
             drawBackground(in: rect)
-            drawOrb(x: 1280, y: 120, radius: 220, color: colors.mint.withAlphaComponent(0.14))
-            drawOrb(x: 1420, y: 780, radius: 180, color: colors.amber.withAlphaComponent(0.16))
+            drawOrb(x: 1290, y: 120, radius: 220, color: colors.mint.withAlphaComponent(0.12))
+            drawOrb(x: 1440, y: 760, radius: 160, color: colors.amber.withAlphaComponent(0.12))
 
-            drawKicker("Open-source menu bar recovery for MacBook + dock desks", at: NSPoint(x: 96, y: 862))
-            drawHeadline("Restore the monitor layout macOS keeps scrambling.", at: NSPoint(x: 96, y: 670), width: 680)
+            drawHeadline("Restore the monitor layout macOS keeps scrambling.", at: NSPoint(x: 96, y: 640), width: 600, fontSize: 54, height: 250)
             drawBody(
-                "Save one known-good layout, then bring it back after sleep, wake, or reconnect only when the current display set is a confident match.",
-                at: NSPoint(x: 96, y: 580),
-                width: 560
+                "Save one known-good desk, then bring it back after sleep, wake, or reconnect only when the current display set is a confident match.",
+                at: NSPoint(x: 96, y: 420),
+                width: 460,
+                fontSize: 25,
+                height: 150
             )
             drawPills([
-                "MacBook + dock + 2+ displays",
+                "MacBook + dock desks",
                 "Restore only when confident",
                 "Manual fallback stays visible"
-            ], origin: NSPoint(x: 96, y: 480))
+            ], origin: NSPoint(x: 96, y: 292))
 
-            drawScreenshotCard(menu, frame: NSRect(x: 860, y: 430, width: 340, height: 398), angle: -3)
-            drawScreenshotCard(settings, frame: NSRect(x: 1018, y: 180, width: 500, height: 568), angle: 4)
+            drawScreenshotCard(
+                settings,
+                frame: NSRect(x: 720, y: 178, width: 792, height: 582),
+                angle: 0.8,
+                glowAlpha: 0.0,
+                shadowAlpha: 0.14,
+                showsChrome: false,
+                contentInset: 14
+            )
+            drawScreenshotCard(
+                menu,
+                frame: NSRect(x: 1084, y: 504, width: 258, height: 458),
+                angle: -1.2,
+                glowAlpha: 0.08,
+                shadowAlpha: 0.16,
+                showsChrome: false,
+                contentInset: 10
+            )
         }
     }
 
     private func featureTrust(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawKicker("Trust before restore", at: NSPoint(x: 104, y: 750))
-            drawHeadline("See why LayoutRecall acted — or why it stayed manual.", at: NSPoint(x: 104, y: 598), width: 600)
+            drawHeadline("Know when LayoutRecall acted — and when it stayed manual.", at: NSPoint(x: 96, y: 590), width: 470, fontSize: 42, height: 210)
             drawBody(
-                "Profile match context, dependency state, and recent diagnostics stay close to the menu bar action so recovery never feels like a blind automation gamble.",
-                at: NSPoint(x: 104, y: 470),
-                width: 540
+                "Confidence, dependency state, and restore evidence stay close to the action so monitor moves never feel like a blind automation guess.",
+                at: NSPoint(x: 96, y: 380),
+                width: 410,
+                fontSize: 21,
+                height: 150
             )
             drawChecklist([
                 "Matched profile and confidence",
-                "Manual fallback when confidence is low",
                 "Dependency state before recovery",
                 "Diagnostics evidence after every attempt"
-            ], origin: NSPoint(x: 104, y: 306))
+            ], origin: NSPoint(x: 96, y: 176))
 
-            drawScreenshotCard(menu, frame: NSRect(x: 860, y: 420, width: 330, height: 380), angle: -2)
-            drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 110, width: 470, height: 610), angle: 4)
+            drawScreenshotCard(
+                diagnostics,
+                frame: NSRect(x: 620, y: 96, width: 890, height: 656),
+                angle: 0.5,
+                glowAlpha: 0.0,
+                shadowAlpha: 0.14,
+                showsChrome: false,
+                contentInset: 14
+            )
+            drawScreenshotCard(
+                menu,
+                frame: NSRect(x: 1100, y: 390, width: 236, height: 420),
+                angle: -1.0,
+                glowAlpha: 0.08,
+                shadowAlpha: 0.15,
+                showsChrome: false,
+                contentInset: 10
+            )
         }
     }
 
     private func featureProfiles(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawKicker("Known desks, fast recovery", at: NSPoint(x: 104, y: 750))
-            drawHeadline("Keep saved layouts and recovery controls within reach.", at: NSPoint(x: 104, y: 598), width: 600)
+            drawHeadline("Keep saved layouts and manual recovery close at hand.", at: NSPoint(x: 96, y: 590), width: 470, fontSize: 42, height: 210)
             drawBody(
-                "Profiles, startup behavior, and manual restore tools stay in one workflow so repeat desks are easy to tune without hunting across the app.",
-                at: NSPoint(x: 104, y: 470),
-                width: 520
+                "Profiles, startup behavior, and direct recovery actions stay in one workflow so repeat desks remain predictable without hunting across the app.",
+                at: NSPoint(x: 96, y: 380),
+                width: 408,
+                fontSize: 21,
+                height: 150
             )
             drawChecklist([
                 "Multiple saved desk profiles",
-                "Startup and launch-at-login controls",
                 "Fix Now and Apply Layout fallbacks",
-                "Predictable setup for repeat reconnects"
-            ], origin: NSPoint(x: 104, y: 306))
+                "Startup controls for repeat reconnects"
+            ], origin: NSPoint(x: 96, y: 176))
 
-            drawScreenshotCard(profiles, frame: NSRect(x: 820, y: 300, width: 520, height: 500), angle: -3)
-            drawScreenshotCard(general, frame: NSRect(x: 1070, y: 90, width: 420, height: 450), angle: 5)
+            drawScreenshotCard(
+                profiles,
+                frame: NSRect(x: 610, y: 86, width: 900, height: 676),
+                angle: 0.5,
+                glowAlpha: 0.0,
+                shadowAlpha: 0.14,
+                showsChrome: false,
+                contentInset: 14
+            )
+            drawScreenshotCard(
+                general,
+                frame: NSRect(x: 1120, y: 492, width: 264, height: 202),
+                angle: -0.8,
+                glowAlpha: 0.08,
+                shadowAlpha: 0.14,
+                showsChrome: false,
+                contentInset: 10
+            )
         }
     }
 
@@ -127,41 +185,86 @@ struct MarketingAssetBuilder {
                 fontSize: 20
             )
 
-            drawScreenshotCard(menu, frame: NSRect(x: 700, y: 250, width: 220, height: 260), angle: -5)
-            drawScreenshotCard(settings, frame: NSRect(x: 850, y: 60, width: 300, height: 380), angle: 6)
+            drawScreenshotCard(
+                settings,
+                frame: NSRect(x: 650, y: 88, width: 468, height: 344),
+                angle: 0.8,
+                glowAlpha: 0.0,
+                shadowAlpha: 0.14,
+                showsChrome: false,
+                contentInset: 12
+            )
+            drawScreenshotCard(
+                menu,
+                frame: NSRect(x: 936, y: 222, width: 186, height: 330),
+                angle: -1.2,
+                glowAlpha: 0.08,
+                shadowAlpha: 0.16,
+                showsChrome: false,
+                contentInset: 10
+            )
         }
     }
 
     private func slideOne(menu: NSImage, settings: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawKicker("Desk drift", at: NSPoint(x: 96, y: 748))
-            drawHeadline("Your desk comes back scrambled.", at: NSPoint(x: 96, y: 600), width: 560, fontSize: 46, height: 130)
-            drawBody("After sleep, wake, or reconnect, identical displays can return in the wrong order or with the wrong main-display state.", at: NSPoint(x: 96, y: 470), width: 540)
-            drawScreenshotCard(settings, frame: NSRect(x: 860, y: 180, width: 560, height: 620), angle: 4)
-            drawScreenshotCard(menu, frame: NSRect(x: 720, y: 360, width: 290, height: 350), angle: -6)
+            drawHeadline("Review the saved desk state before you act.", at: NSPoint(x: 96, y: 618), width: 470, fontSize: 48, height: 160)
+            drawBody("The restore view keeps the current layout and saved target side by side so the app earns trust before anything moves.", at: NSPoint(x: 96, y: 498), width: 410, fontSize: 22, height: 130)
+            drawScreenshotCard(settings, frame: NSRect(x: 620, y: 86, width: 890, height: 656), angle: 0.4, glowAlpha: 0.0, shadowAlpha: 0.14, showsChrome: false, contentInset: 14)
+            drawScreenshotCard(menu, frame: NSRect(x: 1070, y: 450, width: 248, height: 438), angle: -1.0, glowAlpha: 0.08, shadowAlpha: 0.14, showsChrome: false, contentInset: 10)
         }
     }
 
     private func slideTwo(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawKicker("Recognition", at: NSPoint(x: 96, y: 748))
-            drawHeadline("LayoutRecall recognizes the saved desk safely.", at: NSPoint(x: 96, y: 600), width: 580, fontSize: 46, height: 130)
-            drawBody("The app shows the profile match, confidence, and diagnostics context before recovery so monitor moves never feel opaque or reckless.", at: NSPoint(x: 96, y: 470), width: 560)
-            drawScreenshotCard(menu, frame: NSRect(x: 840, y: 360, width: 320, height: 380), angle: -4)
-            drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 120, width: 470, height: 610), angle: 4)
+            drawHeadline("Restore stays visible from the menu bar.", at: NSPoint(x: 96, y: 618), width: 470, fontSize: 48, height: 160)
+            drawBody("The menu keeps the matched profile, restore toggle, and direct actions close by when the desk comes back in a familiar state.", at: NSPoint(x: 96, y: 498), width: 410, fontSize: 22, height: 130)
+            drawScreenshotCard(menu, frame: NSRect(x: 770, y: 76, width: 520, height: 748), angle: -0.6, glowAlpha: 0.0, shadowAlpha: 0.16, showsChrome: false, contentInset: 14)
+            drawScreenshotCard(diagnostics, frame: NSRect(x: 1104, y: 404, width: 332, height: 254), angle: 0.8, glowAlpha: 0.06, shadowAlpha: 0.14, showsChrome: false, contentInset: 10)
         }
     }
 
     private func slideThree(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawKicker("Control", at: NSPoint(x: 96, y: 748))
-            drawHeadline("Recover fast or stay manual on purpose.", at: NSPoint(x: 96, y: 600), width: 580, fontSize: 46, height: 130)
-            drawBody("Profiles, startup behavior, and one-click fallback actions stay visible in one place so repeat desks remain predictable even when automation stops short.", at: NSPoint(x: 96, y: 470), width: 560)
-            drawScreenshotCard(profiles, frame: NSRect(x: 780, y: 250, width: 520, height: 520), angle: -4)
-            drawScreenshotCard(general, frame: NSRect(x: 1080, y: 110, width: 380, height: 420), angle: 5)
+            drawHeadline("Profiles keep repeat desks predictable.", at: NSPoint(x: 96, y: 618), width: 470, fontSize: 48, height: 160)
+            drawBody("Save more than one setup, keep Apply Layout close, and keep startup behavior in the same workflow when your desk changes often.", at: NSPoint(x: 96, y: 498), width: 410, fontSize: 22, height: 130)
+            drawScreenshotCard(profiles, frame: NSRect(x: 650, y: 86, width: 860, height: 670), angle: 0.4, glowAlpha: 0.0, shadowAlpha: 0.14, showsChrome: false, contentInset: 14)
+            drawScreenshotCard(general, frame: NSRect(x: 1142, y: 476, width: 242, height: 184), angle: -0.8, glowAlpha: 0.06, shadowAlpha: 0.14, showsChrome: false, contentInset: 10)
+        }
+    }
+
+    private func demoFrameSettings(settings: NSImage) throws -> NSImage {
+        try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
+            drawBackground(in: rect)
+            drawOrb(x: 1320, y: 126, radius: 170, color: colors.mint.withAlphaComponent(0.08))
+            drawScreenshotCard(settings, frame: NSRect(x: 74, y: 58, width: 1452, height: 782), angle: 0, glowAlpha: 0.0, shadowAlpha: 0.12, showsChrome: false, contentInset: 18)
+        }
+    }
+
+    private func demoFrameMenu(menu: NSImage) throws -> NSImage {
+        try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
+            drawBackground(in: rect)
+            drawOrb(x: 1220, y: 124, radius: 180, color: colors.amber.withAlphaComponent(0.08))
+            drawScreenshotCard(menu, frame: NSRect(x: 514, y: 44, width: 572, height: 812), angle: 0, glowAlpha: 0.04, shadowAlpha: 0.16, showsChrome: false, contentInset: 16)
+        }
+    }
+
+    private func demoFrameDiagnostics(diagnostics: NSImage) throws -> NSImage {
+        try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
+            drawBackground(in: rect)
+            drawOrb(x: 1330, y: 726, radius: 170, color: colors.mint.withAlphaComponent(0.08))
+            drawScreenshotCard(diagnostics, frame: NSRect(x: 74, y: 58, width: 1452, height: 782), angle: 0, glowAlpha: 0.0, shadowAlpha: 0.12, showsChrome: false, contentInset: 18)
+        }
+    }
+
+    private func demoFrameProfiles(profiles: NSImage) throws -> NSImage {
+        try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
+            drawBackground(in: rect)
+            drawOrb(x: 1260, y: 132, radius: 170, color: colors.amber.withAlphaComponent(0.08))
+            drawScreenshotCard(profiles, frame: NSRect(x: 74, y: 58, width: 1452, height: 782), angle: 0, glowAlpha: 0.0, shadowAlpha: 0.12, showsChrome: false, contentInset: 18)
         }
     }
 
@@ -313,7 +416,15 @@ struct MarketingAssetBuilder {
         drawBody(body, at: NSPoint(x: point.x, y: point.y - bodyHeight - 24), width: width, fontSize: bodyFontSize, height: bodyHeight)
     }
 
-    private func drawScreenshotCard(_ image: NSImage, frame: NSRect, angle: CGFloat) {
+    private func drawScreenshotCard(
+        _ image: NSImage,
+        frame: NSRect,
+        angle: CGFloat,
+        glowAlpha: CGFloat = 0.0,
+        shadowAlpha: CGFloat = 0.14,
+        showsChrome: Bool = false,
+        contentInset: CGFloat = 14
+    ) {
         NSGraphicsContext.current?.saveGraphicsState()
         if let context = NSGraphicsContext.current?.cgContext {
             context.translateBy(x: frame.midX, y: frame.midY)
@@ -322,47 +433,51 @@ struct MarketingAssetBuilder {
         }
 
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.22)
-        shadow.shadowBlurRadius = 34
-        shadow.shadowOffset = NSSize(width: 0, height: -18)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(shadowAlpha)
+        shadow.shadowBlurRadius = 22
+        shadow.shadowOffset = NSSize(width: 0, height: -10)
         shadow.set()
 
-        let glowRect = frame.insetBy(dx: -8, dy: -8)
-        colors.cardGlow.withAlphaComponent(0.24).setFill()
-        NSBezierPath(roundedRect: glowRect, xRadius: 34, yRadius: 34).fill()
+        if glowAlpha > 0 {
+            let glowRect = frame.insetBy(dx: -6, dy: -6)
+            colors.cardGlow.withAlphaComponent(glowAlpha).setFill()
+            NSBezierPath(roundedRect: glowRect, xRadius: 30, yRadius: 30).fill()
+        }
 
         colors.cardFill.setFill()
-        let cardPath = NSBezierPath(roundedRect: frame, xRadius: 30, yRadius: 30)
+        let cardPath = NSBezierPath(roundedRect: frame, xRadius: 24, yRadius: 24)
         cardPath.fill()
 
         colors.cardStroke.setStroke()
         cardPath.lineWidth = 1
         cardPath.stroke()
 
-        let chromeRect = NSRect(x: frame.minX, y: frame.maxY - 52, width: frame.width, height: 52)
-        colors.chromeFill.setFill()
-        NSBezierPath(
-            roundedRect: chromeRect,
-            xRadius: 30,
-            yRadius: 30
-        ).fill()
+        var imageRect = frame.insetBy(dx: contentInset, dy: contentInset)
+        if showsChrome {
+            let chromeRect = NSRect(x: frame.minX, y: frame.maxY - 46, width: frame.width, height: 46)
+            colors.chromeFill.setFill()
+            NSBezierPath(
+                roundedRect: chromeRect,
+                xRadius: 24,
+                yRadius: 24
+            ).fill()
 
-        let divider = NSBezierPath()
-        divider.move(to: NSPoint(x: frame.minX + 18, y: chromeRect.minY))
-        divider.line(to: NSPoint(x: frame.maxX - 18, y: chromeRect.minY))
-        colors.cardStroke.withAlphaComponent(0.9).setStroke()
-        divider.lineWidth = 1
-        divider.stroke()
+            let divider = NSBezierPath()
+            divider.move(to: NSPoint(x: frame.minX + 16, y: chromeRect.minY))
+            divider.line(to: NSPoint(x: frame.maxX - 16, y: chromeRect.minY))
+            colors.cardStroke.withAlphaComponent(0.9).setStroke()
+            divider.lineWidth = 1
+            divider.stroke()
 
-        drawWindowDots(origin: NSPoint(x: frame.minX + 22, y: frame.maxY - 31))
-
-        let imageRect = NSRect(
-            x: frame.minX + 18,
-            y: frame.minY + 18,
-            width: frame.width - 36,
-            height: frame.height - 70
-        )
-        let clipPath = NSBezierPath(roundedRect: imageRect, xRadius: 20, yRadius: 20)
+            drawWindowDots(origin: NSPoint(x: frame.minX + 18, y: frame.maxY - 28))
+            imageRect = NSRect(
+                x: frame.minX + contentInset,
+                y: frame.minY + contentInset,
+                width: frame.width - (contentInset * 2),
+                height: frame.height - (contentInset * 2) - 34
+            )
+        }
+        let clipPath = NSBezierPath(roundedRect: imageRect, xRadius: 16, yRadius: 16)
         clipPath.addClip()
         image.draw(in: imageRect)
         NSGraphicsContext.current?.restoreGraphicsState()
