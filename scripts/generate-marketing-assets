@@ -22,19 +22,19 @@ echo "[1/5] Rendering UI snapshots..."
 echo "[2/5] Building branded stills..."
 swift "$ROOT_DIR/scripts/marketing_compositor.swift" "$RAW_DIR" "$FINAL_DIR"
 
-echo "[3/5] Encoding demo video from real app UI snapshots..."
+echo "[3/5] Encoding demo video from framed real app UI snapshots..."
 ffmpeg -y \
-    -loop 1 -t 1.8 -i "$RAW_DIR/settings.png" \
-    -loop 1 -t 1.8 -i "$RAW_DIR/menu.png" \
-    -loop 1 -t 1.8 -i "$RAW_DIR/settings-diagnostics.png" \
-    -loop 1 -t 1.8 -i "$RAW_DIR/settings-profiles.png" \
-    -filter_complex "[0:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v0]; \
-                     [1:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v1]; \
-                     [2:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v2]; \
-                     [3:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v3]; \
-                     [v0][v1]xfade=transition=fade:duration=0.35:offset=1.45[x1]; \
-                     [x1][v2]xfade=transition=fade:duration=0.35:offset=2.90[x2]; \
-                     [x2][v3]xfade=transition=fade:duration=0.35:offset=4.35[v]" \
+    -loop 1 -t 1.9 -i "$FINAL_DIR/demo-frame-01.png" \
+    -loop 1 -t 1.9 -i "$FINAL_DIR/demo-frame-02.png" \
+    -loop 1 -t 1.9 -i "$FINAL_DIR/demo-frame-03.png" \
+    -loop 1 -t 1.9 -i "$FINAL_DIR/demo-frame-04.png" \
+    -filter_complex "[0:v]format=yuv420p,setsar=1[v0]; \
+                     [1:v]format=yuv420p,setsar=1[v1]; \
+                     [2:v]format=yuv420p,setsar=1[v2]; \
+                     [3:v]format=yuv420p,setsar=1[v3]; \
+                     [v0][v1]xfade=transition=fade:duration=0.30:offset=1.60[x1]; \
+                     [x1][v2]xfade=transition=fade:duration=0.30:offset=3.20[x2]; \
+                     [x2][v3]xfade=transition=fade:duration=0.30:offset=4.80[v]" \
     -map "[v]" \
     -c:v libx264 -pix_fmt yuv420p \
     "$FINAL_DIR/layoutrecall-demo.mp4"
@@ -60,7 +60,7 @@ LayoutRecall is the open-source macOS menu bar app for MacBook + dock + multi-di
 ## Asset captions
 
 - `readme-hero.png`: Save one known-good desk, then bring it back without blind guesses.
-- `layoutrecall-demo.gif` / `.mp4`: Watch the desk drift, the saved profile get recognized, and recovery stay confidence-aware.
+- `layoutrecall-demo.gif` / `.mp4`: Watch framed real UI shots move through restore, menu control, diagnostics, and profile fallback.
 - `readme-feature-trust.png`: LayoutRecall shows confidence, dependency state, and diagnostics before it moves your monitors.
 - `readme-feature-profiles.png`: Save multiple desk profiles and keep manual fallback controls close by.
 - `social-card.png`: macOS forgot your monitor layout. LayoutRecall brings back the desk you trust.

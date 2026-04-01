@@ -11,7 +11,7 @@ LayoutRecall is the open-source macOS menu bar app for MacBook + dock + multi-di
 ## Asset captions
 
 - `readme-hero.png`: Save one known-good desk, then bring it back without blind guesses.
-- `layoutrecall-demo.gif` / `.mp4`: Watch the desk drift, the saved profile get recognized, and recovery stay confidence-aware.
+- `layoutrecall-demo.gif` / `.mp4`: Watch framed real UI shots move through restore, menu control, diagnostics, and profile fallback.
 - `readme-feature-trust.png`: LayoutRecall shows confidence, dependency state, and diagnostics before it moves your monitors.
 - `readme-feature-profiles.png`: Save multiple desk profiles and keep manual fallback controls close by.
 - `social-card.png`: macOS forgot your monitor layout. LayoutRecall brings back the desk you trust.
