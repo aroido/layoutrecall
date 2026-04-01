@@ -70,7 +70,6 @@ private struct SupportFileRow: View {
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
-    @State private var dangerousRestoreAction: DangerousRestoreAction?
     @State private var profilePendingDeletion: DisplayProfile?
     @State private var expandedProfileIDs: Set<UUID> = []
     @State private var editingProfileID: UUID?
@@ -139,16 +138,6 @@ struct SettingsView: View {
                 .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(width: 760, height: 560)
-        .alert(item: $dangerousRestoreAction) { action in
-            Alert(
-                title: Text(action.title),
-                message: Text(action.message),
-                primaryButton: .default(Text(action.confirmationTitle)) {
-                    model.perform(action)
-                },
-                secondaryButton: .cancel()
-            )
-        }
         .alert(item: $profilePendingDeletion) { profile in
             Alert(
                 title: Text(L10n.t("profiles.delete.title")),
@@ -304,7 +293,7 @@ struct SettingsView: View {
 
                 if model.showsSwapDisplaysControl {
                     Button {
-                        dangerousRestoreAction = .swapLeftRight
+                        model.swapLeftRight()
                     } label: {
                         Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
                             .frame(maxWidth: .infinity)

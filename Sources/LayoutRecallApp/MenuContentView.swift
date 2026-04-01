@@ -6,7 +6,6 @@ struct MenuContentView: View {
     @ObservedObject var model: AppModel
     let openSettings: (SettingsPane) -> Void
     @State private var hasAnimatedIn = false
-    @State private var dangerousRestoreAction: DangerousRestoreAction?
 
     private var autoRestoreBinding: Binding<Bool> {
         Binding(
@@ -52,6 +51,7 @@ struct MenuContentView: View {
             .padding(14)
             .offset(y: hasAnimatedIn ? 0 : 6)
             .opacity(hasAnimatedIn ? 1 : 0.96)
+
         }
         .frame(width: 316)
         .onAppear {
@@ -59,16 +59,6 @@ struct MenuContentView: View {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
                 hasAnimatedIn = true
             }
-        }
-        .alert(item: $dangerousRestoreAction) { action in
-            Alert(
-                title: Text(action.title),
-                message: Text(action.message),
-                primaryButton: .default(Text(action.confirmationTitle)) {
-                    model.perform(action)
-                },
-                secondaryButton: .cancel()
-            )
         }
         .animation(.spring(response: 0.30, dampingFraction: 0.84), value: model.menuTransitionKey)
     }
@@ -387,7 +377,7 @@ struct MenuContentView: View {
                 }
 
                 Button {
-                    dangerousRestoreAction = .swapLeftRight
+                    model.swapLeftRight()
                 } label: {
                     Label(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
                 }
