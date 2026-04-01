@@ -48,18 +48,18 @@ struct MarketingAssetBuilder {
             drawOrb(x: 1280, y: 120, radius: 220, color: colors.mint.withAlphaComponent(0.14))
             drawOrb(x: 1420, y: 780, radius: 180, color: colors.amber.withAlphaComponent(0.16))
 
-            drawKicker("For MacBook + dock + multi-display desks", at: NSPoint(x: 96, y: 900))
-            drawHeadline("Stop re-fixing your monitor layout every time macOS forgets it.", at: NSPoint(x: 96, y: 620), width: 680, fontSize: 56)
+            drawKicker("Open-source menu bar recovery for MacBook + dock desks", at: NSPoint(x: 96, y: 840))
+            drawHeadline("Restore the monitor layout macOS keeps scrambling.", at: NSPoint(x: 96, y: 690), width: 700)
             drawBody(
-                "LayoutRecall saves a known-good desk layout, restores it after sleep, wake, or reconnect, and stays manual when the match is not confident enough.",
-                at: NSPoint(x: 96, y: 445),
+                "Save one known-good layout, then let LayoutRecall restore it after sleep, wake, or reconnect only when the current display set is a confident match.",
+                at: NSPoint(x: 96, y: 580),
                 width: 610
             )
             drawPills([
-                "High-confidence restore",
-                "Clear manual fallback",
-                "Signed DMG + Homebrew"
-            ], origin: NSPoint(x: 96, y: 355))
+                "MacBook + dock + 2+ displays",
+                "Restore only when confident",
+                "Manual fallback stays visible"
+            ], origin: NSPoint(x: 96, y: 480))
 
             drawScreenshotCard(menu, frame: NSRect(x: 840, y: 420, width: 360, height: 420), angle: -4)
             drawScreenshotCard(settings, frame: NSRect(x: 1010, y: 180, width: 510, height: 580), angle: 5)
@@ -69,19 +69,19 @@ struct MarketingAssetBuilder {
     private func featureTrust(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawSectionLabel("Trust before restore", at: NSPoint(x: 104, y: 788))
-            drawHeadline("Restore only when the match is confident.", at: NSPoint(x: 104, y: 540), width: 640)
+            drawSectionLabel("Restore only when it is safe", at: NSPoint(x: 104, y: 728))
+            drawHeadline("See why LayoutRecall acted — or why it stayed manual.", at: NSPoint(x: 104, y: 608), width: 620)
             drawBody(
-                "LayoutRecall keeps the matched profile, dependency state, and recent diagnostics visible so cautious users can see why it acted — or why it refused.",
-                at: NSPoint(x: 104, y: 400),
+                "The app keeps profile match context, dependency state, and recent diagnostics close to the menu bar action so recovery never feels like a blind automation gamble.",
+                at: NSPoint(x: 104, y: 490),
                 width: 560
             )
             drawChecklist([
                 "Matched profile and confidence",
-                "Dependency state next to restore actions",
-                "Manual recovery when confidence is low",
-                "Recent restore proof in diagnostics"
-            ], origin: NSPoint(x: 104, y: 358))
+                "Manual fallback when confidence is low",
+                "Dependency state before recovery",
+                "Diagnostics evidence after every attempt"
+            ], origin: NSPoint(x: 104, y: 332))
 
             drawScreenshotCard(menu, frame: NSRect(x: 860, y: 420, width: 330, height: 380), angle: -2)
             drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 110, width: 470, height: 610), angle: 4)
@@ -91,19 +91,19 @@ struct MarketingAssetBuilder {
     private func featureProfiles(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawSectionLabel("Desk-to-desk recovery", at: NSPoint(x: 104, y: 788))
-            drawHeadline("Save the desk you want back, then recover it fast.", at: NSPoint(x: 104, y: 540), width: 640)
+            drawSectionLabel("Known desks, fast recovery", at: NSPoint(x: 104, y: 728))
+            drawHeadline("Keep saved layouts and recovery controls within reach.", at: NSPoint(x: 104, y: 608), width: 620)
             drawBody(
-                "Profiles, startup behavior, and restore controls stay in the same settings flow so repeat setups stay practical instead of fragile.",
-                at: NSPoint(x: 104, y: 400),
-                width: 560
+                "Profiles, startup behavior, and manual restore tools stay in one workflow so repeat desks are easy to tune without hunting across the app.",
+                at: NSPoint(x: 104, y: 490),
+                width: 550
             )
             drawChecklist([
-                "Multiple saved layouts",
-                "Manual apply and Fix Now fallback",
-                "Launch-at-login and update controls",
-                "Language and setup guidance in-app"
-            ], origin: NSPoint(x: 104, y: 358))
+                "Multiple saved desk profiles",
+                "Startup and launch-at-login controls",
+                "Fix Now and Apply Layout fallbacks",
+                "Predictable setup for repeat reconnects"
+            ], origin: NSPoint(x: 104, y: 332))
 
             drawScreenshotCard(profiles, frame: NSRect(x: 820, y: 300, width: 520, height: 500), angle: -3)
             drawScreenshotCard(general, frame: NSRect(x: 1070, y: 90, width: 420, height: 450), angle: 5)
@@ -116,16 +116,16 @@ struct MarketingAssetBuilder {
             drawOrb(x: 1060, y: 120, radius: 150, color: colors.mint.withAlphaComponent(0.18))
             drawKicker("LayoutRecall for macOS", at: NSPoint(x: 76, y: 520))
             drawHeadline(
-                "macOS forgot your monitor layout. LayoutRecall brings it back.",
-                at: NSPoint(x: 72, y: 300),
-                width: 520,
-                fontSize: 34
+                "Restore the monitor layout macOS keeps scrambling.",
+                at: NSPoint(x: 72, y: 282),
+                width: 560,
+                fontSize: 32
             )
             drawBody(
-                "Safe menu bar recovery, saved profiles, and diagnostics for multi-display desks.",
-                at: NSPoint(x: 72, y: 184),
-                width: 470,
-                fontSize: 21
+                "Open-source menu bar recovery for MacBook + dock + multi-display desks.",
+                at: NSPoint(x: 72, y: 166),
+                width: 500,
+                fontSize: 20
             )
 
             drawScreenshotCard(menu, frame: NSRect(x: 700, y: 250, width: 220, height: 260), angle: -5)
@@ -136,7 +136,7 @@ struct MarketingAssetBuilder {
     private func slideOne(menu: NSImage, settings: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("01", title: "Save the desk layout you want back.", body: "Capture the arrangement you trust once so a wake cycle or dock reconnect does not send you back to rearranging screens by hand.", at: NSPoint(x: 96, y: 620), width: 580)
+            drawStep("01", title: "Your desk comes back scrambled.", body: "After sleep, wake, or reconnect, identical displays can return in the wrong order or with the wrong main-display state.", at: NSPoint(x: 96, y: 690), width: 600)
             drawScreenshotCard(settings, frame: NSRect(x: 860, y: 180, width: 560, height: 620), angle: 4)
             drawScreenshotCard(menu, frame: NSRect(x: 720, y: 360, width: 290, height: 350), angle: -6)
         }
@@ -145,7 +145,7 @@ struct MarketingAssetBuilder {
     private func slideTwo(menu: NSImage, diagnostics: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("02", title: "Restore only when the match is confident.", body: "The menu shows matched profile, dependency state, and diagnostics so users know why LayoutRecall acted — or why it stayed manual.", at: NSPoint(x: 96, y: 620), width: 620)
+            drawStep("02", title: "LayoutRecall recognizes the saved desk safely.", body: "The app shows the profile match, confidence, and diagnostics context before recovery so monitor moves never feel opaque or reckless.", at: NSPoint(x: 96, y: 690), width: 620)
             drawScreenshotCard(menu, frame: NSRect(x: 840, y: 360, width: 320, height: 380), angle: -4)
             drawScreenshotCard(diagnostics, frame: NSRect(x: 1040, y: 120, width: 470, height: 610), angle: 4)
         }
@@ -154,7 +154,7 @@ struct MarketingAssetBuilder {
     private func slideThree(profiles: NSImage, general: NSImage) throws -> NSImage {
         try renderCanvas(size: NSSize(width: 1600, height: 900)) { rect in
             drawBackground(in: rect)
-            drawStep("03", title: "Keep profiles and setup controls close by.", body: "Save multiple layouts, apply one directly, and keep app behavior visible from the same settings flow when you want explicit control.", at: NSPoint(x: 96, y: 620), width: 600)
+            drawStep("03", title: "Recover fast or stay manual on purpose.", body: "Profiles, startup behavior, and one-click fallback actions stay visible in one place so repeat desks remain predictable even when automation stops short.", at: NSPoint(x: 96, y: 690), width: 620)
             drawScreenshotCard(profiles, frame: NSRect(x: 780, y: 250, width: 520, height: 520), angle: -4)
             drawScreenshotCard(general, frame: NSRect(x: 1080, y: 110, width: 380, height: 420), angle: 5)
         }
