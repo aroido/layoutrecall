@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROGRAM_DIR="$ROOT_DIR/docs/marketing/programs"
+README_PATH="$ROOT_DIR/README.md"
+ASSET_DIR="$ROOT_DIR/docs/marketing/generated/final"
+
+fail() {
+    echo "marketing verify: $*" >&2
+    exit 1
+}
+
+require_file() {
+    local path="$1"
+    [[ -s "$path" ]] || fail "missing or empty file: ${path#$ROOT_DIR/}"
+}
+
+require_contains() {
+    local path="$1"
+    local pattern="$2"
+    local label="$3"
+    if ! grep -Eiq "$pattern" "$path"; then
+        fail "missing ${label} in ${path#$ROOT_DIR/}"
+    fi
+}
+
+count_following_bullets() {
+    local path="$1"
+    local heading_pattern="$2"
+    python3 - "$path" "$heading_pattern" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+heading = re.compile(sys.argv[2], re.I)
+count = 0
+in_section = False
+for line in path.read_text().splitlines():
+    if heading.search(line):
+        in_section = True
+        continue
+    if in_section and re.match(r'^#{1,6}\s+', line):
+        break
+    if in_section and re.match(r'^\s*(?:[-*]|\d+\.)\s+', line):
+        count += 1
+print(count)
+PY
+}
+
+positioning_files=()
+while IFS= read -r positioning_candidate; do
+    positioning_files+=("$positioning_candidate")
+done < <(find "$PROGRAM_DIR" -maxdepth 1 -type f -name '*-positioning.md' | sort)
+[[ ${#positioning_files[@]} -gt 0 ]] || fail "missing docs/marketing/programs/*-positioning.md"
+
+selected_prefix=""
+positioning_path=""
+asset_direction_path=""
+launch_plan_path=""
+for positioning_candidate in "${positioning_files[@]}"; do
+    prefix="${positioning_candidate%-positioning.md}"
+    asset_candidate="${prefix}-asset-direction.md"
+    launch_candidate="${prefix}-launch-plan.md"
+    if [[ -f "$asset_candidate" && -f "$launch_candidate" ]]; then
+        selected_prefix="$prefix"
+        positioning_path="$positioning_candidate"
+        asset_direction_path="$asset_candidate"
+        launch_plan_path="$launch_candidate"
+    fi
+done
+
+[[ -n "$selected_prefix" ]] || fail "missing matching asset-direction/launch-plan docs for a marketing program run"
+
+require_file "$positioning_path"
+require_file "$asset_direction_path"
+require_file "$launch_plan_path"
+
+require_contains "$positioning_path" 'who .*use' 'who-should-use answer'
+require_contains "$positioning_path" 'why .*trust' 'why-trust answer'
+require_contains "$positioning_path" 'why .*download|why .*now' 'why-download-now answer'
+require_contains "$positioning_path" 'skeptical' 'skeptical user section'
+require_contains "$positioning_path" 'bounce|severity|rank' 'bounce severity ranking'
+require_contains "$positioning_path" 'must' 'must priorities'
+require_contains "$positioning_path" 'should' 'should priorities'
+require_contains "$positioning_path" 'could' 'could priorities'
+
+conversion_blockers_count="$(count_following_bullets "$positioning_path" 'conversion blockers')"
+if [[ "$conversion_blockers_count" -lt 5 ]]; then
+    fail "expected at least 5 conversion blockers in ${positioning_path#$ROOT_DIR/}; found $conversion_blockers_count"
+fi
+
+require_contains "$asset_direction_path" 'screenshot' 'screenshot direction'
+require_contains "$asset_direction_path" 'gif|video|demo' 'gif/video direction'
+require_contains "$launch_plan_path" 'github' 'GitHub launch copy'
+require_contains "$launch_plan_path" 'reddit' 'Reddit launch copy'
+require_contains "$launch_plan_path" 'hacker news|hn\b' 'Hacker News launch copy'
+
+require_file "$README_PATH"
+require_contains "$README_PATH" 'readme-hero\.png' 'README hero asset reference'
+require_contains "$README_PATH" 'layoutrecall-demo\.(gif|mp4)' 'README demo asset reference'
+
+for asset in \
+    readme-hero.png \
+    readme-feature-trust.png \
+    readme-feature-profiles.png \
+    social-card.png \
+    layoutrecall-demo.gif \
+    layoutrecall-demo.mp4; do
+    require_file "$ASSET_DIR/$asset"
+done
+
+echo "marketing verify: PASS (${selected_prefix#$ROOT_DIR/})"
