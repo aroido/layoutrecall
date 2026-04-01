@@ -22,16 +22,19 @@ echo "[1/5] Rendering UI snapshots..."
 echo "[2/5] Building branded stills..."
 swift "$ROOT_DIR/scripts/marketing_compositor.swift" "$RAW_DIR" "$FINAL_DIR"
 
-echo "[3/5] Encoding demo video..."
+echo "[3/5] Encoding demo video from real app UI snapshots..."
 ffmpeg -y \
-    -loop 1 -t 2.4 -i "$FINAL_DIR/slide-01.png" \
-    -loop 1 -t 2.4 -i "$FINAL_DIR/slide-02.png" \
-    -loop 1 -t 2.4 -i "$FINAL_DIR/slide-03.png" \
-    -filter_complex "[0:v]fps=30,format=yuv420p,scale=1600:900,setsar=1[v0]; \
-                     [1:v]fps=30,format=yuv420p,scale=1600:900,setsar=1[v1]; \
-                     [2:v]fps=30,format=yuv420p,scale=1600:900,setsar=1[v2]; \
-                     [v0][v1]xfade=transition=fade:duration=0.4:offset=2.0[x1]; \
-                     [x1][v2]xfade=transition=fade:duration=0.4:offset=4.0[v]" \
+    -loop 1 -t 1.8 -i "$RAW_DIR/settings.png" \
+    -loop 1 -t 1.8 -i "$RAW_DIR/menu.png" \
+    -loop 1 -t 1.8 -i "$RAW_DIR/settings-diagnostics.png" \
+    -loop 1 -t 1.8 -i "$RAW_DIR/settings-profiles.png" \
+    -filter_complex "[0:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v0]; \
+                     [1:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v1]; \
+                     [2:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v2]; \
+                     [3:v]scale=1600:900:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0d1421,format=yuv420p,setsar=1[v3]; \
+                     [v0][v1]xfade=transition=fade:duration=0.35:offset=1.45[x1]; \
+                     [x1][v2]xfade=transition=fade:duration=0.35:offset=2.90[x2]; \
+                     [x2][v3]xfade=transition=fade:duration=0.35:offset=4.35[v]" \
     -map "[v]" \
     -c:v libx264 -pix_fmt yuv420p \
     "$FINAL_DIR/layoutrecall-demo.mp4"

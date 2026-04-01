@@ -27,6 +27,37 @@ require_contains() {
     fi
 }
 
+require_not_contains() {
+    local path="$1"
+    local pattern="$2"
+    local label="$3"
+    if grep -Eiq "$pattern" "$path"; then
+        fail "unexpected ${label} in ${path#$ROOT_DIR/}"
+    fi
+}
+
+count_heading_occurrences() {
+    local path="$1"
+    local heading_text="$2"
+    python3 - "$path" "$heading_text" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+heading_text = sys.argv[2].strip().lower()
+count = 0
+for line in path.read_text().splitlines():
+    match = re.match(r'^(#{1,6})\s+(.*)$', line.strip())
+    if not match:
+        continue
+    heading = re.sub(r'\s+', ' ', match.group(2).strip()).lower()
+    if heading == heading_text:
+        count += 1
+print(count)
+PY
+}
+
 count_section_items() {
     local path="$1"
     local heading_pattern="$2"
@@ -110,6 +141,15 @@ require_contains "$launch_plan_path" 'hacker news|hn\b' 'Hacker News launch copy
 require_file "$README_PATH"
 require_contains "$README_PATH" 'readme-hero\.png' 'README hero asset reference'
 require_contains "$README_PATH" 'layoutrecall-demo\.(gif|mp4)' 'README demo asset reference'
+faq_count="$(count_heading_occurrences "$README_PATH" "FAQ")"
+if [[ "$faq_count" -ne 1 ]]; then
+    fail "expected exactly 1 FAQ heading in README.md; found $faq_count"
+fi
+
+MARKETING_README_PATH="$ROOT_DIR/docs/marketing/README.md"
+require_file "$MARKETING_README_PATH"
+require_contains "$MARKETING_README_PATH" 'launch-copy-pack\.md' 'marketing README copy-pack reference'
+require_not_contains "$MARKETING_README_PATH" 'launch-copy\.md' 'stale launch-copy.md reference'
 
 for asset in \
     readme-hero.png \
