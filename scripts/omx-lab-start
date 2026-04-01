@@ -6,6 +6,7 @@ usage() {
   cat <<'EOF'
 Usage:
   ./scripts/omx-lab-start <slug> [lab note]
+  ./scripts/omx-lab-start --release-program <slug> [lab note]
 
 What it does:
   1. Tags the current HEAD as a local baseline snapshot.
@@ -16,6 +17,7 @@ What it does:
 Examples:
   ./scripts/omx-lab-start current-ui-pass
   ./scripts/omx-lab-start current-ui-pass "menu bar UX improvement experiment"
+  ./scripts/omx-lab-start --release-program v2-release "PM-led v2.0.1 and v2.0.2 release program"
 EOF
 }
 
@@ -28,6 +30,12 @@ sanitize_slug() {
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   usage
   exit 0
+fi
+
+LAB_MODE="standard"
+if [[ "${1:-}" == "--release-program" ]]; then
+  LAB_MODE="release_program"
+  shift || true
 fi
 
 if [[ $# -lt 1 ]]; then
@@ -52,7 +60,11 @@ if [[ -z "$SLUG" ]]; then
   exit 1
 fi
 
-LAB_NOTE="${*:-LayoutRecall cross-functional OMX lab}"
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  LAB_NOTE="${*:-LayoutRecall PM-led OMX release program}"
+else
+  LAB_NOTE="${*:-LayoutRecall cross-functional OMX lab}"
+fi
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 REPO_NAME="$(basename "$ROOT_DIR")"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -87,7 +99,89 @@ git worktree add -b "$LAB_BRANCH" "$WORKTREE_PATH" "$HEAD_COMMIT"
 
 mkdir -p "$(dirname "$BRIEF_PATH")"
 
-cat > "$BRIEF_PATH" <<EOF
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  cat > "$BRIEF_PATH" <<EOF
+# OMX Release Program Brief
+
+## Goal
+
+Run a PM-led LayoutRecall release program that produces two scoped milestones:
+
+- v2.0.1: trust, clarity, onboarding, and UX polish
+- v2.0.2: net-new user-facing functionality
+
+## Snapshot
+
+- Source repository: ${REPO_NAME}
+- Source branch at snapshot: ${CURRENT_BRANCH}
+- Source commit at snapshot: ${SHORT_COMMIT}
+- Baseline tag: ${BASELINE_TAG}
+- Lab branch: ${LAB_BRANCH}
+- Lab worktree: ${WORKTREE_PATH}
+- Note: ${LAB_NOTE}
+
+## Release contract
+
+Treat this run as a product program, not a single narrow implementation spike.
+
+- PM owns the master backlog, scope cuts, acceptance criteria, and release call.
+- Virtual user / critic owns pain-point discovery and missing-feature proposals.
+- Designer turns accepted pain points into macOS UX/UI changes.
+- Developers implement only the scopes approved by PM.
+- QA verifies each release cut before the next one starts.
+
+## Planning artifact locations
+
+Do not rely on \`.omx/plans/\` as the primary planning home for worker output.
+Instead, store PM artifacts in tracked files under \`docs/roadmaps/\`.
+
+Required artifacts:
+
+- \`docs/roadmaps/${LAB_ID}-release-plan.md\`
+- \`docs/roadmaps/${LAB_ID}-decision-log.md\`
+
+## Required sequence
+
+1. Inspect the current app and gather at least 5 user pains or missing capabilities.
+2. Virtual user / critic must explicitly propose those pains from real desk-setup usage.
+3. PM must rank them into must / should / could and decide what ships in v2.0.1 vs v2.0.2.
+4. v2.0.1 must focus on trust, onboarding, empty states, and clearer recovery controls.
+5. v2.0.2 must add at least 2 net-new user-facing features.
+6. PM should prefer this shortlist for v2.0.2 unless stronger evidence appears:
+   - Ask Before Restore
+   - Undo Last Restore
+   - Pause / Ignore Current Setup
+   - Profile Rules
+7. Keep the branch shippable after each version cut.
+8. Run \`./scripts/run-ai-verify --mode full\` for each release cut before claiming completion.
+
+## Guardrails
+
+- Start from the current product, not a rewrite.
+- PM decides scope; developers do not silently broaden it.
+- Virtual-user discomfort is an input; PM decides whether it is product-critical.
+- Designer recommendations are not auto-shipped; PM must explicitly accept or reject them.
+- If two worker branches overlap, integrate deliberately and verify on the leader branch.
+
+## Suggested team prompt
+
+Run a LayoutRecall PM-led release program described in .omx/context/${LAB_ID}.md.
+Use six lanes:
+1. PM / release owner
+2. Planner / backlog structuring
+3. Designer / macOS UX audit
+4. Developer A
+5. Developer B
+6. QA plus skeptical virtual user
+
+First, produce docs/roadmaps/${LAB_ID}-release-plan.md and docs/roadmaps/${LAB_ID}-decision-log.md.
+Have the virtual user propose pain points and missing features first.
+Have PM decide v2.0.1 scope and v2.0.2 scope explicitly.
+Ship v2.0.1 for polish/trust, then ship v2.0.2 with at least two net-new user-facing features.
+Verify each release cut with ./scripts/run-ai-verify --mode full.
+EOF
+else
+  cat > "$BRIEF_PATH" <<EOF
 # OMX Lab Brief
 
 ## Goal
@@ -150,6 +244,7 @@ Run a LayoutRecall product squad with 5 lanes:
 First converge on 3 concrete improvement candidates for the current app.
 Then select one narrow candidate, implement it, verify with ./scripts/run-ai-verify --mode full, and report the before/after delta.
 EOF
+fi
 
 cat > "$LAB_ROOT/README.txt" <<EOF
 OMX lab created: ${LAB_ID}
@@ -158,6 +253,7 @@ Baseline tag: ${BASELINE_TAG}
 Lab branch: ${LAB_BRANCH}
 Lab worktree: ${WORKTREE_PATH}
 Brief: ${BRIEF_PATH}
+Mode: ${LAB_MODE}
 EOF
 
 if [[ "$DIRTY" -eq 1 ]]; then
@@ -196,6 +292,10 @@ echo
 echo "Suggested next steps:"
 echo "  cd \"$WORKTREE_PATH\""
 echo "  omx doctor --team"
-echo "  omx ralph --prd \"Run the cross-functional LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
-echo "  # or"
-echo "  omx team 5:team-executor \"Run the LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
+if [[ "$LAB_MODE" == "release_program" ]]; then
+  echo "  omx team 6:executor \"Run the LayoutRecall PM-led release program described in .omx/context/${LAB_ID}.md\""
+else
+  echo "  omx ralph --prd \"Run the cross-functional LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
+  echo "  # or"
+  echo "  omx team 5:team-executor \"Run the LayoutRecall squad experiment described in .omx/context/${LAB_ID}.md\""
+fi

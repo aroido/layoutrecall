@@ -104,6 +104,28 @@ runtime.
 - patch files if the source worktree is dirty
 - a starter `.omx/context/*.md` brief for the squad run
 
+## PM-led release mode
+
+If you want PM to own prioritization and the virtual user to actively discover
+discomfort or missing features, use release-program mode instead of the default
+single-candidate lab brief.
+
+```bash
+./scripts/omx-lab-start --release-program v2-release "LayoutRecall PM-led v2.0.1 and v2.0.2 program"
+cd ../layoutrecall-v2-release-<timestamp>
+omx doctor --team
+omx team 6:executor "Run the LayoutRecall PM-led release program described in .omx/context/<lab-id>.md"
+```
+
+What changes in this mode:
+
+- PM artifacts move to tracked files under [`docs/roadmaps`](./roadmaps/README.md)
+- the virtual user must propose pain points and missing features first
+- PM must decide what ships in `v2.0.1` versus `v2.0.2`
+- `v2.0.2` is expected to include net-new user-facing functionality, not just polish
+
+See [`omx-release-program.md`](./omx-release-program.md) for the detailed contract.
+
 ## Repo-specific rules
 
 - Work from the repository root so OMX picks up the project `AGENTS.md`.

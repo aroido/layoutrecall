@@ -9,13 +9,22 @@ import Testing
 @MainActor
 @Test(.enabled(if: ProcessInfo.processInfo.environment["CI"] == nil, "AppKit snapshot rendering is only supported in local interactive runs."))
 func renderMenuAndSettingsSnapshots() async throws {
-    let outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        .appendingPathComponent("layoutrecall-ui-snapshots", isDirectory: true)
+    let outputDirectory: URL
+    if let configuredOutputDirectory = ProcessInfo.processInfo.environment["LAYOUTRECALL_SNAPSHOT_OUTPUT_DIR"],
+       configuredOutputDirectory.isEmpty == false {
+        outputDirectory = URL(fileURLWithPath: configuredOutputDirectory, isDirectory: true)
+    } else {
+        outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("layoutrecall-ui-snapshots", isDirectory: true)
+    }
     try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 
     let model = AppModel(
         store: SnapshotProfileStore(profiles: [DisplayProfile.officeDock]),
-        settingsStore: SnapshotSettingsStore(settings: AppSettings(launchAtLogin: true)),
+        settingsStore: SnapshotSettingsStore(settings: AppSettings(
+            launchAtLogin: true,
+            preferredLanguageCode: "en"
+        )),
         diagnosticsStore: SnapshotDiagnosticsStore(entries: [
             DiagnosticsEntry(
                 eventType: DisplayEventType.reconfigured.rawValue,

@@ -1128,6 +1128,18 @@ struct SettingsView: View {
         }
     }
 
+    private func copyDiagnosticsReport() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(model.diagnosticsReportText, forType: .string)
+
+        diagnosticsReportCopied = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            diagnosticsReportCopied = false
+        }
+    }
+
     private var supportFileDescriptors: [SupportFileDescriptor] {
         let supportDirectory = LayoutRecallStorage.baseDirectory()
 

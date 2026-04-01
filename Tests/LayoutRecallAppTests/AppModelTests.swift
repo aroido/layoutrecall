@@ -12,6 +12,7 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
         askBeforeAutomaticRestore: true,
         launchAtLogin: true
     ))
+    let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
     let diagnosticsStore = DiagnosticsStoreStub(entries: [
         DiagnosticsEntry(
             eventType: DisplayEventType.manual.rawValue,
@@ -33,7 +34,7 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
         dependency: .init(
             isAvailable: true,
             location: "/usr/local/bin/displayplacer",
-            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+            details: dependencyDetails
         ),
         executionResult: .init(
             outcome: .success,
@@ -68,8 +69,8 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
     #expect(model.diagnostics.count == 1)
     #expect(model.askBeforeAutomaticRestoreEnabled == true)
     #expect(model.launchAtLoginEnabled == true)
-    #expect(!model.loginItemLine.isEmpty)
-    #expect(model.dependencyLine.contains("/usr/local/bin/displayplacer"))
+    #expect(model.loginItemLine == LaunchAtLoginState.enabled.description)
+    #expect(model.dependencyLine == dependencyDetails)
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.ready"))
     #expect(model.autoRestoreBadgeText == L10n.t("status.badge.askBeforeRestore"))
     #expect(model.restoreModeLine == L10n.t("restore.askBeforeAutomatic"))
