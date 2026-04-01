@@ -129,25 +129,30 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
+        ZStack {
+            HStack(spacing: 0) {
+                sidebar
 
-            Divider()
+                Divider()
 
-            detailPane(for: selectedPane)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color(nsColor: .windowBackgroundColor))
-        }
-        .frame(width: 760, height: 560)
-        .alert(item: $dangerousRestoreAction) { action in
-            Alert(
-                title: Text(action.title),
-                message: Text(action.message),
-                primaryButton: .default(Text(action.confirmationTitle)) {
-                    model.perform(action)
-                },
-                secondaryButton: .cancel()
-            )
+                detailPane(for: selectedPane)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background(Color(nsColor: .windowBackgroundColor))
+            }
+            .frame(width: 760, height: 560)
+
+            if let action = dangerousRestoreAction {
+                DangerousRestoreConfirmationOverlay(
+                    action: action,
+                    confirm: {
+                        dangerousRestoreAction = nil
+                        model.perform(action)
+                    },
+                    cancel: {
+                        dangerousRestoreAction = nil
+                    }
+                )
+            }
         }
         .alert(item: $profilePendingDeletion) { profile in
             Alert(
@@ -159,6 +164,7 @@ struct SettingsView: View {
                 secondaryButton: .cancel()
             )
         }
+        .animation(.easeOut(duration: 0.16), value: dangerousRestoreAction)
     }
 
     private var sidebarSelection: Binding<SettingsPane?> {

@@ -52,6 +52,19 @@ struct MenuContentView: View {
             .padding(14)
             .offset(y: hasAnimatedIn ? 0 : 6)
             .opacity(hasAnimatedIn ? 1 : 0.96)
+
+            if let action = dangerousRestoreAction {
+                DangerousRestoreConfirmationOverlay(
+                    action: action,
+                    confirm: {
+                        dangerousRestoreAction = nil
+                        model.perform(action)
+                    },
+                    cancel: {
+                        dangerousRestoreAction = nil
+                    }
+                )
+            }
         }
         .frame(width: 316)
         .onAppear {
@@ -60,17 +73,8 @@ struct MenuContentView: View {
                 hasAnimatedIn = true
             }
         }
-        .alert(item: $dangerousRestoreAction) { action in
-            Alert(
-                title: Text(action.title),
-                message: Text(action.message),
-                primaryButton: .default(Text(action.confirmationTitle)) {
-                    model.perform(action)
-                },
-                secondaryButton: .cancel()
-            )
-        }
         .animation(.spring(response: 0.30, dampingFraction: 0.84), value: model.menuTransitionKey)
+        .animation(.easeOut(duration: 0.16), value: dangerousRestoreAction)
     }
 
     private var header: some View {

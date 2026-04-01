@@ -524,3 +524,50 @@ struct InlineActionButtonStyle: ButtonStyle {
             .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
+
+struct DangerousRestoreConfirmationOverlay: View {
+    let action: DangerousRestoreAction
+    let confirm: () -> Void
+    let cancel: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.22)
+                .ignoresSafeArea()
+
+            GlassCard(padding: 18) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(action.title)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(action.message)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        Spacer(minLength: 0)
+
+                        Button(L10n.t("action.cancel")) {
+                            cancel()
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                        .keyboardShortcut(.cancelAction)
+
+                        Button(action.confirmationTitle) {
+                            confirm()
+                        }
+                        .buttonStyle(ActionButtonStyle(role: .primary))
+                        .keyboardShortcut(.defaultAction)
+                    }
+                }
+            }
+            .frame(maxWidth: 420)
+            .shadow(color: Color.black.opacity(0.18), radius: 24, y: 10)
+            .padding(24)
+        }
+        .transition(.opacity)
+        .zIndex(50)
+    }
+}

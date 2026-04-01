@@ -136,7 +136,7 @@ enum SurfaceAction: String, CaseIterable, Identifiable {
     }
 }
 
-enum DangerousRestoreAction: String, Identifiable {
+enum DangerousRestoreAction: String, Identifiable, Equatable {
     case swapLeftRight
 
     var id: Self { self }
