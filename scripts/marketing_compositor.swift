@@ -227,7 +227,7 @@ struct MarketingAssetBuilder {
         NSString(string: text).draw(in: NSRect(x: point.x, y: point.y, width: width, height: height), withAttributes: attributes)
     }
 
-    private func drawBody(_ text: String, at point: NSPoint, width: CGFloat, fontSize: CGFloat = 24) {
+    private func drawBody(_ text: String, at point: NSPoint, width: CGFloat, fontSize: CGFloat = 24, height: CGFloat = 180) {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 6
         let attributes: [NSAttributedString.Key: Any] = [
@@ -235,7 +235,7 @@ struct MarketingAssetBuilder {
             .foregroundColor: colors.secondaryText,
             .paragraphStyle: paragraph,
         ]
-        NSString(string: text).draw(in: NSRect(x: point.x, y: point.y, width: width, height: 180), withAttributes: attributes)
+        NSString(string: text).draw(in: NSRect(x: point.x, y: point.y, width: width, height: height), withAttributes: attributes)
     }
 
     private func drawPills(_ items: [String], origin: NSPoint) {
@@ -281,6 +281,8 @@ struct MarketingAssetBuilder {
         let titleFontSize: CGFloat = 48
         let titleLineSpacing: CGFloat = 3
         let titleHeight = measureTextHeight(title, width: width, fontSize: titleFontSize, lineSpacing: titleLineSpacing)
+        let bodyFontSize: CGFloat = 24
+        let bodyHeight = measureTextHeight(body, width: width, fontSize: bodyFontSize, lineSpacing: 6, weight: .regular)
         let stepRect = NSRect(x: point.x, y: point.y + titleHeight + 20, width: 76, height: 76)
         colors.accentPanel.setFill()
         NSBezierPath(roundedRect: stepRect, xRadius: 24, yRadius: 24).fill()
@@ -293,7 +295,7 @@ struct MarketingAssetBuilder {
             ]
         )
         drawHeadline(title, at: NSPoint(x: point.x, y: point.y), width: width, fontSize: titleFontSize, height: titleHeight)
-        drawBody(body, at: NSPoint(x: point.x, y: point.y - titleHeight - 28), width: width)
+        drawBody(body, at: NSPoint(x: point.x, y: point.y - bodyHeight - 24), width: width, fontSize: bodyFontSize, height: bodyHeight)
     }
 
     private func drawScreenshotCard(_ image: NSImage, frame: NSRect, angle: CGFloat) {
@@ -331,13 +333,13 @@ struct MarketingAssetBuilder {
         return paragraph
     }
 
-    private func measureTextHeight(_ text: String, width: CGFloat, fontSize: CGFloat, lineSpacing: CGFloat) -> CGFloat {
+    private func measureTextHeight(_ text: String, width: CGFloat, fontSize: CGFloat, lineSpacing: CGFloat, weight: NSFont.Weight = .bold) -> CGFloat {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = lineSpacing
         let attributed = NSAttributedString(
             string: text,
             attributes: [
-                .font: NSFont.systemFont(ofSize: fontSize, weight: .bold),
+                .font: NSFont.systemFont(ofSize: fontSize, weight: weight),
                 .paragraphStyle: paragraph,
             ]
         )
