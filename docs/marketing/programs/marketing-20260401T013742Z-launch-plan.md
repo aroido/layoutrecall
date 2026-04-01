@@ -172,13 +172,13 @@ Use a more problem-first, less "launch announcement" tone than HN.
 
 ### Title
 
-**LayoutRecall 2.0 — stop rebuilding your monitor layout after every reconnect**
+**LayoutRecall — stop re-fixing scrambled macOS monitor layouts**
 
 ### Body
 
-LayoutRecall is a macOS menu bar utility for people who are tired of rebuilding the same external monitor layout after sleep, wake, or reconnect.
+LayoutRecall is the open-source macOS menu bar app for MacBook + dock + multi-display desks that come back scrambled after sleep, wake, or reconnect.
 
-It lets you save a known-good display layout, then restore it automatically when confidence is high — or recover manually with clear controls when it is not.
+Save a known-good display layout once, then restore it automatically when confidence is high — or recover manually with clear controls when it is not.
 
 What ships in the current baseline:
 
@@ -186,7 +186,7 @@ What ships in the current baseline:
 - high-confidence automatic restore,
 - manual `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions`,
 - diagnostics and dependency visibility,
-- GitHub Releases and Homebrew install paths.
+- signed GitHub Releases and Homebrew install paths.
 
 If your MacBook + dock setup keeps drifting and you want a focused fix instead of a giant display-management suite, LayoutRecall is ready to try.
 
@@ -194,13 +194,13 @@ If your MacBook + dock setup keeps drifting and you want a focused fix instead o
 
 ### Title
 
-I built a macOS menu bar app because macOS kept scrambling my monitor layout after sleep/wake/dock reconnect
+I built a macOS menu bar app because I got tired of re-fixing my monitor layout after every dock reconnect
 
 ### Body
 
 I kept hitting the same problem on my MacBook desk setup: after sleep, wake, or reconnecting a dock, identical monitors would come back in the wrong order or wrong position.
 
-So I built **LayoutRecall**, a small macOS menu bar utility that saves a known layout and brings it back later instead of making me rebuild the desk from scratch.
+So I built **LayoutRecall**, an open-source macOS menu bar app that saves a known layout and brings it back later.
 
 A few details that matter:
 
@@ -209,7 +209,7 @@ A few details that matter:
 - there are direct recovery actions like `Fix Now`, `Apply Layout`, and `Show Numbers`,
 - it surfaces diagnostics and dependency state instead of hiding them.
 
-It is open source, available through GitHub Releases and Homebrew, and aimed at people with real multi-monitor desk setups — especially laptop + dock users.
+It is open source, available through signed GitHub Releases and Homebrew, and aimed at people with real multi-monitor desk setups — especially laptop + dock users.
 
 If you try tools like this, I would especially love feedback on install clarity and whether the restore behavior feels trustworthy.
 
@@ -217,8 +217,8 @@ If you try tools like this, I would especially love feedback on install clarity 
 
 ### Title options
 
-- Show HN: LayoutRecall — stop rebuilding scrambled macOS monitor layouts
-- Show HN: LayoutRecall, a menu bar app for broken external display layouts on macOS
+- Show HN: LayoutRecall — stop re-fixing scrambled macOS monitor layouts
+- Show HN: LayoutRecall, a menu bar app for broken macOS external display layouts
 
 ### Body
 
@@ -233,7 +233,7 @@ A few design decisions were important:
 - users can inspect diagnostics and run direct recovery actions,
 - the project stays honest about limits like the `displayplacer` dependency and more complex 4+ display scenarios.
 
-Repo includes releases, Homebrew install, screenshots generated from the real UI, and a short demo asset.
+Repo includes signed releases, Homebrew install, screenshots generated from the real UI, and a short demo asset.
 
 Happy to answer questions about the matching/safety model, the macOS menu bar architecture, or why I kept the product narrow instead of turning it into a full display-management suite.
 
