@@ -70,7 +70,6 @@ private struct SupportFileRow: View {
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var selectedPane: SettingsPane = .restore
-    @State private var dangerousRestoreAction: DangerousRestoreAction?
     @State private var profilePendingDeletion: DisplayProfile?
     @State private var expandedProfileIDs: Set<UUID> = []
     @State private var editingProfileID: UUID?
@@ -141,18 +140,6 @@ struct SettingsView: View {
             }
             .frame(width: 760, height: 560)
 
-            if let action = dangerousRestoreAction {
-                DangerousRestoreConfirmationOverlay(
-                    action: action,
-                    confirm: {
-                        dangerousRestoreAction = nil
-                        model.perform(action)
-                    },
-                    cancel: {
-                        dangerousRestoreAction = nil
-                    }
-                )
-            }
         }
         .alert(item: $profilePendingDeletion) { profile in
             Alert(
@@ -164,7 +151,6 @@ struct SettingsView: View {
                 secondaryButton: .cancel()
             )
         }
-        .animation(.easeOut(duration: 0.16), value: dangerousRestoreAction)
     }
 
     private var sidebarSelection: Binding<SettingsPane?> {
@@ -310,7 +296,7 @@ struct SettingsView: View {
 
                 if model.showsSwapDisplaysControl {
                     Button {
-                        dangerousRestoreAction = .swapLeftRight
+                        presentDangerousRestoreConfirmation(for: .swapLeftRight)
                     } label: {
                         Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
                             .frame(maxWidth: .infinity)
@@ -727,6 +713,25 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+    private func presentDangerousRestoreConfirmation(for action: DangerousRestoreAction) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = action.title
+        alert.informativeText = action.message
+        alert.addButton(withTitle: action.confirmationTitle)
+        alert.addButton(withTitle: L10n.t("action.cancel"))
+
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            alert.beginSheetModal(for: window) { response in
+                if response == .alertFirstButtonReturn {
+                    model.perform(action)
+                }
+            }
+        } else if alert.runModal() == .alertFirstButtonReturn {
+            model.perform(action)
+        }
     }
 
     private func profileLayoutDetails(
