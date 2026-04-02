@@ -2,6 +2,30 @@ import Testing
 @testable import LayoutRecallApp
 @testable import LayoutRecallKit
 
+@MainActor
+@Test
+func settingsPresenterCreatesReusableWindowAndTracksRequestedPane() throws {
+    let model = AppModel(autoBootstrap: false)
+    let navigation = SettingsNavigationState()
+    let presenter = SettingsWindowPresenter(model: model, navigation: navigation)
+
+    presenter.show(.diagnostics)
+    let firstWindow = try #require(presenter.window)
+
+    #expect(navigation.selectedPane == .general)
+    #expect(navigation.isDiagnosticsSectionExpanded == true)
+    #expect(firstWindow.title == L10n.t("action.settings"))
+
+    presenter.show(.profiles)
+    let secondWindow = try #require(presenter.window)
+
+    #expect(firstWindow === secondWindow)
+    #expect(navigation.selectedPane == .profiles)
+    #expect(navigation.isDiagnosticsSectionExpanded == false)
+
+    secondWindow.close()
+}
+
 @Test
 func settingsNavigationKeepsAcceptedThreePaneIA() {
     #expect(SettingsPane.primaryNavigationPanes == [.restore, .profiles, .general])

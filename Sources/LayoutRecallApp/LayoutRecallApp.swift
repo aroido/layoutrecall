@@ -21,7 +21,7 @@ struct LayoutRecallApp: App {
         let bootstrapCoordinator = BootstrapCoordinator()
         let existingInstanceCoordinator = ExistingInstanceCoordinator()
         let settingsNavigation = SettingsNavigationState()
-        let settingsWindowPresenter = SettingsWindowPresenter(navigation: settingsNavigation)
+        let settingsWindowPresenter = SettingsWindowPresenter(model: model, navigation: settingsNavigation)
         let menuHarnessWindowCoordinator = MenuHarnessWindowCoordinator()
         let startupWindowPresenter = StartupWindowPresenter()
         let openSettingsOnLaunch = RuntimeLaunchArguments.contains("--open-settings-on-launch")
@@ -71,10 +71,6 @@ struct LayoutRecallApp: App {
             LayoutRecallCommands(
                 openSettings: { settingsWindowPresenter.show() }
             )
-        }
-
-        Settings {
-            SettingsView(model: model, navigation: settingsNavigation)
         }
     }
 }
