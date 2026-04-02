@@ -62,35 +62,28 @@ This matrix normalizes them into a single user-observable state model and explic
 
 | Action | Current labels / entrypoints | Purpose | Canonical classification |
 | --- | --- | --- | --- |
-| Save Current Layout | `Save`, `Save Current Layout`, `Save first baseline`, `Save another baseline` | Capture the current display arrangement as a profile. | Core runtime action |
-| Fix Now | `Fix Now` | Run the best-match manual restore immediately. | Core runtime action |
-| Apply Layout | profile `Apply Layout`, quick-switch profile restore | Restore a specific saved profile. | Core runtime action |
-| Show Numbers | `Show Numbers`, identify displays | Overlay display identifiers for mapping/verification. | Core runtime action |
-| Swap Positions | `Swap Positions`, `Swap` | Apply a simple swap plan for supported layouts. | Core runtime action |
-| Install displayplacer | `Install displayplacer` | Unblock real restore execution. | Support action |
-| Enable Automatic Restore | `Enable Automatic Restore` | Re-enable the app-wide automatic restore policy. | Policy action |
-| Toggle Ask Before Restore | `Ask Before Restore` | Require manual confirmation before a safe auto restore proceeds. | Policy action |
-| Rename Profile | rename profile UI | Improve profile clarity. | Management action |
-| Delete Profile | delete profile UI | Remove a no-longer-needed profile. | Management action |
-| Adjust Confidence Threshold | profile threshold slider | Tune match strictness per profile. | Management action |
-| Set Shortcuts | shortcuts pane | Bind hotkeys for common recovery actions. | Support action |
-| Toggle Launch at Login | general pane toggle | Make the app available automatically after login. | Support action |
-| Check / Install / Skip Update | updates controls | Manage in-app updates. | Support action |
-| Open Diagnostics | restore shortcut / embedded diagnostics section | Inspect evidence and support files. | Support action |
+| Save current layout | Save Profile | `saveCurrentLayout()` / `.saveNewProfile` | Menu convenience + Profiles canonical home |
+| Restore best match now | `Fix Now` / `Restore Now` (unresolved label) | `fixNow()` / `.fixNow` | Menu + Restore |
+| Restore a specific profile | `Apply Layout` / `Apply Profile` (unresolved label) | `restoreProfile(_:)` | Profiles |
+| Show overlay mapping | Show Numbers / Identify Displays | `identifyDisplays(for:)` | Menu utility + Restore reference context + Profiles canonical home |
+| Reposition simple layouts | Swap display positions (label unresolved) | `swapLeftRight()` | Menu + Restore |
+| Turn on automation | Enable Auto Restore | `setAutoRestore(true)` | Menu + Restore |
+| Install dependency | Install Dependency | `installDisplayplacer()` | Menu + Restore |
+| Open diagnostics context | Open Diagnostics | settings-navigation only | Menu shortcut + General > Diagnostics |
 
 ## Explicit contradictions and duplicate semantics
 
 ### 1. Five-pane docs vs three-pane implementation
 
-- Docs (`README`, `PRD`, `SPEC`) still describe a **five-pane settings window**.
-- Implementation exposes only **three primary panes** in the sidebar and nests **Shortcuts** + **Diagnostics** under **General**.
-- Result: the mental model for where features live is inconsistent before a user even opens settings.
+### 2. `Fix Now` vs `Restore Now`
+- **Why it exists:** code/tests and some docs center `Fix Now`, while some reviewers prefer `Restore Now` for future-facing clarity.
+- **Consensus:** **Unresolved.** Keep the split explicit in the packet and treat rename work as phase 2.
 
 ### 2. `Fix Now` vs `Apply Layout`
 
-- `Fix Now` means “restore the best inferred current match.”
-- `Apply Layout` means “restore this specific saved profile.”
-- Both ultimately execute restore commands, but the difference in intent is not stated clearly enough in docs.
+### 4. Swap position control visible when unavailable
+- **Why it exists:** `showsSwapDisplaysControl` returns true in many states to explain availability via help text.
+- **Consensus:** Keep the control visible only when it teaches something useful; if later simplified, prefer a visible disabled control in Restore, not a surprise hidden action.
 
 ### 3. `Show Numbers` vs `identify displays`
 
@@ -109,27 +102,13 @@ This matrix normalizes them into a single user-observable state model and explic
 - While installing, the primary button still maps to the install action but is disabled.
 - This works mechanically, but the IA should treat installation as a **status with progress** rather than as a fresh available action.
 
-## Chosen normalized state model for future work
+1. Add explicit UX copy for the `No Displays` substate.
+2. Decide whether `Manual Recovery Available` needs a clearer user-facing name.
+3. Remove or expose per-profile auto-restore so the state model stops implying both scopes.
 
-### Primary runtime states to keep
 
-- No Profiles
-- Dependency Missing
-- No Match
-- Low Confidence
-- Review Before Restore
-- Automatic Restore Disabled
-- Manual Layout Override
-- Ready
-- Restore Failed
+## Additional reviewed contradictions to keep explicit
 
-### Secondary diagnostic states to retain internally and expose contextually
-
-- Installing Dependency
-- No Displays
-
-## Phase 2 follow-up candidates (not part of definition approval)
-
-- Promote `Restore Failed` and `No Displays` into first-class visible states instead of collapsing both into generic manual recovery.
-- Rewrite menu/help copy so each runtime state has one unique recommended next action.
-- Align diagnostics labels with the chosen canonical action names.
+1. **Settings IA contradiction:** docs historically describe five conceptual areas, while shipped sidebar navigation is currently 3 top-level panes.
+2. **Swap support contradiction:** some copy implies two-display-only behavior, while current code/UI logic allows 2 or 3 displays.
+3. **NoDisplays / RestoreFailed surfacing:** current state model can collapse them into generic manual recovery, but reviewers asked to keep open whether they need first-class user-facing states.
