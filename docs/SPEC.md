@@ -1,225 +1,187 @@
 # LayoutRecall Product Specification
 
-Status: Working baseline for the 2.0 overnight program  
-Last updated: 2026-04-01
+Status: Phase 1B simplified baseline  
+Last updated: 2026-04-02
 
-## 1. Purpose
+## 1. Exact user problem
 
-LayoutRecall is a macOS menu bar utility that detects disruptive display changes and restores a previously saved layout when the connected monitor set matches a known workspace with high confidence.
+A user with a repeatable multi-display desk already knows the layout they want back. After sleep, wake, or reconnect, macOS can return monitors in the wrong order or position. The product's job is to restore that one known layout safely and quickly.
 
-This specification reflects the **current implemented baseline**, not an earlier scaffold plan. Its job is to document what exists today, where the product intentionally draws safety boundaries, and which areas are the best candidates for the next improvement waves.
+## 2. Product definition
 
-## 2. Product goals
+LayoutRecall is a menu bar recovery utility for saved monitor layouts.
 
-### Primary goals
+It is intentionally narrower than a display-management suite. The app should help the user:
+- save the desired layout once
+- restore it automatically when the match is trustworthy
+- restore it manually when trust is lower
+- understand why the app did or did not act
 
-- Detect meaningful display reconfiguration events with low noise.
-- Match the current monitor set against saved profiles safely.
-- Restore automatically only when confidence is high enough to trust the action.
-- Keep manual recovery fast and understandable when automation is unsafe.
-- Make the menu bar surface trustworthy enough for daily use.
+## 3. Core user problem statement
 
-### Secondary goals
+> "My desk came back wrong. I want my saved layout back now, and I only want the app to do it automatically when it is clearly safe."
 
-- Preserve diagnostics that explain recent decisions and failures.
-- Keep setup friction manageable even when `displayplacer` is missing.
-- Support daily-driver quality for common dual- and triple-monitor desks.
+Everything in the product should support that job directly or be demoted.
 
-## 3. Current implemented baseline
+## 4. Core product capabilities to keep
 
-The repository already includes the following real behavior:
+### 4.1 Saved profile
+- Save the current layout as a profile
+- Rename and delete profiles
+- Tune confidence threshold per profile
 
-### Runtime and recovery pipeline
+### 4.2 Automatic restore
+- Watch display events
+- Match current displays against saved profiles
+- Restore automatically only when threshold and dependency conditions are satisfied
 
-- live display snapshot capture using CoreGraphics
-- real display reconfiguration callback registration
-- wake notification monitoring
-- debounce before reevaluating a hardware change burst
-- confidence-based profile matching
-- automatic restore when the best match clears the active threshold
-- manual restore entrypoints for `Fix Now` and direct `Apply Layout`
-- post-restore verification against expected origins
+### 4.3 Manual restore
+- Provide one primary manual recovery action: **Restore Now**
+- Provide profile-specific restore inside Profiles via **Apply Layout**
 
-### Profile and diagnostics surface
+### 4.4 Trust and support
+- Show current restore state
+- Show dependency readiness
+- Show confidence/match context
+- Record diagnostics
+- Provide `Show Numbers` as a support utility
 
-- save current layout as a profile
-- rename and delete profiles
-- per-profile confidence threshold editing
-- per-profile auto-restore toggle
-- `Show Numbers` to map profile order to physical displays
-- persisted diagnostics with action, score, execution, and verification fields
-- runtime snapshot details in settings
+## 5. Demoted or non-core capabilities
 
-### General app capabilities
+These may remain in the product, but they are not part of the main value proposition:
 
-- launch at login via `SMAppService`
-- global shortcuts
-- English / Korean / System language choice
-- update checks, skip-version handling, and install flow plumbing
-- automatic dependency installation path for `displayplacer`
+- `Swap Positions` — advanced/manual fallback utility
+- keyboard shortcuts — convenience only
+- launch at login — preference only
+- updates — maintenance only
+- language selection — preference only
 
-## 4. Architecture snapshot
+These should not shape the primary IA or PRD story.
 
-### Main modules
+## 6. Removed from baseline truth
 
-- `LayoutRecallApp`
-  - SwiftUI menu bar and settings surfaces
-  - `AppModel` orchestration and user-triggered actions
-  - presentation-state mapping for trust, confidence, and recovery affordances
-- `LayoutRecallKit`
-  - display models and persistence
-  - profile matching and restore decisions
-  - display event monitoring, snapshot reading, restore execution, verification, and diagnostics
+The following should not be described as baseline supported behavior:
 
-### Key services
+- per-profile auto-restore as an active supported product model
+- five equal-weight settings panes as the current implemented IA
+- broad complex-layout automation beyond the saved-layout recovery job
 
-- `DisplaySnapshotReader` — reads live display state from CoreGraphics
-- `CGDisplayEventMonitor` — listens for reconfiguration and wake events
-- `ProfileMatcher` — scores a live display set against saved profiles
-- `RestoreCoordinator` — decides whether to auto-restore, stay manual, or prompt profile creation
-- `DisplayplacerCommandBuilder` — generates restore commands from saved layouts
-- `DisplayplacerRestoreExecutor` — runs restore commands and captures command results
-- `RestoreVerifier` — re-reads displays after restore and compares expected origins
-- `DiagnosticsLogger` — persists a capped recent history
+## 7. Information architecture
 
-## 5. User-facing behavior
+## 7.1 Menu bar
 
-## 5.1 Menu bar surface
+Primary runtime surface.
 
-The menu bar is the primary runtime surface and should answer four questions quickly:
+Responsibilities:
+- state summary
+- primary manual recovery CTA
+- Auto Restore control
+- minimal utilities
 
-1. Is LayoutRecall healthy right now?
-2. Did it find a trustworthy profile match?
-3. If it did not auto-restore, why not?
-4. What is the next best action for the user?
+The menu should prioritize:
+1. current state
+2. next best action
+3. reference profile context
+4. supporting evidence only when needed
 
-Current surface elements:
+## 7.2 Settings
 
-- status title and subtitle
-- evidence pills for dependency, display count, and confidence
-- primary action when intervention is needed
-- quick actions for save, identify, manage profiles, and recovery
+Canonical settings structure:
+- **Restore**
+- **Profiles**
+- **General**
 
-## 5.2 Settings information architecture
+### Restore
+- status summary
+- Auto Restore
+- dependency state
+- recommended action
+- restore comparison preview
 
-The settings window currently has five panes:
+### Profiles
+- save profile
+- manage profiles
+- apply layout
+- show numbers
+- threshold tuning
 
-- **Restore** — automatic restore state, dependency readiness, recommended actions
-- **Profiles** — save/manage profiles, thresholds, apply layout, identify displays
-- **Shortcuts** — keyboard shortcuts for restore actions
-- **Diagnostics** — latest decision plus recent capped history
-- **General** — launch at login, updates, preferred language
+### General
+- diagnostics
+- launch at login
+- updates
+- language
+- shortcuts
+- advanced preferences
 
-This is already a reasonable foundation for 2.0 work; improvements should focus on clarity and trust rather than adding settings volume without evidence.
+## 8. Canonical actions
 
-## 6. Safety and trust model
+### Core actions
+- **Save Profile**
+- **Restore Now**
+- **Apply Layout**
+- **Auto Restore**
+
+### Support utilities
+- **Show Numbers**
+- **Open Diagnostics**
+- **Install displayplacer**
+
+### Advanced/manual fallback
+- **Swap Positions**
+
+## 9. Safety model
 
 The product is intentionally conservative.
 
-### Current safety rules
+### Rules
+- no automatic restore with no displays
+- no automatic restore with no saved profiles
+- no automatic restore below threshold
+- no automatic restore when dependency is missing
+- no automatic restore when Auto Restore is off
 
-- no automatic restore when there are no displays or no profiles
-- no automatic restore when the best profile is below threshold
-- no automatic restore when app-level automatic restore is disabled
-- no automatic restore when `displayplacer` is unavailable
-- diagnostics should capture both successful actions and blocked decisions
-
-### Product principle
+### Principle
 
 Prefer safe false negatives over unsafe false positives.
 
-If the app is not confident enough to move monitors automatically, it should explain the reason and surface the most relevant manual action instead.
+If confidence is weak, the product should stop, explain why, and offer **Restore Now** instead of guessing.
 
-## 7. Known limitations
+## 10. Non-goals
 
-These are current boundaries, not necessarily bugs:
+LayoutRecall should not optimize for:
+- every possible display arrangement edge case
+- broad layout manipulation features
+- being a monitor management control panel
+- replacing `displayplacer`
+- expanding settings/navigation for low-frequency utilities
 
-- `displayplacer` remains the execution engine for real layout changes.
-- Automatic dependency installation depends on Homebrew/bootstrap success.
-- `Swap Positions` is intentionally limited to simpler supported layouts.
-- Four-plus-display rearrangement remains a manual/review-heavy area.
-- Some live hardware and UI harness tests are opt-in because they require a real environment.
+## 11. Current contradictions resolved for docs
 
-## 8. Code quality review
+1. **3-pane vs 5-pane**: current and canonical product IA is 3-pane for simplicity.
+2. **Per-profile auto-restore**: not baseline behavior.
+3. **Core vs utility actions**: `Restore Now` is core; `Swap Positions` is utility.
+4. **Primary product story**: saved-layout recovery, not display management.
 
-The current codebase is in good shape for incremental product work.
+## 12. Remaining justified unresolved item
 
-### Strengths observed
+Only one naming item remains soft internally:
+- whether future code/test cleanup should rename any remaining `Fix Now` references to `Restore Now`
 
-- `AppModel` uses dependency injection consistently enough to keep app behavior testable.
-- Restore logic is separated into matcher, coordinator, executor, and verifier layers.
-- Diagnostics and persistence paths are isolated behind protocols.
-- Localization, update, restore, and settings behavior already have broad automated coverage.
+This does **not** block the simplified product definition because the product-level action is now specified as **Restore Now**.
 
-### Main quality concerns
+## 13. Verification baseline
 
-- Product documentation was materially behind implementation, which makes planning noisier than it should be.
-- Some user trust behaviors are spread across presentation logic and localization strings, so future edits should preserve terminology consistency.
-- Dependency bootstrap relies on shelling out to Homebrew install flows, which is practical but deserves careful user-facing explanation.
-
-## 9. Verification and coverage baseline
-
-The repository already contains useful automated coverage in these areas:
-
-- app-model orchestration and UI presentation behavior
-- profile persistence and settings persistence
-- diagnostics truncation/persistence
-- profile matching and restore decisions
-- restore verification logic
-- localization
-- command generation
-- view snapshot smoke coverage
-- optional live hardware and UI harness smoke paths
-
-Local completion should continue to use:
+Local completion uses:
 
 ```bash
 ./scripts/run-ai-verify --mode full
 ```
 
-## 10. 2.0 improvement priorities
+## 14. Acceptance criteria for follow-up work
 
-The next waves should build on the current baseline instead of rewriting it.
-
-### Priority 1: restore trust and explainability
-
-- make confidence and dependency state easier to understand at a glance
-- explain blocked auto-restore decisions more crisply
-- improve diagnostic summaries so users know what happened without reading raw details
-
-### Priority 2: profile management ergonomics
-
-- reduce friction when multiple profiles exist
-- make direct apply, identify, and threshold tuning feel more obvious
-- tighten profile naming and reference-layout cues
-
-### Priority 3: manual recovery clarity
-
-- document exactly when `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` should be used
-- better communicate unsupported complex-layout cases
-
-### Priority 4: setup and resilience polish
-
-- make dependency setup messaging calmer and more explicit
-- continue hardening around restore verification failures and transient event bursts
-- improve user confidence in launch-at-login and update-management flows
-
-## 11. Suggested acceptance criteria for the next program waves
-
-Any 2.0 wave should satisfy all of the following:
-
-- keep the branch shippable after the wave
-- preserve the conservative auto-restore safety model
-- update user-facing docs when behavior changes materially
-- keep automated verification green
-- improve user trust, clarity, or recoverability in a visible way
-
-## 12. Recommended documentation posture
-
-Going forward, the docs should describe:
-
-- the **current implemented baseline**
-- the **current known limits**
-- the **next highest-value polish work**
-
-They should not drift back into describing the app as an unimplemented scaffold when the code already delivers real behavior.
+Any follow-up implementation should:
+- preserve the saved-layout recovery core
+- reduce overlap rather than add new product pillars
+- keep docs aligned with shipped behavior
+- keep `./scripts/run-ai-verify --mode full` passing
+- make the product simpler or clearer, not merely larger
