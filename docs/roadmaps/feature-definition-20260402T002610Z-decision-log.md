@@ -2,197 +2,151 @@
 
 Lab: `feature-definition-20260402T002610Z`
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1 only)
+Status: Definition-phase consensus artifact (phase 1B simplification pass)
 
-## Council composition used for this definition sprint
+## Phase 1B objective
 
-- **PM facilitator:** scope framing, artifact structure, convergence gate
-- **Analyst:** feature normalization and terminology cleanup
-- **Designer:** menu/settings IA and user-flow clarity
-- **Engineer:** implementation-feasibility and state-model integrity
-- **Critic / skeptical user:** ambiguity, trust, and discoverability objections
-- **Verifier:** completeness and implementation-readiness check
+Sharpen the product definition around simplicity and direct usability.
 
-## Audit summary
+Rule used in this pass:
 
-The product is already materially implemented, but the **definition layer has drifted**:
+> If a feature does not directly help the user save a known-good layout, restore it safely, or understand why restore did or did not happen, it should be demoted or treated as a non-goal.
 
-- docs still teach a five-pane settings model while code currently exposes three primary sections
-- user-facing action names are not yet normalized across menu, settings, docs, and internal state language
-- the state model knows more than the UI surfaces explicitly communicate (for example `restoreFailed` and `noDisplays` are collapsed into generic manual recovery)
+## Accepted decisions
 
-## Decision ledger
+### 1. Narrow the core product problem explicitly
 
-### Accepted decisions
+**Accepted.**
 
-#### 1. Normalize the recovery action vocabulary
+Canonical problem statement:
+- LayoutRecall helps a user recover a previously saved multi-display desk layout after macOS sleep, wake, dock reconnect, or identical-monitor shuffling.
 
-**Accepted canonical terms**
+Why accepted:
+- It is concrete.
+- It matches the implemented product better than a broad “display management” framing.
+- It reduces pressure to keep unrelated convenience features in the headline spec.
+
+### 2. Define the smallest required jobs only
+
+**Accepted.**
+
+Required jobs:
+1. Save a known-good layout.
+2. Detect when the current arrangement drifted.
+3. Restore safely automatically or with one clear manual action.
+4. Explain why restore did or did not happen.
+
+Why accepted:
+- This is the minimum loop that still delivers the product’s value.
+- It gives a hard test for whether a feature belongs in the core spec.
+
+### 3. Keep only five features in the core product definition
+
+**Accepted core set**
 - Save Current Layout
 - Automatic Restore
-- Ask Before Restore
 - Fix Now
-- Apply Layout
-- Show Numbers
-- Swap Positions
+- Restore Status & Evidence
 - Install displayplacer
 
-**Rationale**
-- Keeps user-facing verbs short and concrete.
-- Preserves familiarity with the current menu labels where they are already good.
-- Separates “best inferred recovery” (`Fix Now`) from “chosen specific profile restore” (`Apply Layout`).
+Why accepted:
+- These are the smallest capabilities that still make the product real and trustworthy.
+- Everything else is either supporting, convenience, or out of scope.
 
-**Consensus**
-- PM: Accept
-- Designer: Accept
-- Engineer: Accept
-- Critic: Accept, with request to explain the `Fix Now` vs `Apply Layout` distinction explicitly in docs and UI copy
+### 4. Demote overlapping or secondary recovery features
 
-#### 2. Adopt an explicit 5-section settings IA as the canonical model
+**Accepted demotions**
+- `Apply Layout` = supporting profile-management action, not a headline feature
+- `Show Numbers` = supporting trust utility, not a headline feature
+- `Swap Positions` = constrained convenience fallback, not a headline feature
+- thresholds / diagnostics / profile management = supporting surfaces, not the product core
+
+Why accepted:
+- The product is sharper when it promises one main recovery loop instead of many near-overlapping “fix” actions.
+- This keeps the PRD/SPEC from reading like a feature buffet.
+
+### 5. Keep the shipped 3-primary-section settings model in the definition
 
 **Accepted IA**
 - Restore
 - Profiles
-- Shortcuts
-- Diagnostics
 - General
 
-**Rationale**
-- Diagnostics and Shortcuts are too important to bury under General.
-- This aligns docs and future implementation around one clear map.
-- It reduces the “General as junk drawer” risk.
+Supporting subsections remain nested under General.
 
-**Consensus**
-- PM: Accept
-- Designer: Accept
-- Engineer: Accept
-- Critic: Accept, provided diagnostics remains reachable contextually from Restore too
+Why accepted:
+- It matches the actual current app.
+- It is simpler than promoting every supporting surface to top-level navigation.
+- It avoids inventing a larger IA just to honor legacy docs.
 
-#### 3. Keep the menu as the runtime trust + recovery surface
+### 6. Make explicit non-goals part of the spec
 
-**Accepted scope for menu**
-- status/evidence
-- one primary next action
-- fast runtime actions
-- fast links to deeper settings/diagnostics
+**Accepted non-goals**
+- full display-management suite
+- broad 4+ display automatic rearrangement promise
+- cloud sync / cross-machine sync
+- per-app window placement
+- complex profile-rule engine
+- native restore engine replacement for `displayplacer` in this phase
 
-**Rationale**
-- The menu is strongest when it answers “what happened?” and “what should I do next?” quickly.
-- Deep management and support workflows belong in settings.
+Why accepted:
+- Product clarity improves when expansion ideas are stated as non-goals rather than left ambiguous.
 
-**Consensus**
-- PM: Accept
-- Designer: Accept
-- Engineer: Accept
-- Critic: Accept, with warning not to hide Show Numbers or Apply Layout too deeply
+## Rejected alternatives
 
-#### 4. Preserve the conservative safety model
+### Rejected: define the product by completeness instead of focus
 
-**Accepted rule**
-- Prefer safe false negatives over unsafe false positives.
+Why rejected:
+- It blurs the core user problem.
+- It turns secondary capabilities into false obligations.
 
-**Rationale**
-- This rule is already embedded in the implemented restore logic and should remain the governing principle.
-- It keeps the product differentiated as trustworthy rather than merely aggressive.
+### Rejected: promote Diagnostics and Shortcuts to first-class top-level settings sections
 
-**Consensus**
-- PM: Accept
-- Designer: Accept
-- Engineer: Accept
-- Critic: Accept
+Why rejected:
+- They matter, but they support the core loop rather than define it.
+- The simpler shipped 3-section model is easier to explain and use.
 
-#### 5. Treat the current work as phase 1 definition only
+### Rejected: keep `Swap Positions` as a core product feature
 
-**Accepted rule**
-- No UI/code restructuring is part of this approval artifact set.
-- Implementation proposals must be separated clearly as phase 2 follow-up.
+Why rejected:
+- It solves a narrower subset of desks.
+- It overlaps with the main recovery story and should not compete with it in headline docs.
 
-**Rationale**
-- The brief explicitly called for definition before implementation.
-- This keeps the council from silently sliding into ad hoc redesign work.
+### Rejected: treat update management, login item, language, and shortcuts as product-defining features
 
-**Consensus**
-- PM: Accept
-- Designer: Accept
-- Engineer: Accept
-- Critic: Accept
+Why rejected:
+- These are app qualities and conveniences, not the product’s central promise.
 
-### Rejected alternatives
+### Rejected: leave non-goals implicit
 
-#### Rejected: let PM freeze the feature model unilaterally
+Why rejected:
+- Implicit non-goals invite scope creep and ambiguous PRD/SPEC language.
 
-**Why rejected**
-- The brief explicitly forbids PM-only finalization.
-- The current drift exists partly because definitions were not kept cross-functionally aligned.
+## Critic / verifier objections captured
 
-#### Rejected: keep the current 3-section settings IA as the official long-term model
+- “If everything stays first-class, the product never explains what actually matters most.”
+- “`Swap Positions` is useful, but it should not compete with the main recovery loop in the product story.”
+- “A trust-centric utility should not force users to parse a bloated settings IA to understand the core behavior.”
+- “Docs should not imply a broader display-management ambition than the code and safety model actually support.”
 
-**Why rejected**
-- It hides Diagnostics and Shortcuts too deeply for a trust-centric utility.
-- It perpetuates drift between docs and implementation.
+## Unresolved items worth keeping
 
-#### Rejected: collapse `Fix Now` and `Apply Layout` into a single restore label everywhere
+These remain acceptable unresolved items because they are naming/copy issues, not core product-definition gaps:
 
-**Why rejected**
-- They represent two different user intents.
-- Removing the distinction would make manual recovery less understandable, not more.
+1. Whether `Fix Now` should eventually be renamed to `Restore Now` or `Recover Now`
+2. Whether `manual layout override` needs friendlier public wording
 
-#### Rejected: treat Diagnostics as a purely support-only internal surface
+## Resolved by this pass
 
-**Why rejected**
-- Diagnostics is part of the trust story, not just support tooling.
-- The product promise explicitly depends on visible evidence.
+1. **Core problem:** now explicit
+2. **Minimum required jobs:** now explicit
+3. **Core vs supporting vs convenience features:** now explicit
+4. **Non-goals:** now explicit
+5. **Settings IA direction:** resolved in favor of shipped simplicity, not expanded navigation
 
-## Unresolved questions
+## Recommendations to carry into the final packet
 
-### 1. Should `Restore Failed` become a first-class top-level menu state in phase 2?
-
-- **Current situation:** internal decision context exists, but UI collapses it into generic manual recovery.
-- **Open trade-off:** more explicit trust messaging vs. added state complexity.
-
-### 2. Should `No Displays` get a distinct user-facing empty-hardware state?
-
-- **Current situation:** internal context exists, but UI falls back to generic manual recovery semantics.
-- **Open trade-off:** better root-cause clarity vs. more state variants in menu copy.
-
-### 3. How visible should Show Numbers be in the menu once terminology is normalized?
-
-- **Current situation:** it may appear inside More Actions or in profile management.
-- **Open trade-off:** easier discoverability vs. menu crowding.
-
-### 4. Should Ask Before Restore remain in Restore only, or also appear as a trust summary in the menu?
-
-- **Current situation:** policy lives in settings with runtime state reflected indirectly.
-- **Open trade-off:** clearer trust posture vs. more menu density.
-
-## Critic objections logged explicitly
-
-- “Manual recovery is too much of a catch-all. If the app knows a restore failed, say that.”
-- “If Diagnostics is core to trust, don’t make me go hunting under General.”
-- “`Fix Now` and `Apply Layout` are both restores; if you keep both, their difference must be explained.”
-- “The docs should not teach a different settings map from the one the product team intends to ship.”
-
-## Verifier checklist
-
-### Required artifacts completed
-
-- Feature catalog: **completed**
-- State/action matrix: **completed**
-- Surface map: **completed**
-- Decision log: **completed**
-
-### Implementation readiness assessment
-
-Ready for phase 2 planning once the team treats the following as approved inputs:
-
-1. canonical feature names
-2. chosen 5-section settings IA
-3. canonical feature-home mapping
-4. normalized runtime-state vocabulary
-
-## Phase 2 follow-up outline (separate from this definition approval)
-
-1. Update menu/settings/docs copy to use the accepted terminology consistently.
-2. Refactor settings navigation from current 3-section structure to the chosen 5-section IA.
-3. Promote `Restore Failed` and possibly `No Displays` into clearer surfaced states if design review confirms the added complexity is worthwhile.
-4. Re-run full verification after implementation work begins.
+1. Rewrite PRD/SPEC intros around the narrow recovery problem first.
+2. Split features into **core**, **supporting**, and **convenience** instead of listing everything together.
+3. Remove any PRD/SPEC language that makes `Swap Positions`, updates, shortcuts, or language selection sound core to the product identity.
+4. Keep the final unresolved list short; do not manufacture extra open questions once the keep/non-goal framing is clear.
