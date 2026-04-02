@@ -1,60 +1,163 @@
-# LayoutRecall Simplicity Decision Log
+# LayoutRecall Feature Definition Decision Log
 
-Lab: `feature-definition-20260402T002610Z`
+Lab: `feature-definition-20260402T002610Z`  
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1B simplification pass)
 
-## Phase 1B framing
+## Council lanes used for this definition sprint
 
-This pass optimizes for product simplicity and usability, not feature completeness.
-A feature is kept only if it directly serves the core user problem:
+- PM facilitator
+- Analyst / feature-definition owner
+- macOS UX / IA designer
+- engineer / state-model reviewer
+- critic / skeptical virtual user
+- verifier / implementation-readiness reviewer
 
-> Restore one known display layout safely and quickly after macOS scrambles the desk.
+## Audit findings that forced this run
 
-## Exact user problem statement
+1. Product docs had drifted from the current shipped UI and behavior.
+2. Settings IA was described as five panes in docs, but shipped as three top-level panes with nested advanced/support sections.
+3. Per-profile auto-restore language remained in docs even though the code now normalizes behavior to a global app-level mode.
+4. Runtime actions (`Fix Now`, `Apply Layout`, `Swap Positions`, `Identify Displays`) existed, but their canonical ownership was not written down in one place.
 
-The user already knows the layout they want. They do not need a toolbox for many display experiments. They need a trustworthy way to get one saved layout back.
+## Consensus gate
 
-## Keep / merge / remove-or-demote decisions
+A definition is approved only when PM, Designer, and Engineer all agree.
 
-| ID | Topic | Decision | Rationale |
-| --- | --- | --- | --- |
-| K1 | `profile` terminology | Keep | Clearest single object name for the saved layout |
-| K2 | Auto Restore | Keep | Core value when trust is high |
-| K3 | Restore Now | Keep as the single primary manual recovery CTA | Simpler than competing recovery verbs |
-| K4 | Apply Layout | Keep, but only as the profile-specific restore action in Profiles | Useful, but not a separate product pillar |
-| K5 | Show Numbers | Keep as a support utility | Helps confirm mapping without expanding product scope |
-| K6 | 3-pane settings IA | Keep as canonical product IA | Simpler, matches shipped implementation, avoids inflating support/admin surfaces |
-| M1 | Recovery story | Merge around one core flow: save profile -> auto restore when safe -> Restore Now when not safe | Reduces duplicate recovery concepts |
-| M2 | Support surfaces | Merge diagnostics, shortcuts, updates, language, login into General | Keeps low-frequency functions out of the primary product story |
-| D1 | Swap Positions | Demote to advanced/manual fallback utility | Useful edge aid, not part of the core promise |
-| D2 | Per-profile autoRestore | Remove from baseline truth | Hidden/inconsistent behavior should not shape the product definition |
-| D3 | 5-pane IA as active target | Remove from current product truth | Adds complexity and keeps docs drift alive |
+| Decision | PM | Designer | Engineer | Result |
+| --- | --- | --- | --- | --- |
+| Use global automatic restore as the canonical baseline | Agree | Agree | Agree | **Approved** |
+| Use 3 top-level settings panes with nested Shortcuts/Diagnostics | Agree | Agree | Agree | **Approved** |
+| Keep `Fix Now` and `Apply Layout` as distinct actions with different intent | Agree | Agree | Agree | **Approved** |
+| Keep `Swap Positions` as a constrained manual fallback, not a general restore engine | Agree | Agree | Agree | **Approved** |
+| Separate implementation follow-up from definition approval | Agree | Agree | Agree | **Approved** |
 
-## Explicit non-goals
+## Accepted decisions
 
-- broad display-management feature expansion
-- advanced layout experimentation workflows
-- first-class support/admin surfaces competing with recovery surfaces
-- broad complex-layout automation promises
-- preserving existing behavior only because it already exists in code
+### 1. Automatic restore is app-level, not profile-level
 
-## Contradictions resolved in this pass
+**Accepted.**
 
-| Issue | Resolution |
-| --- | --- |
-| 5-pane docs vs 3-pane implementation | 3-pane is the canonical product IA |
-| `Fix Now` vs `Restore Now` drift | Product-level canonical action is `Restore Now`; legacy code/test naming can be cleaned later |
-| per-profile autoRestore field vs actual behavior | Do not document per-profile autoRestore as supported baseline behavior |
-| core feature vs utility sprawl | Utilities are retained only when they support the saved-layout recovery job |
-| `Swap Positions` prominence | Demoted from core feature to advanced/manual utility |
+Rationale:
+- The current code already normalizes legacy profile flags to global behavior.
+- A single runtime mode is easier to explain and safer to test.
+- Reintroducing profile-scoped restore rules would be a net-new product feature.
 
-## Remaining justified unresolved item
+### 2. Chosen settings IA: 3 top-level panes
 
-| ID | Topic | Why still open |
-| --- | --- | --- |
-| U1 | Cleanup scope for legacy `Fix Now` references in code/tests | Naming cleanup is implementation follow-up, not a blocking product-definition issue |
+**Accepted.**
 
-## Final editorial rule for follow-up work
+Chosen structure:
+- Restore
+- Profiles
+- General
+  - Shortcuts
+  - Diagnostics
 
-If a future change does not make the app better at safely restoring one known layout, it should be removed, merged, hidden, or explicitly treated as a non-goal.
+Rationale:
+- Matches the shipped sidebar behavior.
+- Better suits a menu-bar utility with a small number of high-frequency tasks.
+- Avoids a definition sprint turning into an unnecessary UI refactor.
+
+### 3. `Fix Now` and `Apply Layout` remain separate concepts
+
+**Accepted.**
+
+Canonical wording:
+- **Fix Now** = recover the current desk now using the best available runtime match.
+- **Apply Layout** = run a specific saved profile from profile management.
+
+Rationale:
+- The intents are distinct even if both eventually execute restore commands.
+- Keeping the names distinct reduces ambiguity between runtime recovery and profile administration.
+
+### 4. Diagnostics has one canonical home
+
+**Accepted.**
+
+Canonical home:
+- `General > Diagnostics`
+
+Deep-links allowed from:
+- Restore pane
+- Menu utility actions
+
+Rationale:
+- Keeps runtime surfaces lightweight.
+- Preserves a single support/history destination.
+
+### 5. `Swap Positions` stays limited
+
+**Accepted.**
+
+Rationale:
+- Current implementation is intentionally limited to supported 2- and 3-display desks.
+- Expanding it into a general layout editor would change the product promise.
+
+## Rejected alternatives
+
+### Rejected: restore the old 5-pane settings model as the canonical definition
+
+Why rejected:
+- Conflicts with current shipped navigation.
+- Adds UI churn without solving the main trust/clarity problem.
+
+### Rejected: revive per-profile auto-restore toggles in this definition set
+
+Why rejected:
+- Current implementation intentionally does not behave this way.
+- Would require fresh rule-precedence UX, persistence semantics, and tests.
+
+### Rejected: rename everything to one generic “Restore Now” action immediately
+
+Why rejected for this run:
+- The shipped split between `Fix Now` and `Apply Layout` is purposeful.
+- A naming rewrite would need user-copy validation and migration review.
+
+### Rejected: start implementation during the definition sprint
+
+Why rejected:
+- The brief requires definition artifacts first.
+- There was enough drift that implementation before alignment would be risky.
+
+## Critic objections logged explicitly
+
+- “If diagnostics, restore controls, and profile controls all compete in the same place, the menu becomes a junk drawer.”
+- “A per-profile auto-restore promise in docs is misleading if the shipped app only supports a global mode.”
+- “Five-pane documentation will create trust debt if the UI keeps showing only three.”
+- “`Fix Now` must not appear when the system has no profile or no dependency, or the app looks confused.”
+
+## Unresolved questions
+
+### 1. Should `Fix Now` stay named `Fix Now` long-term?
+
+Current call: keep it for this baseline.
+
+Open question:
+- Future user research may show that `Restore Now` or `Recover Now` is clearer, but that is not required to approve the feature model.
+
+### 2. Should Diagnostics ever return to a top-level sidebar pane?
+
+Current call: no.
+
+Open question:
+- If diagnostics volume grows substantially, revisit with evidence instead of silently drifting back to the older docs.
+
+### 3. How should manual-layout-override be described to end users?
+
+Current call: keep the behavior, but the public-facing label may need a friendlier phrase in a future copy pass.
+
+## Implementation-readiness verdict
+
+**Verifier verdict: ready for phase 2 planning, not for silent implementation shortcuts.**
+
+What is now concrete enough to build from:
+- canonical feature catalog
+- canonical state/action matrix
+- canonical menu/settings surface map
+- explicit accepted/rejected/unresolved log
+
+## Phase 2 follow-up (separate from this approval)
+
+1. Update PRD/SPEC/README to reflect the chosen 3-pane settings IA and global auto-restore mode.
+2. Review naming/copy consistency for `Fix Now`, `Apply Layout`, `Identify Displays`, and diagnostics hints.
+3. Add or update tests/docs that assert the chosen information architecture and feature ownership rules.
