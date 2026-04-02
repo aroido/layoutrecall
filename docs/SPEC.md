@@ -162,12 +162,10 @@ LayoutRecall should not optimize for:
 3. **Core vs utility actions**: `Restore Now` is core; `Swap Positions` is utility.
 4. **Primary product story**: saved-layout recovery, not display management.
 
-## 12. Remaining justified unresolved item
+## 12. Naming status
 
-Only one naming item remains soft internally:
-- whether future code/test cleanup should rename any remaining `Fix Now` references to `Restore Now`
-
-This does **not** block the simplified product definition because the product-level action is now specified as **Restore Now**.
+- User-facing product naming is standardized on **Restore Now**.
+- Internal compatibility identifiers may continue to use `fixNow` where needed for persistence or test continuity.
 
 ## 13. Verification baseline
 

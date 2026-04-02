@@ -325,14 +325,14 @@
 "event.type.wake" = "wake";
 "event.type.manual" = "manual";
 "event.type.restoreVerification" = "restore verification";
-"shortcut.fixNow.title" = "Fix Now";
+"shortcut.fixNow.title" = "Restore Now";
 "shortcut.fixNow.detail" = "Run the best matching saved profile immediately.";
 "shortcut.saveCurrentLayout.title" = "Save Profile";
 "shortcut.saveCurrentLayout.detail" = "Capture the current display arrangement as a saved profile.";
 "shortcut.swapLeftRight.title" = "Swap Positions";
 "shortcut.swapLeftRight.detail" = "Keep the main display in place and change the positions of the other displays.";
 "diagnostic.title.autoRestore" = "Automatic Restore";
-"diagnostic.title.fixNow" = "Fix Now";
+"diagnostic.title.fixNow" = "Restore Now";
 "diagnostic.title.manualRecovery" = "Manual Recovery";
 "diagnostic.title.savedCurrentLayout" = "Save Profile";
 "diagnostic.title.saveNewProfile" = "Save Profile";
@@ -357,7 +357,7 @@
 "launchAtLogin.enabled" = "Launch at login is enabled.";
 "launchAtLogin.disabled" = "Launch at login is disabled.";
 "launchAtLogin.requiresApproval" = "Launch at login requires user approval in System Settings.";
-"launchAtLogin.unsupported.macos" = "Launch at login requires macOS 13 or newer.";
+"launchAtLogin.unsupported.macos" = "Launch at login requires macOS 14 or newer.";
 "launchAtLogin.unsupported.bundle" = "Launch at login is unavailable for this app bundle.";
 "launchAtLogin.unsupported.unknown" = "Launch at login returned an unknown system status.";
 "settings.profileDisplayCountCompact" = "%lld displays";

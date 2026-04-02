@@ -93,7 +93,7 @@ If `displayplacer` is missing, LayoutRecall can guide installation from the app 
 
 ## Requirements
 
-- macOS 13 or later
+- macOS 14 or later
 - Apple Silicon is currently the primary tested target
 - `displayplacer` is required for actual restore commands
 

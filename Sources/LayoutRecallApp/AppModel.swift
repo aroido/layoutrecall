@@ -1,65 +1,74 @@
 import AppKit
-import Combine
 import CoreGraphics
-import LayoutRecallKit
 import Foundation
+import LayoutRecallKit
+import Observation
+
+struct AppSessionServices {
+    let store: any ProfileStoring
+    let settingsStore: any AppSettingsStoring
+    let diagnosticsStore: any DiagnosticsStoring
+    let snapshotReader: any DisplaySnapshotReading
+    let eventMonitor: any DisplayEventMonitoring
+    let commandBuilder: any DisplayCommandBuilding
+    let coordinator: RestoreCoordinator
+    let executor: any RestoreExecuting
+    let dependencyInstaller: any DependencyInstalling
+    let verifier: any RestoreVerifying
+    let loginItemManager: any LoginItemManaging
+    let shortcutManager: any ShortcutManaging
+    let updateChecker: any AppUpdateChecking
+    let updateInstaller: any AppUpdateInstalling
+    let updatePrompt: any AppUpdatePrompting
+    let displayIdentifier: any DisplayIdentifying
+    let terminateApplication: @MainActor () -> Void
+    let debounceNanoseconds: UInt64
+    let restoreCooldown: TimeInterval
+    let shouldBootstrapOnLaunch: Bool
+}
+
+struct AppSessionTaskState {
+    var debounceTask: Task<Void, Never>?
+    var restoreCooldownUntil: Date?
+    var installationTask: Task<Void, Never>?
+    var automaticInstallAttempted = false
+    var promptedUpdateVersion: String?
+    var hasBootstrapped = false
+    var pendingTerminationTasks: [UUID: Task<Void, Never>] = [:]
+    var manualRestoreExpectedOrigins: [DisplayOrigin]?
+    var manualRestoreActionTaken: String?
+}
 
 @MainActor
-final class AppModel: ObservableObject {
-    @Published private(set) var profiles: [DisplayProfile] = []
-    @Published private(set) var diagnostics: [DiagnosticsEntry] = []
-    @Published private(set) var statusLine = L10n.t("status.starting")
-    @Published private(set) var decisionLine = L10n.t("status.waitingSavedProfile")
-    @Published private(set) var dependencyLine = L10n.t("status.checkingDependency")
-    @Published private(set) var dependencyAvailable = false
-    @Published private(set) var installationInProgress = false
-    @Published private(set) var loginItemLine = L10n.t("status.checkingLoginItem")
-    @Published private(set) var lastCommand = ""
-    @Published private(set) var detectedDisplayCount = 0
-    @Published private(set) var currentDisplaySnapshots: [DisplaySnapshot] = []
-    @Published private(set) var latestDecision: RestoreDecision?
-    @Published private(set) var latestMatchedProfileName: String?
-    @Published private(set) var latestMatchScore: Int?
-    @Published private(set) var updateState: AppUpdateState = .idle
-    @Published private(set) var availableUpdate: AppRelease?
-    @Published var automaticUpdateChecksEnabled = true
-    @Published var autoRestoreEnabled = true
-    @Published var askBeforeAutomaticRestoreEnabled = false
-    @Published var launchAtLoginEnabled = false
-    @Published var preferredLanguageOption: AppLanguageOption = .system
-    @Published private(set) var restoreCommandInProgress = false
-    @Published private(set) var shortcuts = ShortcutSettings()
-    @Published private(set) var skippedReleaseVersion: String?
+@Observable
+final class AppSession {
+    var profiles: [DisplayProfile] = []
+    var diagnostics: [DiagnosticsEntry] = []
+    var statusLine = L10n.t("status.starting")
+    var decisionLine = L10n.t("status.waitingSavedProfile")
+    var dependencyLine = L10n.t("status.checkingDependency")
+    var dependencyAvailable = false
+    var installationInProgress = false
+    var loginItemLine = L10n.t("status.checkingLoginItem")
+    var lastCommand = ""
+    var detectedDisplayCount = 0
+    var currentDisplaySnapshots: [DisplaySnapshot] = []
+    var latestDecision: RestoreDecision?
+    var latestMatchedProfileName: String?
+    var latestMatchScore: Int?
+    var updateState: AppUpdateState = .idle
+    var availableUpdate: AppRelease?
+    var automaticUpdateChecksEnabled = true
+    var autoRestoreEnabled = true
+    var askBeforeAutomaticRestoreEnabled = false
+    var launchAtLoginEnabled = false
+    var preferredLanguageOption: AppLanguageOption = .system
+    var restoreCommandInProgress = false
+    var shortcuts = ShortcutSettings()
+    var skippedReleaseVersion: String?
 
-    private let store: any ProfileStoring
-    private let settingsStore: any AppSettingsStoring
-    private let diagnosticsStore: any DiagnosticsStoring
-    private let snapshotReader: any DisplaySnapshotReading
-    private let eventMonitor: any DisplayEventMonitoring
-    private let commandBuilder: any DisplayCommandBuilding
-    private let coordinator: RestoreCoordinator
-    private let executor: any RestoreExecuting
-    private let dependencyInstaller: any DependencyInstalling
-    private let verifier: any RestoreVerifying
-    private let loginItemManager: any LoginItemManaging
-    private let shortcutManager: any ShortcutManaging
-    private let updateChecker: any AppUpdateChecking
-    private let updateInstaller: any AppUpdateInstalling
-    private let updatePrompt: any AppUpdatePrompting
-    private let displayIdentifier: any DisplayIdentifying
-    private let terminateApplication: @MainActor () -> Void
-    private let debounceNanoseconds: UInt64
-    private let restoreCooldown: TimeInterval
-
-    private var debounceTask: Task<Void, Never>?
-    private var restoreCooldownUntil: Date?
-    private var installationTask: Task<Void, Never>?
-    private var automaticInstallAttempted = false
-    private var promptedUpdateVersion: String?
-    private var hasBootstrapped = false
-    private var pendingTerminationTasks: [UUID: Task<Void, Never>] = [:]
-    private var manualRestoreExpectedOrigins: [DisplayOrigin]?
-    private var manualRestoreActionTaken: String?
+    let services: AppSessionServices
+    var taskState = AppSessionTaskState()
 
     init(
         store: any ProfileStoring = ProfileStore(),
@@ -83,40 +92,28 @@ final class AppModel: ObservableObject {
         restoreCooldown: TimeInterval = 8,
         autoBootstrap: Bool = true
     ) {
-        self.store = store
-        self.settingsStore = settingsStore
-        self.diagnosticsStore = diagnosticsStore
-        self.snapshotReader = snapshotReader
-        self.eventMonitor = eventMonitor
-        self.commandBuilder = commandBuilder
-        self.coordinator = coordinator
-        self.executor = executor
-        self.dependencyInstaller = dependencyInstaller
-        self.verifier = verifier
-        self.loginItemManager = loginItemManager
-        self.shortcutManager = shortcutManager
-        self.updateChecker = updateChecker
-        self.updateInstaller = updateInstaller
-        self.updatePrompt = updatePrompt
-        self.displayIdentifier = displayIdentifier
-        self.terminateApplication = terminateApplication
-        self.debounceNanoseconds = debounceNanoseconds
-        self.restoreCooldown = restoreCooldown
-
-        if autoBootstrap {
-            Task {
-                await self.logStartup(
-                    "AppModel init autoBootstrap=true profilePath=\(self.profileStorePath) settingsPath=\(self.settingsStorePath)"
-                )
-                await bootstrapIfNeeded()
-            }
-        } else {
-            Task {
-                await self.logStartup(
-                    "AppModel init autoBootstrap=false profilePath=\(self.profileStorePath) settingsPath=\(self.settingsStorePath)"
-                )
-            }
-        }
+        services = AppSessionServices(
+            store: store,
+            settingsStore: settingsStore,
+            diagnosticsStore: diagnosticsStore,
+            snapshotReader: snapshotReader,
+            eventMonitor: eventMonitor,
+            commandBuilder: commandBuilder,
+            coordinator: coordinator,
+            executor: executor,
+            dependencyInstaller: dependencyInstaller,
+            verifier: verifier,
+            loginItemManager: loginItemManager,
+            shortcutManager: shortcutManager,
+            updateChecker: updateChecker,
+            updateInstaller: updateInstaller,
+            updatePrompt: updatePrompt,
+            displayIdentifier: displayIdentifier,
+            terminateApplication: terminateApplication,
+            debounceNanoseconds: debounceNanoseconds,
+            restoreCooldown: restoreCooldown,
+            shouldBootstrapOnLaunch: autoBootstrap
+        )
     }
 
     var hasPendingTerminationWork: Bool {
@@ -171,1251 +168,80 @@ final class AppModel: ObservableObject {
             }
         }
     }
+}
 
-    func fixNow() {
-        launchTrackedTask {
-            await self.performManualRestore()
-        }
-    }
-
-    func saveCurrentLayout() {
-        launchTrackedTask {
-            await self.performSaveCurrentLayout()
-        }
-    }
-
-    func installDisplayplacer() {
-        launchTrackedTask {
-            await self.installDependency(trigger: "manual-install", automatic: false)
-        }
-    }
-
-    func swapLeftRight() {
-        launchTrackedTask {
-            await self.performSwapLeftRight()
-        }
-    }
-
-    func checkForUpdatesNow() {
-        launchTrackedTask {
-            await self.checkForUpdates(userInitiated: true, promptIfAvailable: false)
-        }
-    }
-
-    func installAvailableUpdate() {
-        guard let availableUpdate else {
-            return
-        }
-
-        launchTrackedTask {
-            await self.installUpdate(availableUpdate)
-        }
-    }
-
-    func skipAvailableUpdateVersion() {
-        guard let availableUpdate else {
-            return
-        }
-
-        launchTrackedTask {
-            await self.markSkippedRelease(availableUpdate)
-        }
-    }
-
-    func clearSkippedUpdateVersion() {
-        skippedReleaseVersion = nil
-
-        launchTrackedTask {
-            await self.persistSettings()
-        }
-    }
-
+extension AppSession {
     func shortcutBinding(for action: ShortcutAction) -> ShortcutBinding? {
         shortcuts[action]
     }
+}
 
-    func setShortcut(_ binding: ShortcutBinding?, for action: ShortcutAction) {
-        if let binding {
-            for candidate in ShortcutAction.allCases where candidate != action && shortcuts[candidate] == binding {
-                shortcuts[candidate] = nil
-            }
-        }
+extension AppSession {
+    var store: any ProfileStoring { services.store }
+    var settingsStore: any AppSettingsStoring { services.settingsStore }
+    var diagnosticsStore: any DiagnosticsStoring { services.diagnosticsStore }
+    var snapshotReader: any DisplaySnapshotReading { services.snapshotReader }
+    var eventMonitor: any DisplayEventMonitoring { services.eventMonitor }
+    var commandBuilder: any DisplayCommandBuilding { services.commandBuilder }
+    var coordinator: RestoreCoordinator { services.coordinator }
+    var executor: any RestoreExecuting { services.executor }
+    var dependencyInstaller: any DependencyInstalling { services.dependencyInstaller }
+    var verifier: any RestoreVerifying { services.verifier }
+    var loginItemManager: any LoginItemManaging { services.loginItemManager }
+    var shortcutManager: any ShortcutManaging { services.shortcutManager }
+    var updateChecker: any AppUpdateChecking { services.updateChecker }
+    var updateInstaller: any AppUpdateInstalling { services.updateInstaller }
+    var updatePrompt: any AppUpdatePrompting { services.updatePrompt }
+    var displayIdentifier: any DisplayIdentifying { services.displayIdentifier }
+    var terminateApplication: @MainActor () -> Void { services.terminateApplication }
+    var debounceNanoseconds: UInt64 { services.debounceNanoseconds }
+    var restoreCooldown: TimeInterval { services.restoreCooldown }
+    var shouldBootstrapOnLaunch: Bool { services.shouldBootstrapOnLaunch }
 
-        shortcuts[action] = binding
-
-        launchTrackedTask {
-            await self.persistSettings()
-            await self.configureShortcuts()
-        }
+    var debounceTask: Task<Void, Never>? {
+        get { taskState.debounceTask }
+        set { taskState.debounceTask = newValue }
     }
 
-    func setAutoRestore(_ enabled: Bool) {
-        autoRestoreEnabled = enabled
-
-        launchTrackedTask {
-            await self.persistSettings()
-            await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-        }
+    var restoreCooldownUntil: Date? {
+        get { taskState.restoreCooldownUntil }
+        set { taskState.restoreCooldownUntil = newValue }
     }
 
-    func setAskBeforeAutomaticRestore(_ enabled: Bool) {
-        askBeforeAutomaticRestoreEnabled = enabled
-
-        launchTrackedTask {
-            await self.persistSettings()
-            await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.askBeforeRestorePreferenceChanged")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-        }
+    var installationTask: Task<Void, Never>? {
+        get { taskState.installationTask }
+        set { taskState.installationTask = newValue }
     }
 
-    func setLaunchAtLogin(_ enabled: Bool) {
-        launchAtLoginEnabled = enabled
-
-        launchTrackedTask {
-            do {
-                try await self.settingsStore.saveSettings(self.currentSettings())
-                let state = try await self.loginItemManager.setEnabled(enabled)
-                await MainActor.run {
-                    self.loginItemLine = state.description
-                    self.statusLine = enabled
-                        ? L10n.t("status.launchAtLoginSaved")
-                        : L10n.t("status.launchAtLoginCleared")
-                }
-            } catch {
-                await MainActor.run {
-                    self.loginItemLine = L10n.t("status.launchAtLoginUpdateFailed")
-                    self.statusLine = L10n.t("status.failedUpdateLaunchAtLogin", error.localizedDescription)
-                }
-            }
-        }
+    var automaticInstallAttempted: Bool {
+        get { taskState.automaticInstallAttempted }
+        set { taskState.automaticInstallAttempted = newValue }
     }
 
-    func setAutomaticUpdateChecks(_ enabled: Bool) {
-        automaticUpdateChecksEnabled = enabled
-
-        if !enabled {
-            updateState = .idle
-        }
-
-        launchTrackedTask {
-            await self.persistSettings()
-
-            if enabled {
-                await self.checkForUpdates(userInitiated: false, promptIfAvailable: false)
-            }
-        }
+    var promptedUpdateVersion: String? {
+        get { taskState.promptedUpdateVersion }
+        set { taskState.promptedUpdateVersion = newValue }
     }
 
-    func setPreferredLanguage(_ option: AppLanguageOption) {
-        preferredLanguageOption = option
-        L10n.setPreferredLanguageCodeOverride(option.preferredLanguageCode)
-
-        launchTrackedTask {
-            await self.persistSettings()
-        }
+    var hasBootstrapped: Bool {
+        get { taskState.hasBootstrapped }
+        set { taskState.hasBootstrapped = newValue }
     }
 
-    func renameProfile(_ profileID: UUID, to name: String) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
-            return
-        }
-
-        profiles[index].name = name
-
-        launchTrackedTask {
-            await self.persistProfiles()
-        }
+    var pendingTerminationTasks: [UUID: Task<Void, Never>] {
+        get { taskState.pendingTerminationTasks }
+        set { taskState.pendingTerminationTasks = newValue }
     }
 
-    func setConfidenceThreshold(_ profileID: UUID, to threshold: Int) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
-            return
-        }
-
-        profiles[index].settings.confidenceThreshold = threshold
-
-        launchTrackedTask {
-            await self.persistProfiles()
-            await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.confidenceThresholdChanged")),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-        }
+    var manualRestoreExpectedOrigins: [DisplayOrigin]? {
+        get { taskState.manualRestoreExpectedOrigins }
+        set { taskState.manualRestoreExpectedOrigins = newValue }
     }
 
-    func deleteProfile(_ profileID: UUID) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else {
-            return
-        }
-
-        let deletedProfile = profiles.remove(at: index)
-
-        if latestMatchedProfileName == deletedProfile.name {
-            latestMatchedProfileName = nil
-            latestMatchScore = nil
-        }
-
-        launchTrackedTask {
-            await self.persistProfiles()
-            await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.profileDeleted", deletedProfile.name)),
-                allowAutomaticRestore: false,
-                shouldRecordDecision: false
-            )
-        }
-    }
-
-    func restoreProfile(_ profileID: UUID) {
-        launchTrackedTask {
-            await self.performRestoreProfile(profileID)
-        }
-    }
-
-    func identifyDisplays(for profileID: UUID) {
-        launchTrackedTask {
-            await self.performDisplayIdentification(profileID)
-        }
-    }
-
-    private func launchTrackedTask(_ operation: @escaping @MainActor () async -> Void) {
-        let taskID = UUID()
-        let task = Task { @MainActor [weak self] in
-            defer {
-                self?.pendingTerminationTasks.removeValue(forKey: taskID)
-            }
-
-            await operation()
-        }
-
-        pendingTerminationTasks[taskID] = task
-    }
-
-    private func startMonitoring() {
-        eventMonitor.start { [weak self] event in
-            Task { @MainActor in
-                self?.handleDisplayEvent(event)
-            }
-        }
-    }
-
-    private func handleDisplayEvent(_ event: DisplayEvent) {
-        if let restoreCooldownUntil, restoreCooldownUntil > Date() {
-            statusLine = L10n.t("status.ignoringEventCooldown", L10n.eventTypeName(event.type.rawValue))
-            return
-        }
-
-        statusLine = L10n.t("status.detectedEvent", L10n.eventTypeName(event.type.rawValue))
-        decisionLine = event.details ?? L10n.t("status.preparingCurrentLayout")
-
-        debounceTask?.cancel()
-        debounceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: self?.debounceNanoseconds ?? 0)
-            await self?.refreshCurrentState(trigger: event, allowAutomaticRestore: true, shouldRecordDecision: true)
-        }
-    }
-
-    private func refreshCurrentState(
-        trigger: DisplayEvent,
-        allowAutomaticRestore: Bool,
-        shouldRecordDecision: Bool
-    ) async {
-        let dependency = await refreshDependencyState()
-
-        do {
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
-            currentDisplaySnapshots = currentDisplays
-            detectedDisplayCount = currentDisplays.count
-            let decision = coordinator.decide(
-                for: currentDisplays,
-                profiles: profiles,
-                automaticRestoreEnabled: autoRestoreEnabled,
-                dependencyAvailable: dependency.isAvailable
-            )
-            let suppressAutomaticRestore = shouldSuppressAutomaticRestore(for: currentDisplays)
-
-            lastCommand = {
-                if case .autoRestore(let command) = decision.action {
-                    return command
-                }
-                return match?.profile.layout.engine.command ?? ""
-            }()
-
-            latestDecision = decision
-            latestMatchedProfileName = match?.profile.name
-            latestMatchScore = match?.score
-            decisionLine = decision.reason
-            statusLine = L10n.connectedDisplayCount(currentDisplays.count)
-
-            if allowAutomaticRestore,
-               case .autoRestore(let command) = decision.action,
-               let match
-            {
-                guard !suppressAutomaticRestore else {
-                    return
-                }
-
-                guard !askBeforeAutomaticRestoreEnabled else {
-                    latestDecision = RestoreDecision(
-                        action: .offerManualFix,
-                        profileName: match.profile.name,
-                        score: match.score,
-                        reason: L10n.t("restoreDecision.askBeforeAutomaticRestore"),
-                        context: .awaitingUserConfirmation
-                    )
-                    decisionLine = L10n.t("restoreDecision.askBeforeAutomaticRestore")
-
-                    if shouldRecordDecision {
-                        await recordDiagnostic(
-                            eventType: trigger.type.rawValue,
-                            profileName: match.profile.name,
-                            score: match.score,
-                            actionTaken: "ask-before-restore",
-                            executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                            verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                            details: L10n.t("restoreDecision.askBeforeAutomaticRestore")
-                        )
-                    }
-                    return
-                }
-
-                await executeRestore(
-                    command: command,
-                    expectedOrigins: match.profile.layout.expectedOrigins,
-                    trigger: trigger.type.rawValue,
-                    actionTaken: "auto-restore",
-                    profileName: match.profile.name,
-                    score: match.score,
-                    details: decision.reason
-                )
-                return
-            }
-
-            if shouldRecordDecision {
-                await recordDiagnostic(
-                    eventType: trigger.type.rawValue,
-                    profileName: match?.profile.name,
-                    score: match?.score,
-                    actionTaken: decisionActionLabel(decision.action),
-                    executionResult: dependency.isAvailable
-                        ? RestoreVerificationOutcome.skipped.rawValue
-                        : RestoreExecutionOutcome.dependencyMissing.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: decision.reason
-                )
-            }
-        } catch {
-            lastCommand = ""
-            currentDisplaySnapshots = []
-            detectedDisplayCount = 0
-            latestDecision = nil
-            latestMatchedProfileName = nil
-            latestMatchScore = nil
-            statusLine = L10n.t("status.failedReadCurrentDisplaySet")
-            decisionLine = error.localizedDescription
-
-            if shouldRecordDecision {
-                await recordDiagnostic(
-                    eventType: trigger.type.rawValue,
-                    profileName: nil,
-                    score: nil,
-                    actionTaken: "snapshot-read",
-                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: error.localizedDescription
-                )
-            }
-        }
-    }
-
-    private func performManualRestore() async {
-        let dependency = await refreshDependencyState()
-        guard dependency.isAvailable else {
-            let result = await installDependency(trigger: "manual-install", automatic: false)
-
-            guard result.outcome == .installed || result.outcome == .alreadyInstalled else {
-                latestDecision = RestoreDecision(
-                    action: .offerManualFix,
-                    reason: L10n.t("decision.manualRestoreRequiresDependency"),
-                    context: .dependencyBlocked
-                )
-                latestMatchedProfileName = nil
-                latestMatchScore = nil
-                statusLine = dependency.details
-                decisionLine = L10n.t("decision.manualRestoreRequiresDependency")
-                await recordDiagnostic(
-                    eventType: DisplayEventType.manual.rawValue,
-                    profileName: nil,
-                    score: nil,
-                    actionTaken: "manual-fix",
-                    executionResult: RestoreExecutionOutcome.dependencyMissing.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: dependency.details
-                )
-                return
-            }
-
-            await performManualRestore()
-            return
-        }
-
-        do {
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            detectedDisplayCount = currentDisplays.count
-
-            guard let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles) else {
-                latestDecision = RestoreDecision(
-                    action: .offerManualFix,
-                    reason: L10n.t("decision.saveProfileBeforeManualRestore"),
-                    context: .noConfidentMatch
-                )
-                latestMatchedProfileName = nil
-                latestMatchScore = nil
-                statusLine = L10n.t("status.noCompatibleSavedProfile")
-                decisionLine = L10n.t("decision.saveProfileBeforeManualRestore")
-                await recordDiagnostic(
-                    eventType: DisplayEventType.manual.rawValue,
-                    profileName: nil,
-                    score: nil,
-                    actionTaken: "manual-fix",
-                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: LayoutRecallRuntimeError.noCompatibleProfile.localizedDescription
-                )
-                return
-            }
-
-            latestDecision = RestoreDecision(
-                action: .offerManualFix,
-                profileName: match.profile.name,
-                score: match.score,
-                reason: L10n.t("details.userRequestedManualRestore"),
-                context: .manualRestoreRequested
-            )
-            latestMatchedProfileName = match.profile.name
-            latestMatchScore = match.score
-            await executeRestore(
-                command: match.profile.layout.engine.command,
-                expectedOrigins: match.profile.layout.expectedOrigins,
-                trigger: DisplayEventType.manual.rawValue,
-                actionTaken: "manual-fix",
-                profileName: match.profile.name,
-                score: match.score,
-                details: L10n.t("details.userRequestedManualRestore")
-            )
-        } catch {
-            latestDecision = nil
-            latestMatchedProfileName = nil
-            latestMatchScore = nil
-            statusLine = L10n.t("status.failedReadCurrentDisplaySetManual")
-            decisionLine = error.localizedDescription
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: nil,
-                score: nil,
-                actionTaken: "manual-fix",
-                executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: error.localizedDescription
-            )
-        }
-    }
-
-    private func performSaveCurrentLayout() async {
-        do {
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            let layoutPlan = try commandBuilder.restorePlan(for: currentDisplays)
-
-            if let existingProfile = existingProfileMatchingCurrentLayout(
-                displays: currentDisplays,
-                layoutPlan: layoutPlan
-            ) {
-                currentDisplaySnapshots = currentDisplays
-                detectedDisplayCount = currentDisplays.count
-                latestDecision = RestoreDecision(
-                    action: .autoRestore(command: existingProfile.layout.engine.command),
-                    profileName: existingProfile.name,
-                    reason: L10n.t("decision.savedProfileAlreadyExists"),
-                    context: .savedProfileReady
-                )
-                latestMatchedProfileName = existingProfile.name
-                latestMatchScore = nil
-                lastCommand = existingProfile.layout.engine.command
-                statusLine = L10n.t("status.layoutAlreadySaved", existingProfile.name)
-                decisionLine = L10n.t("decision.savedProfileAlreadyExists")
-
-                await recordDiagnostic(
-                    eventType: DisplayEventType.manual.rawValue,
-                    profileName: existingProfile.name,
-                    score: nil,
-                    actionTaken: "save-profile-duplicate",
-                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: L10n.t("details.savedLayoutAlreadyExists", existingProfile.name)
-                )
-                return
-            }
-
-            let nextIndex = profiles.count + 1
-            let profile = DisplayProfile.draft(
-                name: L10n.workspaceName(nextIndex),
-                displays: currentDisplays,
-                layoutPlan: layoutPlan
-            )
-
-            profiles.append(profile)
-            currentDisplaySnapshots = currentDisplays
-            detectedDisplayCount = currentDisplays.count
-            latestDecision = RestoreDecision(
-                action: .autoRestore(command: profile.layout.engine.command),
-                profileName: profile.name,
-                reason: L10n.t("decision.savedProfileReady"),
-                context: .savedProfileReady
-            )
-            latestMatchedProfileName = profile.name
-            latestMatchScore = nil
-            lastCommand = profile.layout.engine.command
-
-            await persistProfiles()
-
-            statusLine = L10n.t("status.capturedLayout", profile.name)
-            decisionLine = L10n.t("decision.savedProfileReady")
-
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: profile.name,
-                score: nil,
-                actionTaken: "save-profile",
-                executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: L10n.t("details.savedCurrentLayout")
-            )
-        } catch {
-            statusLine = L10n.t("status.failedCaptureLayout")
-            decisionLine = error.localizedDescription
-        }
-    }
-
-    private func existingProfileMatchingCurrentLayout(
-        displays: [DisplaySnapshot],
-        layoutPlan: GeneratedLayoutPlan
-    ) -> DisplayProfile? {
-        let expectedOrigins = normalizedExpectedOrigins(layoutPlan.expectedOrigins)
-
-        return profiles.first { profile in
-            profile.displaySet.count == displays.count
-                && profile.displaySet.fingerprint == displays.fingerprint
-                && profile.layout.primaryDisplayKey == layoutPlan.primaryDisplayKey
-                && normalizedExpectedOrigins(profile.layout.expectedOrigins) == expectedOrigins
-        }
-    }
-
-    private func normalizedExpectedOrigins(_ origins: [DisplayOrigin]) -> [DisplayOrigin] {
-        origins.sorted { lhs, rhs in
-            if lhs.key != rhs.key {
-                return lhs.key < rhs.key
-            }
-
-            if lhs.x != rhs.x {
-                return lhs.x < rhs.x
-            }
-
-            return lhs.y < rhs.y
-        }
-    }
-
-    private func expectedOrigins(for displays: [DisplaySnapshot]) -> [DisplayOrigin] {
-        let orderedDisplays = displays.sorted(by: DisplaySnapshot.positionComparator)
-        return orderedDisplays.map { display in
-            DisplayOrigin(
-                key: orderedDisplays.uniqueMatchKey(for: display),
-                x: display.bounds.x,
-                y: display.bounds.y
-            )
-        }
-    }
-
-    private func shouldSuppressAutomaticRestore(for displays: [DisplaySnapshot]) -> Bool {
-        matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
-    }
-
-    private func matchesManualRestoreSuppression(
-        for displays: [DisplaySnapshot],
-        clearWhenMismatch: Bool
-    ) -> Bool {
-        guard let suppressedExpectedOrigins = manualRestoreExpectedOrigins else {
-            return false
-        }
-
-        let currentOrigins = normalizedExpectedOrigins(expectedOrigins(for: displays))
-        let suppressedOrigins = normalizedExpectedOrigins(suppressedExpectedOrigins)
-        let matches = currentOrigins == suppressedOrigins
-
-        if !matches && clearWhenMismatch {
-            self.manualRestoreExpectedOrigins = nil
-            manualRestoreActionTaken = nil
-        }
-
-        return matches
-    }
-
-    private func updateManualRestoreSuppression(
-        for actionTaken: String,
-        expectedOrigins: [DisplayOrigin],
-        displayFingerprint _: String?
-    ) {
-        switch actionTaken {
-        case "manual-fix", "restore-profile":
-            manualRestoreExpectedOrigins = expectedOrigins
-            manualRestoreActionTaken = actionTaken
-        default:
-            manualRestoreExpectedOrigins = nil
-            manualRestoreActionTaken = nil
-        }
-    }
-
-    private func performRestoreProfile(_ profileID: UUID) async {
-        guard let profile = profiles.first(where: { $0.id == profileID }) else {
-            return
-        }
-
-        let dependency = await refreshDependencyState()
-        detectedDisplayCount = profile.displaySet.count
-
-        guard dependency.isAvailable else {
-            latestDecision = RestoreDecision(
-                action: .offerManualFix,
-                profileName: profile.name,
-                reason: L10n.t("decision.manualRestoreRequiresDependency"),
-                context: .dependencyBlocked
-            )
-            latestMatchedProfileName = profile.name
-            latestMatchScore = nil
-            statusLine = dependency.details
-            decisionLine = L10n.t("decision.manualRestoreRequiresDependency")
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: profile.name,
-                score: nil,
-                actionTaken: "restore-profile",
-                executionResult: RestoreExecutionOutcome.dependencyMissing.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: dependency.details
-            )
-            return
-        }
-
-        latestDecision = RestoreDecision(
-            action: .offerManualFix,
-            profileName: profile.name,
-            reason: L10n.t("details.userRequestedProfileRestore", profile.name),
-            context: .profileRestoreRequested
-        )
-        latestMatchedProfileName = profile.name
-        latestMatchScore = nil
-
-        await executeRestore(
-            command: profile.layout.engine.command,
-            expectedOrigins: profile.layout.expectedOrigins,
-            trigger: DisplayEventType.manual.rawValue,
-            actionTaken: "restore-profile",
-            profileName: profile.name,
-            score: nil,
-            details: L10n.t("details.userRequestedProfileRestore", profile.name)
-        )
-    }
-
-    private func performDisplayIdentification(_ profileID: UUID) async {
-        guard let profile = profiles.first(where: { $0.id == profileID }) else {
-            return
-        }
-
-        do {
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            currentDisplaySnapshots = currentDisplays
-            let resolvedPrimaryDisplayKey = DisplayPresentationBuilder.resolvedPrimaryDisplayKey(
-                for: profile.displaySet.displays,
-                storedPrimaryDisplayKey: profile.layout.primaryDisplayKey,
-                currentDisplays: currentDisplays
-            )
-            let markers = DisplayPresentationBuilder.identificationMarkers(
-                for: profile.displaySet.displays,
-                primaryDisplayKey: resolvedPrimaryDisplayKey,
-                currentDisplays: currentDisplays
-            )
-
-            detectedDisplayCount = currentDisplays.count
-
-            guard !markers.isEmpty else {
-                statusLine = L10n.t("status.displayIdentificationUnavailable")
-                decisionLine = L10n.t("runtime.identifyNoMatchingDisplays")
-                await recordDiagnostic(
-                    eventType: DisplayEventType.manual.rawValue,
-                    profileName: profile.name,
-                    score: nil,
-                    actionTaken: "identify-displays",
-                    executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                    verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                    details: L10n.t("runtime.identifyNoMatchingDisplays")
-                )
-                return
-            }
-
-            displayIdentifier.showLabels(markers)
-            statusLine = L10n.t("status.displayIdentificationShown", profile.name)
-            decisionLine = L10n.t("details.userRequestedDisplayIdentification", profile.name)
-
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: profile.name,
-                score: nil,
-                actionTaken: "identify-displays",
-                executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: L10n.t("details.userRequestedDisplayIdentification", profile.name)
-            )
-        } catch {
-            statusLine = L10n.t("status.displayIdentificationUnavailable")
-            decisionLine = error.localizedDescription
-
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: profile.name,
-                score: nil,
-                actionTaken: "identify-displays",
-                executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: error.localizedDescription
-            )
-        }
-    }
-
-    private func performSwapLeftRight() async {
-        do {
-            guard !restoreCommandInProgress else {
-                statusLine = L10n.t("status.swapAlreadyRunning")
-                decisionLine = L10n.t("details.swapAlreadyRunning")
-                await logStartup("swapLeftRight ignored because restoreCommandInProgress=true")
-                return
-            }
-
-            let currentDisplays = try await snapshotReader.currentDisplays()
-            await logStartup("swapLeftRight currentDisplays=\(describeDisplays(currentDisplays))")
-            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
-            let layoutPlan = try commandBuilder.swapLeftRightPlan(for: currentDisplays)
-            await logStartup(
-                "swapLeftRight plan command=\(layoutPlan.command) expectedOrigins=\(describeOrigins(layoutPlan.expectedOrigins))"
-            )
-            detectedDisplayCount = currentDisplays.count
-            latestDecision = RestoreDecision(
-                action: .offerManualFix,
-                profileName: match?.profile.name,
-                score: match?.score,
-                reason: L10n.t("details.userRequestedSwap")
-            )
-            latestMatchedProfileName = match?.profile.name
-            latestMatchScore = match?.score
-
-            await executeRestore(
-                command: layoutPlan.command,
-                expectedOrigins: layoutPlan.expectedOrigins,
-                trigger: DisplayEventType.manual.rawValue,
-                actionTaken: "swap-left-right",
-                profileName: match?.profile.name,
-                score: match?.score,
-                details: L10n.t("details.userRequestedSwap"),
-                displayFingerprint: currentDisplays.fingerprint
-            )
-        } catch {
-            latestDecision = nil
-            latestMatchedProfileName = nil
-            latestMatchScore = nil
-            statusLine = L10n.t("status.swapUnavailable")
-            decisionLine = error.localizedDescription
-            await recordDiagnostic(
-                eventType: DisplayEventType.manual.rawValue,
-                profileName: nil,
-                score: nil,
-                actionTaken: "swap-left-right",
-                executionResult: RestoreVerificationOutcome.skipped.rawValue,
-                verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-                details: error.localizedDescription
-            )
-        }
-    }
-
-    private func executeRestore(
-        command: String,
-        expectedOrigins: [DisplayOrigin],
-        trigger: String,
-        actionTaken: String,
-        profileName: String?,
-        score: Int?,
-        details: String,
-        displayFingerprint: String? = nil
-    ) async {
-        restoreCommandInProgress = true
-        defer {
-            restoreCommandInProgress = false
-        }
-
-        lastCommand = command
-        statusLine = L10n.t("status.runningRestoreCommand")
-        decisionLine = details
-        await logStartup(
-            "executeRestore start action=\(actionTaken) trigger=\(trigger) profile=\(profileName ?? "<none>") command=\(command) expectedOrigins=\(describeOrigins(expectedOrigins))"
-        )
-
-        let executionResult = await executor.execute(command: command)
-        var verificationResult = RestoreVerificationResult.skipped
-
-        if actionTaken == "swap-left-right" {
-            restoreCooldownUntil = nil
-        } else if executionResult.outcome != .dependencyMissing {
-            restoreCooldownUntil = Date().addingTimeInterval(restoreCooldown)
-        }
-
-        if executionResult.outcome == .success {
-            verificationResult = await verifier.verify(expectedOrigins: expectedOrigins, using: snapshotReader)
-            updateManualRestoreSuppression(
-                for: actionTaken,
-                expectedOrigins: expectedOrigins,
-                displayFingerprint: displayFingerprint
-            )
-        }
-        await logStartup(
-            "executeRestore finished action=\(actionTaken) execution=\(executionResult.outcome.rawValue) verification=\(verificationResult.outcome.rawValue) details=\(verificationResult.details)"
-        )
-
-        let executionSummary = executionResult.outcome.rawValue
-        let verificationSummary = verificationResult.outcome.rawValue
-        if executionResult.outcome == .success {
-            latestDecision = RestoreDecision(
-                action: .autoRestore(command: command),
-                profileName: profileName,
-                score: score,
-                reason: verificationResult.details,
-                context: .ready
-            )
-        } else {
-            latestDecision = RestoreDecision(
-                action: .offerManualFix,
-                profileName: profileName,
-                score: score,
-                reason: executionResult.details,
-                context: .restoreFailed
-            )
-        }
-        latestMatchedProfileName = profileName
-        latestMatchScore = score
-        statusLine = executionResult.details
-        decisionLine = latestDecision?.reason ?? verificationResult.details
-
-        await recordDiagnostic(
-            eventType: trigger,
-            profileName: profileName,
-            score: score,
-            actionTaken: actionTaken,
-            executionResult: executionSummary,
-            verificationResult: verificationSummary,
-            details: [
-                details,
-                executionResult.details,
-                verificationResult.details
-            ]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        )
-    }
-
-    private func decisionActionLabel(_ action: RestoreAction) -> String {
-        switch action {
-        case .autoRestore:
-            return "auto-restore"
-        case .offerManualFix:
-            return "manual-recovery"
-        case .saveNewProfile:
-            return "save-new-profile"
-        case .idle:
-            return "idle"
-        }
-    }
-
-    private func loadProfiles() async {
-        await logStartup(
-            "loadProfiles begin path=\(profileStorePath) exists=\(FileManager.default.fileExists(atPath: profileStorePath))"
-        )
-        do {
-            let storedProfiles = try await store.loadProfiles()
-            let normalizedProfiles = normalizeProfiles(storedProfiles)
-            profiles = normalizedProfiles
-            await logStartup(
-                "loadProfiles success stored=\(storedProfiles.count) normalized=\(normalizedProfiles.count) names=\(normalizedProfiles.map { $0.name }.joined(separator: ","))"
-            )
-
-            if normalizedProfiles != storedProfiles {
-                try await store.saveProfiles(normalizedProfiles)
-                await logStartup("loadProfiles wrote normalized profiles back to disk")
-            }
-        } catch {
-            statusLine = L10n.t("status.failedLoadProfiles")
-            decisionLine = error.localizedDescription
-            await logStartup("loadProfiles failed error=\(error.localizedDescription)")
-        }
-    }
-
-    private func normalizeProfiles(_ storedProfiles: [DisplayProfile]) -> [DisplayProfile] {
-        storedProfiles.map { profile in
-            guard let updatedPlan = try? commandBuilder.restorePlan(for: profile.displaySet.displays) else {
-                return profile
-            }
-
-            var normalized = profile
-            normalized.settings.autoRestore = true
-            normalized.layout = LayoutDefinition(
-                primaryDisplayKey: updatedPlan.primaryDisplayKey,
-                expectedOrigins: updatedPlan.expectedOrigins,
-                engine: LayoutEngineCommand(
-                    type: profile.layout.engine.type,
-                    command: updatedPlan.command
-                )
-            )
-            return normalized
-        }
-    }
-
-    private func loadDiagnostics() async {
-        do {
-            diagnostics = try await diagnosticsStore.recentEntries()
-        } catch {
-            statusLine = L10n.t("status.failedLoadDiagnostics")
-            decisionLine = error.localizedDescription
-        }
-    }
-
-    private func loadSettings() async {
-        do {
-            let settings = try await settingsStore.loadSettings()
-            autoRestoreEnabled = settings.automaticRestoreEnabled
-            askBeforeAutomaticRestoreEnabled = settings.askBeforeAutomaticRestore
-            launchAtLoginEnabled = settings.launchAtLogin
-            shortcuts = settings.shortcuts
-            automaticUpdateChecksEnabled = settings.automaticallyCheckForUpdates
-            skippedReleaseVersion = settings.skippedReleaseVersion
-            preferredLanguageOption = AppLanguageOption(preferredLanguageCode: settings.preferredLanguageCode)
-            L10n.setPreferredLanguageCodeOverride(settings.preferredLanguageCode)
-        } catch {
-            statusLine = L10n.t("status.failedLoadSettings")
-            decisionLine = error.localizedDescription
-        }
-    }
-
-    private func persistProfiles() async {
-        await logStartup("persistProfiles begin count=\(profiles.count) path=\(profileStorePath)")
-        do {
-            try await store.saveProfiles(profiles)
-            await logStartup("persistProfiles success count=\(profiles.count)")
-        } catch {
-            statusLine = L10n.t("status.failedSaveProfiles")
-            decisionLine = error.localizedDescription
-            await logStartup("persistProfiles failed error=\(error.localizedDescription)")
-        }
-    }
-
-    private func persistSettings() async {
-        do {
-            try await settingsStore.saveSettings(currentSettings())
-        } catch {
-            statusLine = L10n.t("status.failedSaveSettings")
-            decisionLine = error.localizedDescription
-        }
-    }
-
-    private func currentSettings() -> AppSettings {
-        AppSettings(
-            automaticRestoreEnabled: autoRestoreEnabled,
-            askBeforeAutomaticRestore: askBeforeAutomaticRestoreEnabled,
-            launchAtLogin: launchAtLoginEnabled,
-            shortcuts: shortcuts,
-            automaticallyCheckForUpdates: automaticUpdateChecksEnabled,
-            skippedReleaseVersion: skippedReleaseVersion,
-            preferredLanguageCode: preferredLanguageOption.preferredLanguageCode
-        )
-    }
-
-    private func checkForUpdates(userInitiated: Bool, promptIfAvailable: Bool) async {
-        guard !updateState.isBusy else {
-            return
-        }
-
-        updateState = .checking
-
-        do {
-            guard let release = try await updateChecker.fetchLatestRelease() else {
-                availableUpdate = nil
-                updateState = .noPublishedReleases
-                return
-            }
-
-            guard AppVersionComparator.isNewer(release.versionIdentifier, than: AppRuntimeMetadata.currentVersion) else {
-                availableUpdate = nil
-                updateState = .upToDate
-                return
-            }
-
-            availableUpdate = release
-
-            if !userInitiated, skippedReleaseVersion == release.versionIdentifier {
-                updateState = .skipped(release)
-                return
-            }
-
-            updateState = .available(release)
-
-            guard promptIfAvailable,
-                  promptedUpdateVersion != release.versionIdentifier else {
-                return
-            }
-
-            promptedUpdateVersion = release.versionIdentifier
-
-            let promptResponse = await updatePrompt.promptToInstall(
-                release: release,
-                currentVersion: AppRuntimeMetadata.currentVersion
-            )
-
-            switch promptResponse {
-            case .install:
-                await installUpdate(release)
-            case .skipThisVersion:
-                await markSkippedRelease(release)
-            case .later:
-                updateState = .available(release)
-            }
-        } catch let error as AppUpdateError {
-            availableUpdate = nil
-            updateState = error == .noPublishedReleases
-                ? .noPublishedReleases
-                : .failed(error.localizedDescription)
-        } catch {
-            availableUpdate = nil
-            updateState = .failed(error.localizedDescription)
-        }
-    }
-
-    private func markSkippedRelease(_ release: AppRelease) async {
-        skippedReleaseVersion = release.versionIdentifier
-        availableUpdate = release
-        updateState = .skipped(release)
-        await persistSettings()
-    }
-
-    private func installUpdate(_ release: AppRelease) async {
-        updateState = .downloading(release)
-
-        do {
-            try await updateInstaller.prepareUpdateInstallation(
-                release: release,
-                replacing: Bundle.main.bundleURL
-            )
-            updateState = .installing(release)
-            terminateApplication()
-        } catch {
-            availableUpdate = release
-            updateState = .failed(error.localizedDescription)
-        }
-    }
-
-    private func configureShortcuts() async {
-        do {
-            try await shortcutManager.configure(shortcuts: shortcuts) { [weak self] action in
-                Task { @MainActor in
-                    await self?.handleShortcut(action)
-                }
-            }
-        } catch {
-            statusLine = L10n.t("status.failedConfigureShortcuts")
-            decisionLine = error.localizedDescription
-        }
-    }
-
-    private func handleShortcut(_ action: ShortcutAction) async {
-        switch action {
-        case .fixNow:
-            await performManualRestore()
-        case .saveCurrentLayout:
-            await performSaveCurrentLayout()
-        case .swapLeftRight:
-            await performSwapLeftRight()
-        }
-    }
-
-    @discardableResult
-    private func refreshDependencyState() async -> RestoreDependencyStatus {
-        let dependency = await executor.dependencyStatus()
-        dependencyAvailable = dependency.isAvailable
-        dependencyLine = dependency.details
-
-        if !dependency.isAvailable, !automaticInstallAttempted {
-            automaticInstallAttempted = true
-            installationTask = Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
-
-                _ = await self.runDependencyInstall(trigger: "bootstrap-install", automatic: true)
-                self.installationTask = nil
-            }
-        }
-
-        return dependency
-    }
-
-    @discardableResult
-    private func installDependency(trigger: String, automatic: Bool) async -> DependencyInstallResult {
-        if let installationTask {
-            await installationTask.value
-            let dependency = await executor.dependencyStatus()
-            return DependencyInstallResult(
-                outcome: dependency.isAvailable ? .alreadyInstalled : .failed,
-                dependency: "displayplacer",
-                location: dependency.location,
-                details: dependency.details
-            )
-        }
-
-        return await runDependencyInstall(trigger: trigger, automatic: automatic)
-    }
-
-    @discardableResult
-    private func runDependencyInstall(trigger: String, automatic: Bool) async -> DependencyInstallResult {
-        installationInProgress = true
-        statusLine = automatic ? L10n.t("status.installingDisplayplacerAuto") : L10n.t("status.installingDisplayplacer")
-        decisionLine = automatic
-            ? L10n.t("decision.backgroundDependencySetup")
-            : L10n.t("decision.tryingInstallDependency")
-
-        let result = await dependencyInstaller.installDisplayplacerIfNeeded()
-        installationInProgress = false
-
-        let dependency = await executor.dependencyStatus()
-        dependencyAvailable = dependency.isAvailable
-        dependencyLine = dependency.details
-        statusLine = result.details
-
-        if result.outcome == .installed || result.outcome == .alreadyInstalled {
-            decisionLine = automatic
-                ? L10n.t("decision.dependencyReadyAuto")
-                : L10n.t("decision.dependencyReadyManual")
-        } else {
-            decisionLine = automatic
-                ? L10n.t("decision.dependencySetupFailedAuto")
-                : L10n.t("decision.dependencyInstallFailed")
-        }
-
-        await recordDiagnostic(
-            eventType: DisplayEventType.manual.rawValue,
-            profileName: nil,
-            score: nil,
-            actionTaken: trigger,
-            executionResult: result.outcome.rawValue,
-            verificationResult: RestoreVerificationOutcome.skipped.rawValue,
-            details: result.details
-        )
-
-        return result
-    }
-
-    private func refreshLoginItemState() async {
-        let loginState = await loginItemManager.currentState()
-        loginItemLine = loginState.description
-    }
-
-    private func recordDiagnostic(
-        eventType: String,
-        profileName: String?,
-        score: Int?,
-        actionTaken: String,
-        executionResult: String,
-        verificationResult: String,
-        details: String
-    ) async {
-        let entry = DiagnosticsEntry(
-            eventType: eventType,
-            profileName: profileName,
-            score: score,
-            actionTaken: actionTaken,
-            executionResult: executionResult,
-            verificationResult: verificationResult,
-            details: details
-        )
-
-        do {
-            try await diagnosticsStore.append(entry)
-            diagnostics = try await diagnosticsStore.recentEntries()
-        } catch {
-            statusLine = L10n.t("status.failedSaveDiagnostics")
-            decisionLine = error.localizedDescription
-        }
+    var manualRestoreActionTaken: String? {
+        get { taskState.manualRestoreActionTaken }
+        set { taskState.manualRestoreActionTaken = newValue }
     }
 }
 
-private extension AppModel {
-    var profileStorePath: String {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library", isDirectory: true)
-            .appendingPathComponent("Application Support", isDirectory: true)
-            .appendingPathComponent("LayoutRecall", isDirectory: true)
-            .appendingPathComponent("profiles.json", isDirectory: false)
-            .path
-    }
-
-    var settingsStorePath: String {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library", isDirectory: true)
-            .appendingPathComponent("Application Support", isDirectory: true)
-            .appendingPathComponent("LayoutRecall", isDirectory: true)
-            .appendingPathComponent("settings.json", isDirectory: false)
-            .path
-    }
-
-    func logStartup(_ message: String) async {
-        await StartupTraceLogger.shared.append(message)
-    }
-
-    private func describeDisplays(_ displays: [DisplaySnapshot]) -> String {
-        displays
-            .sorted(by: DisplaySnapshot.positionComparator)
-            .map { display in
-                let identifier = display.persistentID ?? display.contextualID ?? display.id
-                let mainMarker = display.isMain == true ? ":main" : ""
-                return "\(identifier)@(\(display.bounds.x),\(display.bounds.y))\(mainMarker)"
-            }
-            .joined(separator: ",")
-    }
-
-    private func describeOrigins(_ origins: [DisplayOrigin]) -> String {
-        origins
-            .sorted {
-                if $0.x != $1.x {
-                    return $0.x < $1.x
-                }
-
-                if $0.y != $1.y {
-                    return $0.y < $1.y
-                }
-
-                return $0.key < $1.key
-            }
-            .map { "\($0.key)@(\($0.x),\($0.y))" }
-            .joined(separator: ",")
-    }
-}
+typealias AppModel = AppSession

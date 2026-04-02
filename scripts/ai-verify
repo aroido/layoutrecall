@@ -24,7 +24,7 @@ cd "$ROOT_DIR"
 # signal 11 during later test teardown on this machine.
 swift test --no-parallel --scratch-path "$SCRATCH_PATH" \
     --skip renderMenuAndSettingsSnapshots
-swift test --filter renderMenuAndSettingsSnapshots --scratch-path "$SCRATCH_PATH"
+swift test --no-parallel --filter renderMenuAndSettingsSnapshots --scratch-path "$SCRATCH_PATH"
 
 if find "$ROOT_DIR/docs/marketing/programs" -maxdepth 1 -type f -name '*-positioning.md' | grep -q .; then
     echo "running marketing verification"
