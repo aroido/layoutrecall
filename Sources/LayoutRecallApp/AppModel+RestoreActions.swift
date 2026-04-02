@@ -209,6 +209,71 @@ extension AppModel {
         }
     }
 
+    func currentLayoutMatchesExpectedOrigins(
+        displays: [DisplaySnapshot],
+        expectedOrigins targetOrigins: [DisplayOrigin]
+    ) -> Bool {
+        normalizedExpectedOrigins(expectedOrigins(for: displays))
+            == normalizedExpectedOrigins(targetOrigins)
+    }
+
+    @discardableResult
+    func attemptImmediateRestoreAfterEnablingAutoRestore(trigger: DisplayEvent) async -> Bool {
+        guard autoRestoreEnabled, !askBeforeAutomaticRestoreEnabled else {
+            return false
+        }
+
+        let dependency = await refreshDependencyState()
+
+        do {
+            let currentDisplays = try await snapshotReader.currentDisplays()
+            let match = coordinator.matcher.bestMatch(for: currentDisplays, among: profiles)
+            let decision = coordinator.decide(
+                for: currentDisplays,
+                profiles: profiles,
+                automaticRestoreEnabled: autoRestoreEnabled,
+                dependencyAvailable: dependency.isAvailable
+            )
+
+            currentDisplaySnapshots = currentDisplays
+            detectedDisplayCount = currentDisplays.count
+            lastCommand = {
+                if case .autoRestore(let command) = decision.action {
+                    return command
+                }
+                return match?.profile.layout.engine.command ?? ""
+            }()
+            latestDecision = decision
+            latestMatchedProfileName = match?.profile.name
+            latestMatchScore = match?.score
+            decisionLine = decision.reason
+            statusLine = L10n.connectedDisplayCount(currentDisplays.count)
+
+            guard case .autoRestore(let command) = decision.action,
+                  let match,
+                  !currentLayoutMatchesExpectedOrigins(
+                      displays: currentDisplays,
+                      expectedOrigins: match.profile.layout.expectedOrigins
+                  )
+            else {
+                return false
+            }
+
+            await executeRestore(
+                command: command,
+                expectedOrigins: match.profile.layout.expectedOrigins,
+                trigger: trigger.type.rawValue,
+                actionTaken: "auto-restore",
+                profileName: match.profile.name,
+                score: match.score,
+                details: decision.reason
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
     func shouldSuppressAutomaticRestore(for displays: [DisplaySnapshot]) -> Bool {
         matchesManualRestoreSuppression(for: displays, clearWhenMismatch: true)
     }

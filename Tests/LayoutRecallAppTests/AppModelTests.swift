@@ -906,6 +906,122 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
 
 @MainActor
 @Test
+func enablingAutoRestoreImmediatelyRestoresCurrentMismatchedLayout() async {
+    let settingsStore = AppSettingsStoreStub(settings: AppSettings(automaticRestoreEnabled: false))
+    let diagnosticsStore = DiagnosticsStoreStub()
+    let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])
+    let executor = RestoreExecutorStub(
+        dependency: .init(
+            isAvailable: true,
+            location: "/usr/local/bin/displayplacer",
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+        ),
+        executionResult: .init(
+            outcome: .success,
+            command: "",
+            exitCode: 0,
+            details: L10n.t("restoreExecutor.success")
+        )
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: settingsStore,
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: DisplayplacerCommandBuilder(),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(
+            result: .init(
+                outcome: .success,
+                attempts: 1,
+                details: L10n.t("verify.match")
+            )
+        ),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.swapLeftRight()
+
+    await waitUntil {
+        let commands = await executor.executedCommands()
+        return commands.count == 1
+            && commands[0].contains("id:persistent-right enabled:true origin:(-2560,0)")
+    }
+
+    await snapshotReader.setDisplays(swappedDisplays())
+    model.setAutoRestore(true)
+
+    await waitUntil {
+        let commands = await executor.executedCommands()
+        let savedSettings = await settingsStore.latestSavedSettings()
+        return commands.count == 2
+            && commands[1] == DisplayProfile.officeDock.layout.engine.command
+            && model.autoRestoreEnabled
+            && savedSettings?.automaticRestoreEnabled == true
+    }
+
+    #expect((await executor.executedCommands()).count == 2)
+    #expect(model.diagnostics.first?.actionTaken == "auto-restore")
+    #expect(model.latestMatchedProfileName == DisplayProfile.officeDock.name)
+    #expect(model.decisionLine == L10n.t("verify.match"))
+}
+
+@MainActor
+@Test
+func enablingAutoRestoreDoesNotRestoreWhenCurrentLayoutAlreadyMatchesProfile() async {
+    let settingsStore = AppSettingsStoreStub(settings: AppSettings(automaticRestoreEnabled: false))
+    let executor = RestoreExecutorStub(
+        dependency: .init(
+            isAvailable: true,
+            location: "/usr/local/bin/displayplacer",
+            details: L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
+        ),
+        executionResult: .init(
+            outcome: .success,
+            command: DisplayProfile.officeDock.layout.engine.command,
+            exitCode: 0,
+            details: L10n.t("restoreExecutor.success")
+        )
+    )
+    let model = AppModel(
+        store: ProfileStoreStub(profiles: [.officeDock]),
+        settingsStore: settingsStore,
+        diagnosticsStore: DiagnosticsStoreStub(),
+        snapshotReader: SnapshotReaderStub(displays: [.sampleLeft, .sampleRight]),
+        eventMonitor: EventMonitorStub(),
+        commandBuilder: StaticCommandBuilder(
+            restorePlanResult: sampleRestorePlan(),
+            swapPlanResult: sampleSwapPlan()
+        ),
+        executor: executor,
+        dependencyInstaller: DependencyInstallerStub(),
+        verifier: RestoreVerifierStub(result: .skipped),
+        loginItemManager: LoginItemManagerStub(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+    model.setAutoRestore(true)
+
+    await waitUntil {
+        await settingsStore.latestSavedSettings()?.automaticRestoreEnabled == true
+    }
+
+    #expect(await executor.executedCommands().isEmpty)
+    #expect(model.autoRestoreEnabled == true)
+    #expect(model.menuPrimaryState == .healthy)
+}
+
+@MainActor
+@Test
 func profileDeletionAndDirectRestorePersistExpectedState() async {
     var secondaryProfile = DisplayProfile.officeDock
     secondaryProfile.id = UUID()
