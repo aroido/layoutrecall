@@ -30,18 +30,18 @@ Reviewed implementation and docs for surface structure using:
 3. **Primary action** (conditional)
    - Save Current Layout
    - Install displayplacer
-   - Fix Now
+   - Restore Now
    - Enable Automatic Restore
 4. **Quick control section** (when profiles exist)
    - Automatic Restore toggle
-   - optional inline Fix Now button
-   - optional Swap Positions button
+   - optional inline Restore Now button
    - More Actions menu with:
      - Save Current Layout
      - profile quick switch / Apply Layout
      - Manage Profiles
      - Show Numbers
      - Open Diagnostics
+     - Advanced fallback utility: Swap Positions
 5. **Footer**
    - Settings
    - Quit
@@ -64,9 +64,9 @@ Reviewed implementation and docs for surface structure using:
 | Surface area | Docs say | Code does |
 | --- | --- | --- |
 | Settings IA | Three primary sections: Restore / Profiles / General | Three sidebar sections with Shortcuts + Diagnostics collapsed into General |
-| Diagnostics access | Dedicated settings pane | Nested disclosure under General plus contextual shortcut from Restore |
-| Shortcuts access | Dedicated settings pane | Nested disclosure under General |
-| Menu quick actions | README/PRD/SPEC treat `Fix Now` as the primary manual recovery CTA and demote other utilities | Core recovery action is primary; supporting actions sit behind `More Actions` or in settings/profile flows |
+| Diagnostics access | Supporting section under General plus contextual shortcut from Restore | Nested disclosure under General plus contextual shortcut from Restore |
+| Shortcuts access | Supporting section under General | Nested disclosure under General |
+| Menu quick actions | README/PRD/SPEC treat `Restore Now` as the primary manual recovery CTA and demote other utilities | Core recovery action is primary; supporting actions sit behind `More Actions` or in settings/profile flows |
 
 ## IA candidates considered
 
@@ -139,7 +139,7 @@ The menu remains the **runtime trust and recovery surface**.
 - Primary next action for the current state
 - Automatic Restore toggle
 - Fast runtime actions:
-  - Fix Now
+  - Restore Now
   - Save Current Layout
   - Apply Layout (via quick switch)
   - Show Numbers
@@ -165,7 +165,7 @@ Owns:
 - Automatic Restore toggle
 - Ask Before Restore toggle
 - dependency/install state
-- recommended restore actions (`Fix Now`, `Install displayplacer`, `Enable Automatic Restore`)
+- recommended restore actions (`Restore Now`, `Install displayplacer`, `Enable Automatic Restore`)
 - current-vs-saved layout comparison
 - contextual diagnostics shortcut
 
@@ -203,7 +203,7 @@ Owns:
 | Save Current Layout | Yes | No | Yes | No | **Profiles** |
 | Automatic Restore | Toggle | Yes | No | No | **Restore** |
 | Ask Before Restore | No | Yes | No | Yes | **Restore** |
-| Fix Now | Yes | Yes | No | No | **Restore** |
+| Restore Now | Yes | Yes | No | No | **Restore** |
 | Apply Layout | Quick-switch only | No | Yes | No | **Profiles** |
 | Show Numbers | Utility action | No | Yes | No | **Profiles** |
 | Swap Positions | Advanced utility only | No | No | Yes | **General** |

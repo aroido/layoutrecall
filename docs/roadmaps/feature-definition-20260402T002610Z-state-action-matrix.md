@@ -2,7 +2,7 @@
 
 Lab: `feature-definition-20260402T002610Z`
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1 only)
+Status: Simplified implementation-aligned artifact
 
 ## Audit basis
 
@@ -45,28 +45,28 @@ This matrix normalizes them into a single user-observable state model and explic
 
 | State | Allowed actions | Blocked / discouraged actions | Notes |
 | --- | --- | --- | --- |
-| No Profiles | Save Current Layout; open Settings; quit | Fix Now; Apply Layout; Show Numbers; confidence tuning | First-run path is clear, but settings still exposes some controls that are disabled rather than hidden. |
+| No Profiles | Save Current Layout; open Settings; quit | Restore Now; Apply Layout; Show Numbers; confidence tuning | First-run path is clear, but settings still exposes some controls that are disabled rather than hidden. |
 | Installing Dependency | Wait; open Settings; quit | Install displayplacer again; real restore actions | The menu still shows an install-flavored primary action even though it is disabled during active install. |
-| Dependency Missing | Install displayplacer; Save Current Layout; open Settings; quit | Fix Now; Apply Layout; Swap Positions | Save is still allowed because profile capture does not require restore execution. |
-| No Match | Save Current Layout; open Settings; quit | Fix Now (explicitly disabled in menu); Apply Layout to unavailable reference profile | User should create a new baseline for the current desk. |
-| Low Confidence | Fix Now; Save Current Layout; Swap Positions; open diagnostics/settings; choose Apply Layout manually | Automatic Restore | Manual recovery is available, but the difference between Fix Now and Apply Layout needs crisper copy. |
-| Review Before Restore | Fix Now; Save Current Layout; Swap Positions; open diagnostics/settings | Automatic Restore without user confirmation | This state exists specifically to force a human decision. |
+| Dependency Missing | Install displayplacer; Save Current Layout; open Settings; quit | Restore Now; Apply Layout; Swap Positions | Save is still allowed because profile capture does not require restore execution. |
+| No Match | Save Current Layout; open Settings; quit | Restore Now (explicitly disabled in menu); Apply Layout to unavailable reference profile | User should create a new baseline for the current desk. |
+| Low Confidence | Restore Now; Save Current Layout; Swap Positions; open diagnostics/settings; choose Apply Layout manually | Automatic Restore | Manual recovery is available, but Restore Now should stay visually primary over supporting utilities. |
+| Review Before Restore | Restore Now; Save Current Layout; Swap Positions; open diagnostics/settings | Automatic Restore without user confirmation | This state exists specifically to force a human decision. |
 | Automatic Restore Disabled | Enable Automatic Restore; Save Current Layout; Apply Layout; Show Numbers; Swap Positions | Background automatic restore | The model assumes manual recovery is still allowed while policy is disabled. |
 | Manual Layout Override | Save Current Layout; Apply Layout; Show Numbers; open settings/diagnostics | Automatic Restore | Current code path is present in the state enum but not clearly surfaced in docs. |
-| Manual Recovery | Fix Now; Save Current Layout; Apply Layout; Show Numbers; Swap Positions; diagnostics/settings | Automatic Restore until state changes | Catch-all state that currently absorbs several distinct reasons. |
+| Manual Recovery | Restore Now; Save Current Layout; Apply Layout; Show Numbers; Swap Positions; diagnostics/settings | Automatic Restore until state changes | Catch-all state that currently absorbs several distinct reasons. |
 | Healthy / Ready | Save Current Layout; Apply Layout; Show Numbers; Swap Positions; open settings; optional diagnostics | None strictly blocked except context-specific dependency/display limits | This is the calm state where the menu should mostly reassure instead of warn. |
-| Restore Failed | Fix Now retry; Apply Layout; Save Current Layout; diagnostics/support actions | Trusting automation until root cause is understood | Should become its own explicit surfaced state in a later implementation pass. |
-| No Displays | Wait for hardware to settle; diagnostics/support review | Save Current Layout; Fix Now; Apply Layout | Currently not distinguished sharply enough from generic manual recovery. |
+| Restore Failed | Restore Now retry; Apply Layout; Save Current Layout; diagnostics/support actions | Trusting automation until root cause is understood | Should become its own explicit surfaced state in a later implementation pass. |
+| No Displays | Wait for hardware to settle; diagnostics/support review | Save Current Layout; Restore Now; Apply Layout | Currently not distinguished sharply enough from generic manual recovery. |
 
-## Demoted actions
+## Supporting and demoted actions
 
 | Action | Current labels / entrypoints | Purpose | Canonical classification |
 | --- | --- | --- | --- |
 | Save Current Layout | `Save`, `Save Current Layout`, `Save first baseline`, `Save another baseline` | Capture the current display arrangement as a profile. | Core runtime action |
-| Fix Now | `Fix Now` | Run the best-match manual restore immediately. | Core runtime action |
-| Apply Layout | profile `Apply Layout`, quick-switch profile restore | Restore a specific saved profile. | Core runtime action |
-| Show Numbers | `Show Numbers`, identify displays | Overlay display identifiers for mapping/verification. | Core runtime action |
-| Swap Positions | `Swap Positions`, `Swap` | Apply a simple swap plan for supported layouts. | Core runtime action |
+| Restore Now | `Restore Now`, internal `fixNow` identifiers | Run the best-match manual restore immediately. | Core runtime action |
+| Apply Layout | profile `Apply Layout`, quick-switch profile restore | Restore a specific saved profile. | Supporting action |
+| Show Numbers | `Show Numbers`, identify displays | Overlay display identifiers for mapping/verification. | Supporting action |
+| Swap Positions | `Swap Positions`, `Swap` | Apply a simple swap plan for supported layouts. | Advanced utility |
 | Install displayplacer | `Install displayplacer` | Unblock real restore execution. | Support action |
 | Enable Automatic Restore | `Enable Automatic Restore` | Re-enable the app-wide automatic restore policy. | Policy action |
 | Toggle Ask Before Restore | `Ask Before Restore` | Require manual confirmation before a safe auto restore proceeds. | Policy action |
@@ -78,19 +78,19 @@ This matrix normalizes them into a single user-observable state model and explic
 | Check / Install / Skip Update | updates controls | Manage in-app updates. | Support action |
 | Open Diagnostics | restore shortcut / embedded diagnostics section | Inspect evidence and support files. | Support action |
 
-## Explicit contradictions and duplicate semantics
+## Current implementation notes
 
-### 1. Five-pane docs vs three-pane implementation
+### 1. 3-pane settings baseline
 
-- Docs (`README`, `PRD`, `SPEC`) still describe a **five-pane settings window**.
-- Implementation exposes only **three primary panes** in the sidebar and nests **Shortcuts** + **Diagnostics** under **General**.
-- Result: the mental model for where features live is inconsistent before a user even opens settings.
+- Current docs and implementation both use **three primary panes** in the sidebar.
+- **Shortcuts** and **Diagnostics** remain supporting sections under **General**.
+- The remaining question is not pane count, but how much supporting functionality should stay visible in each surface.
 
-### 2. `Fix Now` vs `Apply Layout`
+### 2. `Restore Now` vs `Apply Layout`
 
-- `Fix Now` means “restore the best inferred current match.”
+- `Restore Now` means “restore the best inferred current match.”
 - `Apply Layout` means “restore this specific saved profile.”
-- Both ultimately execute restore commands, but the difference in intent is not stated clearly enough in docs.
+- Both ultimately execute restore commands, but only `Restore Now` should remain the primary manual recovery CTA.
 
 ### 3. `Show Numbers` vs `identify displays`
 
@@ -131,5 +131,5 @@ This matrix normalizes them into a single user-observable state model and explic
 ## Phase 2 follow-up candidates (not part of definition approval)
 
 - Promote `Restore Failed` and `No Displays` into first-class visible states instead of collapsing both into generic manual recovery.
-- Rewrite menu/help copy so each runtime state has one unique recommended next action.
+- Keep menu/help copy aligned so each runtime state has one unique recommended next action.
 - Align diagnostics labels with the chosen canonical action names.

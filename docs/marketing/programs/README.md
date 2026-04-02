@@ -2,6 +2,19 @@
 
 Tracked strategy artifacts for OMX marketing-team runs live here.
 
+## Current source of truth
+
+These files are dated marketing snapshots, not the primary product definition.
+
+For current shipped behavior and positioning, use:
+
+- [`README.md`](../../../README.md)
+- [`PRD.md`](../../PRD.md)
+- [`SPEC.md`](../../SPEC.md)
+
+If a dated marketing artifact differs from those files, treat the marketing file
+as historical context and the current product docs as authoritative.
+
 Typical outputs:
 
 - positioning and ICP notes

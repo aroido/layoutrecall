@@ -15,11 +15,12 @@ Status: Simplified implementation-aligned artifact
 
 ## Audit summary
 
-The product is already materially implemented, but the **definition layer has drifted**:
+The product is already materially implemented, and this packet now records the
+accepted simplified baseline:
 
-- docs still teach a five-pane settings model while code currently exposes three primary sections
-- user-facing action names are not yet normalized across menu, settings, docs, and internal state language
-- the state model knows more than the UI surfaces explicitly communicate (for example `restoreFailed` and `noDisplays` are collapsed into generic manual recovery)
+- docs and code align on a 3-section settings model
+- user-facing product docs use `Restore Now` as the primary manual recovery CTA
+- the state model still knows more than the UI surfaces explicitly communicate (for example `restoreFailed` and `noDisplays` are collapsed into generic manual recovery)
 
 ## Decision ledger
 
@@ -31,7 +32,7 @@ The product is already materially implemented, but the **definition layer has dr
 - Save Current Layout
 - Automatic Restore
 - Ask Before Restore
-- Fix Now
+- Restore Now
 - Apply Layout
 - Show Numbers
 - Swap Positions
@@ -40,13 +41,13 @@ The product is already materially implemented, but the **definition layer has dr
 **Rationale**
 - Keeps user-facing verbs short and concrete.
 - Preserves familiarity with the current menu labels where they are already good.
-- Separates “best inferred recovery” (`Fix Now`) from “chosen specific profile restore” (`Apply Layout`).
+- Separates “best inferred recovery” (`Restore Now`) from “chosen specific profile restore” (`Apply Layout`).
 
 **Consensus**
 - PM: Accept
 - Designer: Accept
 - Engineer: Accept
-- Critic: Accept, with request to explain the `Fix Now` vs `Apply Layout` distinction explicitly in docs and UI copy
+- Critic: Accept, with request to explain the `Restore Now` vs `Apply Layout` distinction explicitly in docs and UI copy
 
 #### 2. Keep the shipped 3-section settings IA as the canonical model
 
@@ -129,7 +130,7 @@ The product is already materially implemented, but the **definition layer has dr
 - It overstates the size of the product for the current shipped scope.
 - It creates a second source of truth against the actual app.
 
-#### Rejected: collapse `Fix Now` and `Apply Layout` into a single restore label everywhere
+#### Rejected: collapse `Restore Now` and `Apply Layout` into a single restore label everywhere
 
 **Why rejected**
 - They represent two different user intents.
@@ -167,7 +168,7 @@ The product is already materially implemented, but the **definition layer has dr
 
 - “Manual recovery is too much of a catch-all. If the app knows a restore failed, say that.”
 - “If Diagnostics is core to trust, don’t make me go hunting under General.”
-- “`Fix Now` and `Apply Layout` are both restores; if you keep both, their difference must be explained.”
+- “`Restore Now` and `Apply Layout` are both restores; if you keep both, their difference must be explained.”
 - “The docs should not teach a different settings map from the one the product team intends to ship.”
 
 ## Verifier checklist
@@ -203,8 +204,8 @@ Simplicity-first review outcome for phase 1B:
 ### Resolved outcomes pushed from this lane
 
 1. **Manual recovery CTA**
-   - Resolve to **`Fix Now` for the current spec baseline**.
-   - Reason: it is the shipped/menu/tested label today, it is shorter in the menu, and introducing `Restore Now` while `Apply Layout` already exists adds rename debt without solving a user problem in phase 1.
+   - Resolve to **`Restore Now` as the user-facing product label** while keeping internal `fixNow` identifiers as implementation detail.
+   - Reason: current README/PRD/SPEC describe the product-level action as `Restore Now`, and the code identifier can stay stable internally.
 
 2. **Settings IA target**
    - Resolve to **3 primary panes in the baseline spec: Restore / Profiles / General**.
