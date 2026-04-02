@@ -29,15 +29,13 @@ struct MenuContentView: View {
                 header
                 statusBlock
 
-                if let action = recoverySurface.primaryAction {
+                if let action = recoverySurface.primaryAction, shouldShowPrimaryActionButton(for: action) {
                     primaryActionButton(for: action)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                if shouldShowQuickControlSection {
-                    quickControlSection
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
+                quickControlSection
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
 
                 Divider()
                     .padding(.top, 2)
@@ -106,15 +104,9 @@ struct MenuContentView: View {
 
     private var autoRestoreControl: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.automaticRestoreControlTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Text(model.restoreModeLine)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+            Label(model.automaticRestoreControlTitle, systemImage: "sparkles")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
 
             Spacer(minLength: 0)
 
@@ -154,151 +146,76 @@ struct MenuContentView: View {
             VStack(alignment: .leading, spacing: 12) {
                 autoRestoreControl
 
-                if shouldShowSecondaryActionsRow {
-                    Divider()
-                        .padding(.vertical, 2)
+                Divider()
+                    .padding(.vertical, 2)
 
-                    compactActionRow
+                directActionGrid
+            }
+        }
+    }
+
+    private func shouldShowPrimaryActionButton(for action: SurfaceActionPresentation) -> Bool {
+        action.action == .installDependency
+    }
+
+    private var directActionGrid: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(minimum: 0), spacing: 10),
+                GridItem(.flexible(minimum: 0), spacing: 10)
+            ],
+            spacing: 10
+        ) {
+            directActionButton(
+                title: model.surfaceActionPresentation(for: .fixNow).title,
+                systemImage: model.surfaceActionPresentation(for: .fixNow).systemImage,
+                accessibilityIdentifier: "menu.action.fixNow",
+                isDisabled: model.surfaceActionPresentation(for: .fixNow).isDisabled,
+                action: model.fixNow
+            )
+
+            directActionButton(
+                title: L10n.t("action.save"),
+                systemImage: SurfaceAction.saveNewProfile.systemImage,
+                accessibilityIdentifier: "menu.action.save",
+                isDisabled: false,
+                action: model.saveCurrentLayout
+            )
+
+            directActionButton(
+                title: L10n.t("action.identifyDisplays"),
+                systemImage: "number.square",
+                accessibilityIdentifier: "menu.action.identify",
+                isDisabled: model.referenceProfile == nil,
+                action: {
+                    guard let profile = model.referenceProfile else { return }
+                    model.identifyDisplays(for: profile.id)
                 }
-            }
+            )
+
+            directActionButton(
+                title: L10n.t("action.swap"),
+                systemImage: "arrow.left.and.right.square",
+                accessibilityIdentifier: "menu.action.swap",
+                isDisabled: !model.canSwapDisplays,
+                action: model.swapLeftRight
+            )
         }
     }
 
-    private var shouldShowQuickControlSection: Bool {
-        !model.profiles.isEmpty
-    }
-
-    private var shouldShowSecondaryActionsRow: Bool {
-        recoverySurface.showsInlineFixNow || recoverySurface.showsAdvancedMenu
-    }
-
-    private var compactActionRow: some View {
-        AdaptiveActionGroup {
-            if recoverySurface.showsInlineFixNow {
-                fixNowButton
-            }
-
-            if recoverySurface.showsAdvancedMenu {
-                advancedActionsMenu
-            }
-        }
-    }
-
-    private var fixNowButton: some View {
-        let presentation = model.surfaceActionPresentation(for: .fixNow)
-
-        return Button {
-            model.fixNow()
-        } label: {
-            actionLabel(presentation.title, systemImage: presentation.systemImage)
+    private func directActionButton(
+        title: String,
+        systemImage: String,
+        accessibilityIdentifier: String,
+        isDisabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            actionLabel(title, systemImage: systemImage)
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(presentation.isDisabled)
-        .accessibilityIdentifier("menu.action.fixNow")
-    }
-
-    private var identifyDisplaysMenuItem: some View {
-        Button {
-            if let profile = model.referenceProfile {
-                model.identifyDisplays(for: profile.id)
-            }
-        } label: {
-            Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
-        }
-        .disabled(model.referenceProfile == nil)
-    }
-
-    private var advancedActionsMenu: some View {
-        Menu {
-            if !recoverySurface.showsInlineFixNow && model.canRestoreSavedProfiles {
-                let presentation = model.surfaceActionPresentation(for: .fixNow)
-                Button {
-                    model.fixNow()
-                } label: {
-                    Label(presentation.title, systemImage: presentation.systemImage)
-                }
-                .disabled(presentation.isDisabled)
-            }
-
-            ForEach(recoverySurface.quickActions) { action in
-                Button {
-                    model.perform(action.action)
-                } label: {
-                    Label(action.title, systemImage: action.systemImage)
-                }
-                .disabled(action.isDisabled)
-            }
-
-            if model.profiles.count > 1 {
-                Divider()
-
-                Menu(L10n.t("menu.quickSwitch")) {
-                    ForEach(model.profiles) { profile in
-                        Button {
-                            model.restoreProfile(profile.id)
-                        } label: {
-                            if model.referenceProfile?.id == profile.id {
-                                Label(profile.name, systemImage: "checkmark.circle.fill")
-                            } else {
-                                Text(profile.name)
-                            }
-                        }
-                        .disabled(!model.canRestoreSavedProfiles)
-                    }
-
-                    Divider()
-
-                    Button(L10n.t("menu.quickSwitch.manageProfiles")) {
-                        openSettings(.profiles)
-                    }
-                }
-            }
-
-            let showsUtilityActions =
-                model.referenceProfile != nil
-                || model.shouldOfferDiagnosticsShortcut
-
-            if showsUtilityActions && (!recoverySurface.quickActions.isEmpty || model.profiles.count > 1) {
-                Divider()
-            }
-
-            if model.referenceProfile != nil {
-                identifyDisplaysMenuItem
-            }
-
-            if model.showsSwapDisplaysControl {
-                if model.referenceProfile != nil || model.shouldOfferDiagnosticsShortcut {
-                    Divider()
-                }
-
-                Menu(L10n.t("settings.advancedActions")) {
-                    Button {
-                        model.swapLeftRight()
-                    } label: {
-                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
-                    }
-                    .disabled(!model.canSwapDisplays)
-                }
-            }
-
-            if model.shouldOfferDiagnosticsShortcut {
-                if model.referenceProfile != nil {
-                    Divider()
-                }
-
-                Button {
-                    openSettings(.diagnostics)
-                } label: {
-                    Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
-                }
-            }
-        }
-        label: {
-            actionLabel(L10n.t("menu.moreActions"), systemImage: "ellipsis.circle")
-        }
-        .menuStyle(.borderlessButton)
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .accessibilityIdentifier("menu.action.more")
+        .disabled(isDisabled)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private func actionLabel(_ title: String, systemImage: String) -> some View {
@@ -309,19 +226,21 @@ struct MenuContentView: View {
     }
 
     private var footer: some View {
-        HStack {
-            Button(L10n.t("action.settings")) {
+        AdaptiveActionGroup {
+            Button {
                 openSettings(.restore)
+            } label: {
+                Label(L10n.t("action.settings"), systemImage: "gearshape")
             }
-            .buttonStyle(InlineActionButtonStyle())
+            .buttonStyle(ActionButtonStyle(role: .secondary))
             .accessibilityIdentifier("menu.footer.settings")
 
-            Spacer()
-
-            Button(L10n.t("action.quit")) {
+            Button {
                 NSApplication.shared.terminate(nil)
+            } label: {
+                Label(L10n.t("action.quit"), systemImage: "xmark.circle")
             }
-            .buttonStyle(InlineActionButtonStyle())
+            .buttonStyle(ActionButtonStyle(role: .secondary))
             .accessibilityIdentifier("menu.footer.quit")
         }
     }
