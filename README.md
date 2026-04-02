@@ -16,7 +16,7 @@ Quick reasons people install it:
 
 - **Save a desk once:** keep a known-good layout ready for the next reconnect.
 - **Restore only when safe:** automatic recovery is limited to strong profile matches.
-- **Stay in control when it is not safe:** `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics stay available.
+- **Stay in control when it is not safe:** `Restore Now`, `Apply Layout`, `Show Numbers`, and diagnostics stay available.
 
 ## Built for the desk setup that keeps drifting
 
@@ -32,7 +32,7 @@ If you want a full display-management suite or magical support for every complex
 
 - **It is conservative by design.** Automatic restore only runs when the connected display set strongly matches a saved profile.
 - **It stays transparent when it refuses to act.** If the match is weak or a dependency is missing, the app keeps recovery manual and shows why.
-- **It gives you direct recovery controls.** `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` are available when you want control.
+- **It gives you direct recovery controls.** `Restore Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` are available when you want control.
 - **It exposes real diagnostics.** Confidence, dependency state, and recent restore evidence stay visible instead of being buried.
 - **It is easy to evaluate honestly.** Signed downloads, a Homebrew cask, and the open-source codebase make the install path lower-friction than a random display script.
 
@@ -43,7 +43,7 @@ If you want a full display-management suite or magical support for every complex
 | Identical monitors come back in the wrong order after sleep or wake | Restores a saved profile when the live display snapshot is a confident match |
 | Dock reconnect changes the main display or origin unexpectedly | Brings back the known-good arrangement you already saved |
 | Auto-restore would be risky | Stops short, shows diagnostics, and leaves recovery manual on purpose |
-| You want to recover immediately yourself | Gives you `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` |
+| You want to recover immediately yourself | Gives you `Restore Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions` |
 
 ## Short demo
 
@@ -69,9 +69,9 @@ Save more than one desk profile, tune how restore behaves on startup, and keep m
 
 - Saves and manages one or more display layout profiles from the current live monitor arrangement
 - Watches for real display reconfiguration events and attempts automatic restore when confidence is high
-- Falls back to manual recovery with `Fix Now`, direct `Apply Layout`, `Show Numbers`, and `Swap Positions`
+- Falls back to manual recovery with `Restore Now`, direct `Apply Layout`, `Show Numbers`, and `Swap Positions`
 - Shows profile, confidence, dependency, and diagnostic context directly from the menu bar
-- Persists diagnostics history and exposes restore controls from a five-pane settings window
+- Persists diagnostics history and keeps recovery controls inside three primary settings sections: Restore, Profiles, and General
 - Supports launch at login, keyboard shortcuts, in-app update checks, and explicit `System` / `English` / `Korean` language choice
 - Can install `displayplacer` through the app flow when the dependency is missing
 
@@ -93,7 +93,7 @@ If `displayplacer` is missing, LayoutRecall can guide installation from the app 
 
 ## Requirements
 
-- macOS 13 or later
+- macOS 14 or later
 - Apple Silicon is currently the primary tested target
 - `displayplacer` is required for actual restore commands
 

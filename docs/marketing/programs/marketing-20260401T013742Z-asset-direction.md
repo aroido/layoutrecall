@@ -66,7 +66,7 @@ Purpose:
 
 Caption direction:
 
-> Save multiple desk profiles, tune recovery behavior, and fall back to `Fix Now`, `Apply Layout`, or `Show Numbers` when you want control.
+> Save multiple desk profiles, tune recovery behavior, and fall back to `Restore Now`, `Apply Layout`, or `Show Numbers` when you want control.
 
 ## Screenshot treatment rules
 

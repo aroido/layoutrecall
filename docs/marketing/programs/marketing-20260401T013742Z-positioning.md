@@ -39,7 +39,7 @@ LayoutRecall earns trust when the marketing consistently shows that the app is:
 1. **Built around a real pain** — monitor order and main-display state breaking after reconnects.
 2. **Conservative by design** — automatic restore happens only when confidence is high.
 3. **Transparent when it does not act** — the app explains blocked auto-restore decisions and surfaces manual recovery actions.
-4. **Grounded in real workflows** — saved profiles, `Fix Now`, `Apply Layout`, `Show Numbers`, and diagnostics already exist today.
+4. **Grounded in real workflows** — saved profiles, `Restore Now`, `Apply Layout`, `Show Numbers`, and diagnostics already exist today.
 5. **Low-friction to try** — signed app download, Homebrew cask, and OSS code visibility reduce adoption fear.
 
 ## Why they should download it now
@@ -67,7 +67,7 @@ When automatic restore is unsafe, LayoutRecall stays manual on purpose and shows
 
 - menu bar utility with saved layout profiles
 - confidence-based automatic restore
-- manual recovery tools: `Fix Now`, `Apply Layout`, `Show Numbers`, `Swap Positions`
+- manual recovery tools: `Restore Now`, `Apply Layout`, `Show Numbers`, `Swap Positions`
 - diagnostics history for recent restore decisions
 - signed app + Homebrew install path
 - open-source codebase with current docs and verification workflow

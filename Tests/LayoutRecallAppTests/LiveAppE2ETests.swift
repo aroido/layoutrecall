@@ -151,7 +151,6 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
         }
 
         return model.autoRestoreEnabled == false
-            && model.profiles.first?.settings.autoRestore == true
             && settings.automaticRestoreEnabled == false
     }
 
@@ -162,7 +161,6 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
         }
 
         return model.autoRestoreEnabled == true
-            && model.profiles.first?.settings.autoRestore == true
             && settings.automaticRestoreEnabled == true
     }
 

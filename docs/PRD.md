@@ -1,106 +1,125 @@
 # LayoutRecall Product Summary
 
-_Last updated: 2026-04-01_
+_Last updated: 2026-04-02_
+
+## Exact user problem
+
+When a MacBook + dock + multi-display desk wakes, reconnects, or reorders identical monitors, macOS can bring the displays back in the wrong arrangement. The user already knows the one layout they want. They need a lightweight tool that can bring that known layout back quickly, automatically when it is clearly safe, and manually when it is not.
 
 ## One-line definition
 
-LayoutRecall is a macOS menu bar utility that helps people recover a known multi-display layout after sleep, wake, dock reconnect, or identical-monitor shuffling.
+LayoutRecall is a macOS menu bar app that restores one known display profile after sleep, wake, or reconnect, automatically when the match is trustworthy and manually when it is not.
 
 ## Product promise
 
-- restore a saved layout automatically only when confidence is high
-- keep recovery obvious when confidence is lower
-- show enough evidence that the user can trust what the app is about to do
-- stay lightweight, menu-bar-first, and practical for daily desk setups
+- save the current known-good desk layout once
+- restore it automatically only when the current desk clearly matches
+- keep manual recovery one click away when automation is unsafe
+- explain why the app acted or refused to act
+- stay small, predictable, and menu-bar-first
 
-## Current baseline
+## Core product shape
 
-The current branch is no longer a scaffold-only MVP. The app already ships a usable restore workflow with:
+LayoutRecall is not a general display-management suite.
+It is a **known-layout recovery utility**.
 
-- live display snapshot capture from CoreGraphics
-- real display reconfiguration and wake monitoring with debounce
-- profile save, rename, delete, and direct `Apply Layout`
-- confidence-based automatic restore plus manual `Fix Now`
-- `Show Numbers` to confirm screen-to-profile mapping
-- `Swap Positions` fallback for supported desk layouts
-- persisted diagnostics history with verification outcomes
-- launch-at-login, keyboard shortcuts, update checks, and language selection
-- automatic `displayplacer` install flow when the dependency is missing
+That means the product should optimize for:
+1. one clear restore model
+2. one clear saved-profile model
+3. one clear fallback path
+4. clear safety signals
 
-## Target user
+## Keep / merge / remove-or-demote decisions
 
-- developers using a laptop, dock, and two or more external displays
-- creators with layout-sensitive editing or preview workflows
-- analysts, operators, or traders who depend on stable left/right placement
+### Keep
 
-## Key user flows
+- **Profile** as the single saved-layout object
+- **Auto Restore** when confidence is high enough
+- **Restore Now** as the single manual recovery CTA
+- **Apply Layout** as the profile-specific action inside Profiles
+- **Show Numbers** as a support utility for mapping displays
+- **Dependency setup** for `displayplacer`
+- **Diagnostics** as a support surface
 
-### 1. Capture a known-good workspace
+### Merge / simplify
+
+- Merge the product story around **one primary manual recovery action**: `Restore Now`
+- Treat `Apply Layout` as the profile-specific variant of restore, not a separate product pillar
+- Treat `Show Numbers` as a utility within recovery/profile management, not a standalone feature area
+- Treat settings as a simple three-pane model: **Restore / Profiles / General**
+
+### Remove or demote
+
+- **Swap Positions** is demoted from a core feature to an advanced/manual fallback utility
+- **Shortcuts** are demoted to advanced convenience, not a core workflow
+- **Update controls, launch at login, language choice** remain product features but are general preferences, not part of the core recovery story
+- **Per-profile auto-restore** is not part of the product baseline and should not be documented as a supported feature
+
+## Canonical user flows
+
+### 1. Save the desk once
 
 1. Arrange displays the way you want.
 2. Save the current layout as a profile.
-3. LayoutRecall stores matching metadata, expected origins, and a generated restore command.
+3. LayoutRecall stores the restore command and matching metadata.
 
-### 2. Recover automatically when confidence is high
+### 2. Restore automatically when safe
 
-1. macOS emits a real display reconfiguration or wake event.
-2. LayoutRecall waits for the event burst to settle.
-3. The app compares the live display set with saved profiles.
-4. If confidence clears the threshold and auto-restore is enabled, the app runs the restore command and verifies the result.
+1. Sleep, wake, or reconnect triggers a display event.
+2. LayoutRecall checks whether the current display set strongly matches the saved profile.
+3. If the match is strong enough and dependency/setup is ready, the app restores automatically.
+4. The app verifies the result and records diagnostics.
 
-### 3. Recover manually when confidence is low or the user wants control
+### 3. Restore manually when not safe
 
-1. The menu bar surface explains why auto-restore did not run.
-2. The user chooses `Fix Now`, `Apply Layout`, `Show Numbers`, or `Swap Positions`.
-3. The app records the action, outcome, and verification result in diagnostics.
+1. The menu explains why auto restore did not run.
+2. The user clicks **Restore Now**.
+3. If needed, the user can inspect **Show Numbers** or open **Diagnostics**.
 
 ## Information architecture
 
 ### Menu bar
 
-- current status and recent decision
-- confidence, display-count, and dependency badges
-- primary recovery action when needed
-- quick actions for save, identify, apply, and advanced controls
+The menu exists to answer four questions quickly:
+1. Is the app ready?
+2. Did it find the right profile?
+3. Why did it not restore automatically?
+4. What should I do next?
+
+Primary menu responsibilities:
+- current restore state
+- main recovery CTA
+- Auto Restore toggle
+- utility shortcuts (`Show Numbers`, diagnostics, save profile)
 
 ### Settings
 
-- **Restore**: automatic restore state, dependency readiness, recommended recovery actions
-- **Profiles**: profile management, confidence thresholds, direct apply, and identify displays
-- **Shortcuts**: keyboard bindings for recovery actions
-- **Diagnostics**: latest diagnostic, capped recent history, and runtime snapshot
-- **General**: launch at login, updates, and preferred language
+Use a simple three-pane model:
 
-## Product boundaries
+- **Restore** — current state, Auto Restore, recommended action, dependency readiness
+- **Profiles** — save/manage profiles, confidence threshold, apply layout, show numbers
+- **General** — diagnostics, launch at login, updates, language, shortcuts, advanced preferences
 
-The current app intentionally does **not** promise:
+## Non-goals
 
-- perfect prevention of every macOS display glitch
-- automatic restore below the configured confidence threshold
-- broad four-plus-display rearrangement heuristics
-- cloud sync, cross-machine profile sync, or per-app window placement
-- a native restore engine that replaces `displayplacer`
+LayoutRecall does **not** aim to be:
+- a full display-management suite
+- a tool for arbitrary layout experimentation
+- a broad four-plus-display rearrangement engine
+- a per-app window placement manager
+- a cloud sync tool
+- a replacement for `displayplacer`
 
 ## Known limitations to communicate clearly
 
-- `displayplacer` is still the execution engine for real layout changes.
-- Automatic restore is biased toward safe false negatives over risky false positives.
-- `Swap Positions` is intentionally limited to simpler supported layouts.
-- Live hardware stress coverage exists, but some hardware-dependent tests are opt-in.
+- `displayplacer` is still required for real layout changes.
+- Auto Restore is intentionally conservative.
+- `Swap Positions` is a limited fallback utility, not a primary workflow.
+- Some hardware-heavy tests remain opt-in.
 
-## Code quality review notes
+## Product priorities after this definition pass
 
-The codebase is in solid shape for continued 2.0 iteration:
-
-- app/runtime dependencies are injected cleanly enough to support focused tests
-- restore, persistence, diagnostics, localization, and UI behavior already have meaningful automated coverage
-- documentation was lagging behind implementation and needed a current-state refresh more than a structural rewrite
-
-The highest-value remaining product work is therefore polish, clarity, and trust-building rather than replacing the entire architecture.
-
-## Recommended next priorities
-
-1. Improve restore trust signals and explainability in the menu and diagnostics.
-2. Tighten profile-management ergonomics for multi-profile users.
-3. Clarify supported manual recovery paths and unsupported complex layouts.
-4. Continue hardening around dependency setup, verification failures, and edge-case hardware churn.
+1. Make restore trust signals easier to read.
+2. Reduce duplicate or overlapping recovery actions.
+3. Keep profile management simple and obvious.
+4. Make degraded states clearer without expanding the feature set.

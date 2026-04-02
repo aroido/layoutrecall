@@ -76,10 +76,8 @@ func bootstrapLoadsPersistedStateAndStartsMonitoring() async {
     #expect(model.restoreModeLine == L10n.t("restore.askBeforeAutomatic"))
     #expect(model.lastCommand == DisplayProfile.officeDock.layout.engine.command)
     #expect(model.menuPrimaryState == .healthy)
-    #expect(model.menuPrimaryAction == nil)
-    #expect(model.menuQuickActions == [.saveNewProfile])
-    #expect(model.restorePrimaryAction == nil)
-    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == nil)
+    #expect(model.recoverySurfacePresentation.quickActions.map(\.action) == [.saveNewProfile])
     #expect(model.shouldOfferDiagnosticsShortcut == false)
     #expect(model.menuStatusTitle == L10n.t("menu.state.readyProfile", "Office Dock"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.ready"))
@@ -179,10 +177,8 @@ func presentationActionsReflectMissingBaseline() async {
     await model.bootstrap()
 
     #expect(model.menuPrimaryState == .noProfiles)
-    #expect(model.menuPrimaryAction == .saveNewProfile)
-    #expect(model.menuQuickActions.isEmpty)
-    #expect(model.restorePrimaryAction == .saveNewProfile)
-    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .saveNewProfile)
+    #expect(model.recoverySurfacePresentation.quickActions.isEmpty)
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.noProfiles"))
 }
 
@@ -218,10 +214,8 @@ func presentationActionsReflectMissingDependency() async {
     await model.bootstrap()
 
     #expect(model.menuPrimaryState == .dependencyMissing)
-    #expect(model.menuPrimaryAction == .installDependency)
-    #expect(model.menuQuickActions == [.saveNewProfile])
-    #expect(model.restorePrimaryAction == .installDependency)
-    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .installDependency)
+    #expect(model.recoverySurfacePresentation.quickActions.map(\.action) == [.saveNewProfile])
     #expect(model.shouldOfferDiagnosticsShortcut == true)
     #expect(model.diagnosticsShortcutHint == L10n.t("settings.restore.openDiagnosticsHint"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.dependencyMissing"))
@@ -257,10 +251,8 @@ func presentationActionsReflectNoMatchingBaseline() async {
     await model.bootstrap()
 
     #expect(model.menuPrimaryState == .noMatch)
-    #expect(model.menuPrimaryAction == .saveNewProfile)
-    #expect(model.menuQuickActions.isEmpty)
-    #expect(model.restorePrimaryAction == .saveNewProfile)
-    #expect(model.restoreSecondaryActions.isEmpty)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .saveNewProfile)
+    #expect(model.recoverySurfacePresentation.quickActions.isEmpty)
     #expect(model.showsSwapDisplaysControl == true)
     #expect(model.canSwapDisplays == false)
     #expect(model.swapAvailabilityLine == L10n.t("runtime.swapRequiresTwo"))
@@ -338,6 +330,7 @@ func presentationAllowsPositionSwapForThreeDisplayLayouts() async {
 @MainActor
 @Test
 func presentationActionsReflectLowConfidenceMatch() async {
+    L10n.setPreferredLanguageCodeOverride(nil)
     let installer = DependencyInstallerStub()
     let model = AppModel(
         store: ProfileStoreStub(profiles: [.officeDock]),
@@ -361,10 +354,8 @@ func presentationActionsReflectLowConfidenceMatch() async {
     await model.bootstrap()
 
     #expect(model.menuPrimaryState == .lowConfidence)
-    #expect(model.menuPrimaryAction == .fixNow)
-    #expect(model.menuQuickActions == [.saveNewProfile])
-    #expect(model.restorePrimaryAction == .fixNow)
-    #expect(model.restoreSecondaryActions == [.saveNewProfile])
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .fixNow)
+    #expect(model.recoverySurfacePresentation.quickActions.map(\.action) == [.saveNewProfile])
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.lowConfidence"))
     #expect(model.referenceProfile?.name == "Office Dock")
 }
@@ -448,12 +439,9 @@ func profileCardActionStateDisablesDirectApplyWhenDependencyIsMissing() async {
 
 @MainActor
 @Test
-func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
-    var profile = DisplayProfile.officeDock
-    profile.settings.autoRestore = false
-
+func bootstrapPreservesLegacyProfilePayloadCompatibilityWithoutRuntimeAutoRestoreState() async {
     let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
-    let profileStore = ProfileStoreStub(profiles: [profile])
+    let profileStore = ProfileStoreStub(profiles: [.officeDock])
     let installer = DependencyInstallerStub()
     let model = AppModel(
         store: profileStore,
@@ -484,11 +472,10 @@ func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
 
     let persistedProfiles = await profileStore.currentProfiles()
 
-    #expect(model.profiles.first?.settings.autoRestore == true)
-    #expect(persistedProfiles.first?.settings.autoRestore == true)
+    #expect(model.profiles.first?.settings.confidenceThreshold == 70)
+    #expect(persistedProfiles.first?.settings.confidenceThreshold == 70)
     #expect(model.menuPrimaryState == .healthy)
-    #expect(model.menuPrimaryAction == nil)
-    #expect(model.restorePrimaryAction == nil)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == nil)
     #expect(model.restoreModeLine == L10n.t("restore.automatic"))
     #expect(model.dependencyLine == dependencyDetails)
     #expect(model.dependencySummaryLine == L10n.t("restore.dependency.ready"))
@@ -529,15 +516,13 @@ func presentationActionsReflectGlobalAutoRestoreDisabledWithoutMutatingProfileSt
     await model.bootstrap()
 
     #expect(model.autoRestoreEnabled == false)
-    #expect(model.profiles.first?.settings.autoRestore == true)
     #expect(model.menuPrimaryState == .autoRestoreDisabled)
-    #expect(model.menuPrimaryAction == .enableAutoRestore)
-    #expect(model.restorePrimaryAction == .enableAutoRestore)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .enableAutoRestore)
     #expect(model.menuStatusTitle == L10n.t("menu.state.globalAutoRestoreDisabled"))
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.globalAutoRestoreDisabled"))
     #expect(model.restoreActionHint == L10n.t("settings.restore.globalAutoRestoreDisabledHint"))
     #expect(model.restoreModeLine == L10n.t("restore.manualOnly"))
-    #expect(model.menuTitle(for: .enableAutoRestore) == L10n.t("action.enableAppAutoRestore"))
+    #expect(model.surfaceActionPresentation(for: .enableAutoRestore).title == L10n.t("action.enableAppAutoRestore"))
     #expect(model.canEnableAutomaticRestoreAction)
 }
 
@@ -632,7 +617,6 @@ func enableAutoRestoreActionTargetsGlobalSettingWhenAppSettingIsOff() async {
     }
 
     #expect(model.autoRestoreEnabled == true)
-    #expect(model.profiles.first?.settings.autoRestore == true)
 }
 
 @MainActor
@@ -908,7 +892,6 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
 
     #expect(model.profiles.first?.name == "Desk Alpha")
     #expect(model.profiles.first?.settings.confidenceThreshold == 85)
-    #expect(model.profiles.first?.settings.autoRestore == true)
     #expect(model.autoRestoreEnabled == false)
     #expect((await settingsStore.latestSavedSettings())?.automaticRestoreEnabled == false)
 
@@ -919,7 +902,6 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
     }
 
     #expect(model.autoRestoreEnabled == true)
-    #expect(model.profiles.first?.settings.autoRestore == true)
 }
 
 @MainActor
@@ -1399,7 +1381,7 @@ func askBeforeRestorePreventsAutomaticExecutionUntilUserConfirms() async {
 
     #expect(await executor.executedCommands().isEmpty)
     #expect(model.menuPrimaryState == .reviewBeforeRestore)
-    #expect(model.menuPrimaryAction == .fixNow)
+    #expect(model.recoverySurfacePresentation.primaryAction?.action == .fixNow)
     #expect(model.decisionLine == L10n.t("restoreDecision.askBeforeAutomaticRestore"))
 
     model.fixNow()
@@ -1480,6 +1462,7 @@ func displayEventsAreIgnoredDuringRestoreCooldown() async {
 @MainActor
 @Test
 func swapLeftRightAutomaticallyReturnsToSavedProfileWhenAutoRestoreIsEnabled() async {
+    L10n.setPreferredLanguageCodeOverride(nil)
     let diagnosticsStore = DiagnosticsStoreStub()
     let eventMonitor = EventMonitorStub()
     let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])

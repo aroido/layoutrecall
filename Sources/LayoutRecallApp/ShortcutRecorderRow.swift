@@ -24,7 +24,7 @@ struct ShortcutRecorderRow: View {
                 controls
             }
         }
-        .onChange(of: isRecording) { newValue in
+        .onChange(of: isRecording) { _, newValue in
             if newValue {
                 installMonitor()
             } else {

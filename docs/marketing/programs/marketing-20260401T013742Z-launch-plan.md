@@ -184,7 +184,7 @@ What ships in the current baseline:
 
 - saved display layout profiles,
 - high-confidence automatic restore,
-- manual `Fix Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions`,
+- manual `Restore Now`, `Apply Layout`, `Show Numbers`, and `Swap Positions`,
 - diagnostics and dependency visibility,
 - signed GitHub Releases and Homebrew install paths.
 
@@ -206,7 +206,7 @@ A few details that matter:
 
 - it only auto-restores when the match is confident,
 - if confidence is low, it stays manual instead of guessing,
-- there are direct recovery actions like `Fix Now`, `Apply Layout`, and `Show Numbers`,
+- there are direct recovery actions like `Restore Now`, `Apply Layout`, and `Show Numbers`,
 - it surfaces diagnostics and dependency state instead of hiding them.
 
 It is open source, available through GitHub Releases and Homebrew, and aimed at people with real multi-monitor desk setups — especially MacBook + dock users.

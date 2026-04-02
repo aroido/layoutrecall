@@ -1,11 +1,16 @@
 import AppKit
 import LayoutRecallKit
+import Observation
 import SwiftUI
 
 struct MenuContentView: View {
-    @ObservedObject var model: AppModel
+    @Bindable var model: AppModel
     let openSettings: (SettingsPane) -> Void
     @State private var hasAnimatedIn = false
+
+    private var recoverySurface: RecoverySurfacePresentation {
+        model.recoverySurfacePresentation
+    }
 
     private var autoRestoreBinding: Binding<Bool> {
         Binding(
@@ -24,7 +29,7 @@ struct MenuContentView: View {
                 header
                 statusBlock
 
-                if let action = model.menuPrimaryAction {
+                if let action = recoverySurface.primaryAction {
                     primaryActionButton(for: action)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -164,76 +169,32 @@ struct MenuContentView: View {
     }
 
     private var shouldShowSecondaryActionsRow: Bool {
-        shouldShowInlineFixNowButton
-            || model.showsSwapDisplaysControl
-            || shouldShowAdvancedActionsMenu
-    }
-
-    private var shouldShowInlineFixNowButton: Bool {
-        model.menuPrimaryAction != .fixNow && model.canRestoreSavedProfiles
-    }
-
-    private var shouldShowAdvancedActionsMenu: Bool {
-        !model.menuQuickActions.isEmpty
-            || model.profiles.count > 1
-            || model.referenceProfile != nil
-            || model.shouldOfferDiagnosticsShortcut
+        recoverySurface.showsInlineFixNow || recoverySurface.showsAdvancedMenu
     }
 
     private var compactActionRow: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                if shouldShowInlineFixNowButton {
-                    fixNowButton
-                }
-
-                if model.showsSwapDisplaysControl {
-                    swapPositionsButton
-                }
-
-                if shouldShowAdvancedActionsMenu {
-                    advancedActionsMenu
-                }
+        AdaptiveActionGroup {
+            if recoverySurface.showsInlineFixNow {
+                fixNowButton
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                if shouldShowInlineFixNowButton {
-                    fixNowButton
-                }
-
-                if model.showsSwapDisplaysControl {
-                    swapPositionsButton
-                }
-
-                if shouldShowAdvancedActionsMenu {
-                    advancedActionsMenu
-                }
+            if recoverySurface.showsAdvancedMenu {
+                advancedActionsMenu
             }
         }
     }
 
     private var fixNowButton: some View {
-        Button {
+        let presentation = model.surfaceActionPresentation(for: .fixNow)
+
+        return Button {
             model.fixNow()
         } label: {
-            actionLabel(L10n.t("action.fixNow"), systemImage: "bolt.fill")
+            actionLabel(presentation.title, systemImage: presentation.systemImage)
         }
         .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!model.canRestoreSavedProfiles || model.menuPrimaryState == .noMatch)
+        .disabled(presentation.isDisabled)
         .accessibilityIdentifier("menu.action.fixNow")
-    }
-
-    private var identifyDisplaysButton: some View {
-        Button {
-            if let profile = model.referenceProfile {
-                model.identifyDisplays(for: profile.id)
-            }
-        } label: {
-            actionLabel(L10n.t("action.identifyDisplays"), systemImage: "number.square")
-        }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(model.referenceProfile == nil)
-        .accessibilityIdentifier("menu.action.identify")
     }
 
     private var identifyDisplaysMenuItem: some View {
@@ -247,27 +208,25 @@ struct MenuContentView: View {
         .disabled(model.referenceProfile == nil)
     }
 
-    private var swapPositionsButton: some View {
-        Button {
-            model.swapLeftRight()
-        } label: {
-            actionLabel(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
-        }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!model.canSwapDisplays)
-        .help(model.swapAvailabilityLine)
-        .accessibilityIdentifier("menu.action.swap")
-    }
-
     private var advancedActionsMenu: some View {
         Menu {
-            ForEach(model.menuQuickActions) { action in
+            if !recoverySurface.showsInlineFixNow && model.canRestoreSavedProfiles {
+                let presentation = model.surfaceActionPresentation(for: .fixNow)
                 Button {
-                    model.perform(action)
+                    model.fixNow()
                 } label: {
-                    Label(model.menuTitle(for: action), systemImage: action.systemImage)
+                    Label(presentation.title, systemImage: presentation.systemImage)
                 }
-                .disabled(isDisabled(action))
+                .disabled(presentation.isDisabled)
+            }
+
+            ForEach(recoverySurface.quickActions) { action in
+                Button {
+                    model.perform(action.action)
+                } label: {
+                    Label(action.title, systemImage: action.systemImage)
+                }
+                .disabled(action.isDisabled)
             }
 
             if model.profiles.count > 1 {
@@ -299,12 +258,27 @@ struct MenuContentView: View {
                 model.referenceProfile != nil
                 || model.shouldOfferDiagnosticsShortcut
 
-            if showsUtilityActions && (!model.menuQuickActions.isEmpty || model.profiles.count > 1) {
+            if showsUtilityActions && (!recoverySurface.quickActions.isEmpty || model.profiles.count > 1) {
                 Divider()
             }
 
             if model.referenceProfile != nil {
                 identifyDisplaysMenuItem
+            }
+
+            if model.showsSwapDisplaysControl {
+                if model.referenceProfile != nil || model.shouldOfferDiagnosticsShortcut {
+                    Divider()
+                }
+
+                Menu(L10n.t("settings.advancedActions")) {
+                    Button {
+                        model.swapLeftRight()
+                    } label: {
+                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                    }
+                    .disabled(!model.canSwapDisplays)
+                }
             }
 
             if model.shouldOfferDiagnosticsShortcut {
@@ -353,29 +327,13 @@ struct MenuContentView: View {
     }
 
     @ViewBuilder
-    private func primaryActionButton(for action: SurfaceAction) -> some View {
-        Button(action: { model.perform(action) }) {
-            Label(
-                model.menuTitle(for: action),
-                systemImage: action == .installDependency && model.installationInProgress
-                    ? "hourglass"
-                    : action.systemImage
-            )
+    private func primaryActionButton(for action: SurfaceActionPresentation) -> some View {
+        Button(action: { model.perform(action.action) }) {
+            Label(action.title, systemImage: action.systemImage)
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(ActionButtonStyle(role: .primary))
-        .disabled(isDisabled(action))
-        .accessibilityIdentifier("menu.primary.\(action.rawValue)")
-    }
-
-    private func isDisabled(_ action: SurfaceAction) -> Bool {
-        switch action {
-        case .installDependency:
-            return model.installationInProgress
-        case .fixNow, .saveNewProfile:
-            return false
-        case .enableAutoRestore:
-            return !model.canEnableAutomaticRestoreAction
-        }
+        .disabled(action.isDisabled)
+        .accessibilityIdentifier("menu.primary.\(action.action.rawValue)")
     }
 }

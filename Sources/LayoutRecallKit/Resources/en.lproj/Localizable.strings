@@ -1,7 +1,7 @@
 "app.name" = "LayoutRecall";
 "menu.actions" = "Actions";
 "menu.automaticRestore" = "Automatic restore";
-"menu.appAutomaticRestore" = "App automatic restore";
+"menu.appAutomaticRestore" = "Automatic restore";
 "dependency.installing" = "Installing";
 "dependency.ready" = "Ready";
 "dependency.install" = "Install";
@@ -43,8 +43,8 @@
 "menu.subtitle.manualLayoutOverride" = "The repositioned layout is being kept as-is. Save it as a profile if you want to keep using it.";
 "menu.subtitle.manualRecovery" = "The current state needs a manual review before another restore attempt.";
 "menu.subtitle.ready" = "This setup looks safe. If the displays shift again, LayoutRecall can restore from this profile.";
-"menu.action.saveFirstBaseline" = "Save First Profile";
-"menu.action.saveAnotherBaseline" = "Save Profile";
+"menu.action.saveFirstBaseline" = "Save Current Layout";
+"menu.action.saveAnotherBaseline" = "Save Current Layout";
 "menu.recentActivity" = "Latest %@ · %@";
 "menu.quickSwitch" = "Quick Switch";
 "menu.profileShortcut" = "%lld. %@";
@@ -60,7 +60,7 @@
 "action.openDiagnostics" = "Open Diagnostics";
 "action.ignoreCurrentSetup" = "Keep Current Layout";
 "action.resumeCurrentSetup" = "Resume Auto Restore";
-"action.save" = "Save Profile";
+"action.save" = "Save Current Layout";
 "action.swap" = "Swap Positions";
 "section.status" = "Status";
 "field.profile" = "Profile";
@@ -114,7 +114,7 @@
 "restore.askBeforeAutomatic" = "Review first";
 "restore.manualOnly" = "Off";
 "toggle.enableAutomaticRestore" = "Enable automatic restore";
-"toggle.enableAppAutomaticRestore" = "Enable app automatic restore";
+"toggle.enableAppAutomaticRestore" = "Enable automatic restore";
 "toggle.askBeforeAutomaticRestore" = "Ask before restoring automatically";
 "restore.dependency.ready" = "The restore tool is ready.";
 "restore.dependency.missing" = "Install the restore tool before automatic restore can run.";
@@ -139,7 +139,7 @@
 "settings.restore.reviewDiagnosticsHint" = "Review diagnostics before retrying restore so you can see the latest runtime evidence.";
 "section.profiles" = "Profiles";
 "profiles.empty" = "Save the current layout to create your first profile.";
-"profiles.save.hint" = "Save the current monitor arrangement as a new profile. You can rename it and adjust the confidence threshold from the card right after saving.";
+"profiles.save.hint" = "Save the current monitor arrangement as the layout you want LayoutRecall to restore later. You can rename it and adjust the confidence threshold from the card right after saving.";
 "profiles.badge.reference" = "Matched";
 "profiles.savedAt" = "Saved %@";
 "profiles.preview.hint" = "These rectangles are a saved layout preview. Use Show Display Numbers below to light up the same numbers on the real monitors.";
@@ -325,14 +325,14 @@
 "event.type.wake" = "wake";
 "event.type.manual" = "manual";
 "event.type.restoreVerification" = "restore verification";
-"shortcut.fixNow.title" = "Fix Now";
+"shortcut.fixNow.title" = "Restore Now";
 "shortcut.fixNow.detail" = "Run the best matching saved profile immediately.";
 "shortcut.saveCurrentLayout.title" = "Save Profile";
 "shortcut.saveCurrentLayout.detail" = "Capture the current display arrangement as a saved profile.";
 "shortcut.swapLeftRight.title" = "Swap Positions";
 "shortcut.swapLeftRight.detail" = "Keep the main display in place and change the positions of the other displays.";
 "diagnostic.title.autoRestore" = "Automatic Restore";
-"diagnostic.title.fixNow" = "Fix Now";
+"diagnostic.title.fixNow" = "Restore Now";
 "diagnostic.title.manualRecovery" = "Manual Recovery";
 "diagnostic.title.savedCurrentLayout" = "Save Profile";
 "diagnostic.title.saveNewProfile" = "Save Profile";
@@ -357,7 +357,7 @@
 "launchAtLogin.enabled" = "Launch at login is enabled.";
 "launchAtLogin.disabled" = "Launch at login is disabled.";
 "launchAtLogin.requiresApproval" = "Launch at login requires user approval in System Settings.";
-"launchAtLogin.unsupported.macos" = "Launch at login requires macOS 13 or newer.";
+"launchAtLogin.unsupported.macos" = "Launch at login requires macOS 14 or newer.";
 "launchAtLogin.unsupported.bundle" = "Launch at login is unavailable for this app bundle.";
 "launchAtLogin.unsupported.unknown" = "Launch at login returned an unknown system status.";
 "settings.profileDisplayCountCompact" = "%lld displays";
