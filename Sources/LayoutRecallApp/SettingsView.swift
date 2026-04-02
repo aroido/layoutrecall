@@ -62,19 +62,16 @@ struct SettingsView: View {
                 SettingsPaneHeader(title: pane.title, subtitle: pane.subtitle)
 
                 switch pane {
-                case .restore:
+                case .restore, .diagnostics:
                     SettingsRestorePane(
                         model: model,
+                        isDiagnosticsSectionExpanded: $navigation.isDiagnosticsSectionExpanded,
                         openDiagnostics: openDiagnosticsSection
                     )
                 case .profiles:
                     SettingsProfilesPane(model: model)
-                case .general, .shortcuts, .diagnostics:
-                    SettingsGeneralPane(
-                        model: model,
-                        isShortcutsSectionExpanded: $navigation.isShortcutsSectionExpanded,
-                        isDiagnosticsSectionExpanded: $navigation.isDiagnosticsSectionExpanded
-                    )
+                case .general, .shortcuts:
+                    SettingsGeneralPane(model: model)
                 }
             }
             .padding(24)

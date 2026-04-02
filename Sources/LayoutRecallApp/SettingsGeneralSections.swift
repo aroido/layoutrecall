@@ -1,53 +1,6 @@
-import AppKit
 import LayoutRecallKit
 import Observation
 import SwiftUI
-
-struct SettingsGeneralSummaryCard: View {
-    @Bindable var model: AppModel
-
-    var body: some View {
-        GlassCard(padding: 18) {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeading(
-                    title: L10n.t("general.summary.title"),
-                    systemImage: "gearshape"
-                )
-
-                AdaptiveGroup {
-                    StatusPill(
-                        text: model.automaticUpdateChecksEnabled
-                            ? L10n.t("general.badge.updatesOn")
-                            : L10n.t("general.badge.updatesOff"),
-                        systemImage: "arrow.triangle.2.circlepath",
-                        emphasis: model.automaticUpdateChecksEnabled
-                    )
-
-                    StatusPill(
-                        text: model.launchAtLoginEnabled
-                            ? L10n.t("general.badge.launchOn")
-                            : L10n.t("general.badge.launchOff"),
-                        systemImage: "switch.2",
-                        emphasis: model.launchAtLoginEnabled
-                    )
-
-                    if let skippedReleaseVersion = model.skippedReleaseVersion {
-                        StatusPill(
-                            text: L10n.t("general.badge.skipped", skippedReleaseVersion),
-                            systemImage: "arrow.uturn.forward"
-                        )
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    KeyValueRow(label: L10n.t("section.updates"), value: model.updateStatusTitle)
-                    KeyValueRow(label: L10n.t("toggle.launchAtLogin"), value: model.loginItemLine)
-                    KeyValueRow(label: L10n.t("settings.appInfo"), value: model.appVersionDescription)
-                }
-            }
-        }
-    }
-}
 
 struct SettingsLanguageSection: View {
     @Bindable var model: AppModel
@@ -115,6 +68,8 @@ struct SettingsUpdateSection: View {
                 AdaptiveActionGroup {
                     updateActionButtons
                 }
+
+                SettingsFormHint(text: model.appVersionDescription)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
@@ -198,105 +153,6 @@ struct SettingsLaunchAtLoginSection: View {
         Binding(
             get: { model.launchAtLoginEnabled },
             set: { model.setLaunchAtLogin($0) }
-        )
-    }
-}
-
-struct SettingsAdvancedSection: View {
-    @Bindable var model: AppModel
-    @Binding var isShortcutsSectionExpanded: Bool
-    @Binding var isDiagnosticsSectionExpanded: Bool
-
-    var body: some View {
-        GlassCard(padding: 18) {
-            VStack(alignment: .leading, spacing: 16) {
-                SectionHeading(
-                    title: L10n.t("settings.advanced.title"),
-                    systemImage: "slider.horizontal.3"
-                )
-
-                SettingsFormHint(text: L10n.t("settings.advanced.hint"))
-
-                askBeforeRestoreSection
-
-                if model.showsSwapDisplaysControl {
-                    Divider()
-                    swapDisplaysSection
-                }
-
-                DisclosureGroup(
-                    isExpanded: $isShortcutsSectionExpanded,
-                    content: {
-                        VStack(alignment: .leading, spacing: 16) {
-                            SettingsShortcutsPane(model: model)
-                        }
-                        .padding(.top, 12)
-                    },
-                    label: {
-                        Label(SettingsPane.shortcuts.title, systemImage: SettingsPane.shortcuts.systemImage)
-                    }
-                )
-                .font(.subheadline.weight(.semibold))
-                .tint(Color.primary)
-
-                DisclosureGroup(
-                    isExpanded: $isDiagnosticsSectionExpanded,
-                    content: {
-                        VStack(alignment: .leading, spacing: 16) {
-                            SettingsDiagnosticsPane(model: model)
-                        }
-                        .padding(.top, 12)
-                    },
-                    label: {
-                        Label(SettingsPane.diagnostics.title, systemImage: SettingsPane.diagnostics.systemImage)
-                    }
-                )
-                .font(.subheadline.weight(.semibold))
-                .tint(Color.primary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private var askBeforeRestoreSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(model.askBeforeRestoreControlTitle)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
-                .toggleStyle(.switch)
-                .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
-                .accessibilityIdentifier("settings.general.askBeforeRestore")
-
-            SettingsFormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
-        }
-    }
-
-    private var swapDisplaysSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.t("action.swap"))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            SettingsFormHint(text: model.swapAvailabilityLine)
-
-            SettingsActionButton(
-                title: L10n.t("action.swap"),
-                systemImage: "arrow.left.and.right.square",
-                role: .secondary,
-                isDisabled: !model.canSwapDisplays,
-                accessibilityIdentifier: "settings.general.swap"
-            ) {
-                model.swapLeftRight()
-            }
-        }
-    }
-
-    private var askBeforeRestoreBinding: Binding<Bool> {
-        Binding(
-            get: { model.askBeforeAutomaticRestoreEnabled },
-            set: { model.setAskBeforeAutomaticRestore($0) }
         )
     }
 }

@@ -71,7 +71,7 @@ Save more than one desk profile, tune how restore behaves on startup, and keep m
 - Watches for real display reconfiguration events and attempts automatic restore when confidence is high
 - Falls back to manual recovery with `Restore Now`, direct `Apply Layout`, `Show Numbers`, and `Swap Positions`
 - Shows profile, confidence, dependency, and diagnostic context directly from the menu bar
-- Persists diagnostics history and keeps recovery controls inside three primary settings sections: Restore, Profiles, and General
+- Persists diagnostics history and keeps recovery controls inside three primary settings sections: Restore, Profiles, and App
 - Supports launch at login, keyboard shortcuts, in-app update checks, and explicit `System` / `English` / `Korean` language choice
 - Can install `displayplacer` through the app flow when the dependency is missing
 
@@ -158,7 +158,7 @@ Example local release build:
 VERSION=<version> BUILD_NUMBER=$(date +%Y%m%d%H%M%S) ./scripts/build-release-archive
 ```
 
-The app checks GitHub Releases for `aroido/layoutrecall`. Automatic update checks can be controlled from `General > Updates`.
+The app checks GitHub Releases for `aroido/layoutrecall`. Automatic update checks can be controlled from `App > Updates`.
 
 ## Contributing
 
