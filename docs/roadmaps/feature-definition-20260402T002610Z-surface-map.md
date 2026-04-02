@@ -1,256 +1,179 @@
 # LayoutRecall Surface Map
 
 Lab: `feature-definition-20260402T002610Z`
+Status: phase-1B minimal-product refinement
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1 only)
 
-## Audit basis
+## Minimal-product framing
 
-Reviewed implementation and docs for surface structure using:
+LayoutRecall's core job is narrow:
 
-- `README.md`
-- `docs/PRD.md`
-- `docs/SPEC.md`
-- `Sources/LayoutRecallApp/MenuContentView.swift`
-- `Sources/LayoutRecallApp/SettingsView.swift`
-- `Sources/LayoutRecallApp/AppPresentation.swift`
+> **When macOS scrambles a previously known desk layout, help the user get back to the saved arrangement safely.**
 
-## Current implementation snapshot
+Everything in the surface map should be judged against that job.
 
-### Menu bar content model (current)
+### Keep prominent only if it directly supports the core job
 
-1. **Header**
-   - App name
-   - state-sensitive app symbol
-2. **Status block**
-   - state badge
-   - status title
-   - status subtitle
-   - optional compact reference-profile summary
-3. **Primary action** (conditional)
-   - Save Current Layout
-   - Install displayplacer
-   - Fix Now
-   - Enable Automatic Restore
-4. **Quick control section** (when profiles exist)
-   - Automatic Restore toggle
-   - optional inline Fix Now button
-   - optional Swap Positions button
-   - More Actions menu with:
-     - Save Current Layout
-     - profile quick switch / Apply Layout
-     - Manage Profiles
-     - Show Numbers
-     - Open Diagnostics
-5. **Footer**
-   - Settings
-   - Quit
+Prominent surfaces should be limited to:
+1. understanding current restore readiness
+2. saving a known-good layout
+3. restoring the saved layout safely
+4. resolving the most common confidence/dependency blockers
 
-### Settings content model (current)
+Anything else should be demoted, hidden behind one extra step, or treated as a non-goal for the core product story.
 
-#### Primary sidebar sections
+## Decision: choose 3-pane IA as the canonical minimal product model
 
-- Restore
-- Profiles
-- General
+### Chosen top-level settings panes
 
-#### Embedded advanced sub-sections inside General
+1. **Restore**
+2. **Profiles**
+3. **General**
+   - Shortcuts
+   - Diagnostics
 
-- Shortcuts
-- Diagnostics
+### Why 3 panes wins under a minimal-product lens
 
-### Drift between docs and code
+- **Restore** and **Profiles** are the only two settings destinations directly tied to the app's core recovery job.
+- **General** cleanly absorbs maintenance and app-level preferences without asking users to treat every support/admin area as a first-class workflow.
+- A menu bar utility benefits more from fewer primary destinations than from strict conceptual purity.
+- The current implementation already supports this structure, so the docs can become sharper without creating a second, more expansive target IA.
 
-| Surface area | Docs say | Code does |
-| --- | --- | --- |
-| Settings IA | Five panes: Restore / Profiles / Shortcuts / Diagnostics / General | Three sidebar sections with Shortcuts + Diagnostics collapsed into General |
-| Diagnostics access | Dedicated settings pane | Nested disclosure under General plus contextual shortcut from Restore |
-| Shortcuts access | Dedicated settings pane | Nested disclosure under General |
-| Menu quick actions | README lists `Fix Now`, `Apply Layout`, `Show Numbers`, `Swap Positions` | Same capabilities exist, but some are top-level buttons while others are buried in the More Actions menu or per-profile settings cards |
+### Why 5 panes loses under a minimal-product lens
 
-## IA candidates considered
+A five-pane model over-promotes secondary surfaces:
+- **Diagnostics** is important, but it is evidence/support, not the main workflow.
+- **Shortcuts** is useful, but optional.
+- Making both top-level panes implies a broader product than the app actually needs to be.
 
-### Candidate A — Keep current 3-section sidebar with embedded advanced sub-sections
+**Decision:** treat the old 5-area documentation model as product-definition drift, not as a future target to preserve.
 
-**Sidebar**
-- Restore
-- Profiles
-- General
+## Prominence rules
 
-**Inside General**
-- Language
-- Updates
-- Launch at Login
-- Advanced
-  - Ask Before Restore
-  - Shortcuts (disclosure)
-  - Diagnostics (disclosure)
+### Primary surfaces
 
-**Pros**
-- Minimal implementation disruption.
-- Keeps the top-level sidebar short and simple.
-- Works well if Shortcuts and Diagnostics are considered secondary/advanced.
+#### Menu bar
+The menu should primarily answer:
+1. What state is the app in?
+2. Can it safely restore right now?
+3. What is the single best next action?
 
-**Cons**
-- Diagnostics is too important for trust and support to feel “tucked away.”
-- Shortcuts and Diagnostics are user-visible enough to deserve clearer findability.
-- Conflicts with the current docs and marketing narrative about the product surface.
+#### Restore pane
+The Restore pane is the canonical surface for runtime trust and recovery.
 
-### Candidate B — Use one explicit 5-section settings IA
+#### Profiles pane
+The Profiles pane is the canonical surface for creating and managing saved layouts.
 
-**Sidebar**
-- Restore
-- Profiles
-- Shortcuts
-- Diagnostics
-- General
+### Secondary / demoted surfaces
 
-**Pros**
-- Matches the docs users and contributors already read.
-- Gives trust/support surfaces first-class visibility.
-- Makes “where does this live?” decisions simpler and less nested.
+#### Diagnostics
+- Keep accessible from blocked/error states.
+- Keep as a section under General.
+- Do **not** make it a top-level pane in the minimal product.
+- Treat it as a support/trust artifact, not a daily workflow.
 
-**Cons**
-- Slightly heavier sidebar.
-- Requires implementation work to unnest the current General pane.
-- Needs careful copy cleanup to avoid duplicating restore controls across panes.
+#### Shortcuts
+- Keep under General.
+- Do **not** elevate to a top-level pane.
+- It is optional acceleration, not core recovery behavior.
 
-## Chosen IA
+#### Updates / language / launch at login
+- Keep under General.
+- These are operational preferences, not recovery workflow.
 
-**Chosen candidate: Candidate B — explicit 5-section settings IA.**
+## Canonical menu model
 
-### Why this is the chosen definition
+### Healthy state
+Healthy state should be quiet.
 
-- The product promise is trust-heavy; **Diagnostics** is too important to bury as a disclosure.
-- **Shortcuts** is a full user-facing capability with three independent action bindings, not just an advanced footnote.
-- The existing docs already teach a 5-section mental model, so choosing it minimizes long-term narrative drift.
-- PM, Designer, and Engineer alignment is easier when every major feature area has one obvious home.
+Keep visible:
+- status summary
+- optional profile context
+- settings access
 
-## Chosen canonical surface map
+Demote or remove from immediate prominence:
+- multiple secondary controls at once
+- heavy dashboard-like cards
+- maintenance/admin affordances
 
-### Menu bar: what belongs here
+### Degraded state
+Degraded states may expand, but only enough to support recovery.
 
-The menu remains the **runtime trust and recovery surface**.
+Keep prominent:
+- blocker explanation
+- one primary next action
+- one or two relevant secondary actions at most
 
-#### Menu should own
+Demote:
+- broad utility menus
+- profile-management detail
+- support/admin content unless directly relevant
 
-- Current status badge/title/subtitle
-- Reference profile summary when relevant
-- Primary next action for the current state
-- Automatic Restore toggle
-- Fast runtime actions:
-  - Fix Now
-  - Save Current Layout
-  - Swap Positions
-  - Apply Layout (via quick switch)
-  - Show Numbers
-- Fast link to Settings / Diagnostics when attention is needed
+## Feature-to-surface ownership under minimal scope
 
-#### Menu should not own
+| Feature / action | Prominence | Canonical home | Minimal-product ruling |
+| --- | --- | --- | --- |
+| Status / readiness | Primary | Menu + Restore | Keep primary |
+| Save Profile | Primary in Profiles, secondary in Menu | Profiles | Keep |
+| Auto Restore | Primary policy control | Restore | Keep |
+| Restore Now / Fix Now | Primary runtime recovery | Menu + Restore | Keep, but one canonical label should win later |
+| Apply specific profile | Secondary | Profiles | Keep, but do not over-promote in runtime surfaces |
+| Show Numbers | Secondary utility | Profiles | Keep, but demote from top-level runtime prominence |
+| Swap display positions | Advanced/manual fallback | Restore | Keep as demoted fallback, not a co-equal primary action |
+| Diagnostics | Support / trust evidence | General > Diagnostics | Keep demoted but shortcut from blocked states |
+| Shortcuts | Optional acceleration | General > Shortcuts | Keep demoted |
+| Updates / language / launch at login | Operational preferences | General | Keep demoted |
 
-- Profile renaming/deletion
-- Confidence threshold sliders
-- Shortcut editing
-- Update policy configuration
-- Language settings
-- Support-file browsing as a primary workflow
+## Accept / reject decisions
 
-### Settings: chosen 5-section IA
+### Accepted
 
-#### 1. Restore
+1. **Accept 3-pane settings navigation as canonical.**
+   - Rationale: it is the smallest structure that fully supports the product's real job.
 
-Purpose: explain current restore policy, trust state, and recommended next actions.
+2. **Accept Restore as the primary runtime/trust pane.**
+   - Rationale: runtime safety, dependency readiness, and immediate recovery belong together.
 
-Owns:
-- Automatic Restore toggle
-- Ask Before Restore toggle
-- dependency/install state
-- recommended restore actions (`Fix Now`, `Install displayplacer`, `Enable Automatic Restore`)
-- current-vs-saved layout comparison
-- contextual diagnostics shortcut
-- Swap Positions action and availability messaging
+3. **Accept Profiles as the primary saved-layout management pane.**
+   - Rationale: saving, inspecting, and applying a specific profile is a distinct but still core job.
 
-#### 2. Profiles
+4. **Accept Diagnostics as demoted but directly reachable from blocked states.**
+   - Rationale: evidence matters most when something is blocked or unclear.
 
-Purpose: create, inspect, and manage saved layouts.
+5. **Accept Shortcuts as demoted under General.**
+   - Rationale: useful, but not required to understand or complete the main workflow.
 
-Owns:
-- Save Current Layout
-- profile list
-- Apply Layout per profile
-- Show Numbers per profile
-- rename/delete profile
-- confidence threshold tuning
-- saved-layout preview/details
+### Rejected
 
-#### 3. Shortcuts
+1. **Reject 5-pane IA as canonical.**
+   - Rationale: it optimizes for feature completeness and conceptual symmetry rather than product sharpness.
 
-Purpose: configure hotkeys for high-frequency recovery actions.
+2. **Reject first-class prominence for Diagnostics.**
+   - Rationale: diagnostics is important evidence, but not a daily primary workflow.
 
-Owns:
-- Fix Now shortcut
-- Save Current Layout shortcut
-- Swap Positions shortcut
+3. **Reject first-class prominence for Shortcuts.**
+   - Rationale: shortcuts should not compete with restore/profile surfaces for primary navigation attention.
 
-#### 4. Diagnostics
+4. **Reject equal prominence for Swap Positions and other expansion-oriented controls.**
+   - Rationale: they are fallback tools, not the main product promise.
 
-Purpose: expose evidence, history, and support artifacts.
+## Simplification guidance for final docs
 
-Owns:
-- latest restore outcome
-- runtime snapshot
-- recent history
-- copy diagnostics report
-- support-folder and support-file links
+The final PRD/SPEC language should emphasize:
+- save a known-good layout
+- restore it safely when the desk drifts
+- stay manual when confidence is weak
+- expose evidence only as much as needed to maintain trust
 
-#### 5. General
+The final PRD/SPEC language should de-emphasize:
+- feature completeness
+- support/admin surfaces as primary destinations
+- every advanced/manual fallback as if it were part of the main promise
 
-Purpose: app-level non-recovery preferences and app lifecycle controls.
+## Remaining low-priority unresolved item
 
-Owns:
-- language selection
-- automatic update checks
-- update actions (check now / install / skip)
-- launch at login
-- app version/build info
+Only one unresolved item should remain if needed:
 
-## Feature-to-surface canonical home map
+- **Final runtime CTA copy:** whether the user-facing label settles on `Fix Now` or `Restore Now`.
 
-| Feature | Menu | Restore | Profiles | Shortcuts | Diagnostics | General | Canonical home |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Save Current Layout | Yes | No | Yes | Shortcut entry only | No | No | **Profiles** |
-| Automatic Restore | Toggle | Yes | No | No | No | No | **Restore** |
-| Ask Before Restore | No | Yes | No | No | No | No | **Restore** |
-| Fix Now | Yes | Yes | No | Shortcut entry only | Context only | No | **Restore** |
-| Apply Layout | Quick-switch only | No | Yes | No | No | No | **Profiles** |
-| Show Numbers | Utility action | No | Yes | No | No | No | **Profiles** |
-| Swap Positions | Yes | Yes | No | Shortcut entry only | No | No | **Restore** |
-| Profile rename/delete | No | No | Yes | No | No | No | **Profiles** |
-| Confidence threshold | No | No | Yes | No | No | No | **Profiles** |
-| Diagnostics history/report | Shortcut only | Shortcut only | No | No | Yes | No | **Diagnostics** |
-| Shortcut editing | No | No | No | Yes | No | No | **Shortcuts** |
-| Updates | No | No | No | No | No | Yes | **General** |
-| Launch at login | No | No | No | No | No | Yes | **General** |
-| Language | No | No | No | No | No | Yes | **General** |
-| Install displayplacer | Yes when blocked | Yes | No | No | Context only | No | **Restore** |
-
-## Rationale: 5-pane vs 3-pane
-
-### Accepted rationale for 5-pane
-
-- Trust-heavy apps need **Diagnostics** to be first-class, not buried.
-- The app already has enough surface area that “General” should not become a junk drawer.
-- A dedicated **Shortcuts** pane is justified because shortcut editing is structured, repetitive, and task-specific.
-- The five-pane model better matches the product story in README/PRD/SPEC and reduces future documentation drift.
-
-### Why 3-pane was not chosen
-
-- It optimizes for a shorter sidebar at the cost of clarity.
-- It hides two user-visible capabilities inside an “Advanced” stack that weakens findability.
-- It makes the “canonical home” of diagnostics ambiguous, especially when restore trust is the core product value.
-
-## Phase 2 follow-up candidates (not part of definition approval)
-
-- Move Shortcuts and Diagnostics back into first-class sidebar panes in code.
-- Update README/PRD/SPEC copy to match the chosen IA exactly.
-- Rebalance the menu so more-actions density stays manageable after terminology cleanup.
+This is copy debt, not IA debt.
