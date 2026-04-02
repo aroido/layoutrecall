@@ -12,7 +12,7 @@ func settingsPresenterCreatesReusableWindowAndTracksRequestedPane() throws {
     presenter.show(.diagnostics)
     let firstWindow = try #require(presenter.window)
 
-    #expect(navigation.selectedPane == .general)
+    #expect(navigation.selectedPane == .restore)
     #expect(navigation.isDiagnosticsSectionExpanded == true)
     #expect(firstWindow.title == L10n.t("action.settings"))
 
@@ -33,7 +33,7 @@ func settingsNavigationKeepsAcceptedThreePaneIA() {
     #expect(SettingsPane.profiles.navigationPane == .profiles)
     #expect(SettingsPane.general.navigationPane == .general)
     #expect(SettingsPane.shortcuts.navigationPane == .general)
-    #expect(SettingsPane.diagnostics.navigationPane == .general)
+    #expect(SettingsPane.diagnostics.navigationPane == .restore)
 }
 
 @Test

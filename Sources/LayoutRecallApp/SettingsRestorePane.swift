@@ -4,6 +4,9 @@ import SwiftUI
 
 struct SettingsRestorePane: View {
     @Bindable var model: AppModel
+    @Binding var isDiagnosticsSectionExpanded: Bool
+    @State private var isLayoutComparisonExpanded = false
+    @State private var hasPrimedDisclosureState = false
     let openDiagnostics: () -> Void
 
     private var recoverySurface: RecoverySurfacePresentation {
@@ -12,103 +15,61 @@ struct SettingsRestorePane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            restoreOverviewCard
-            restoreControlCards
+            restoreHeroCard
+            layoutComparisonSection
+            recoverySettingsCard
+            diagnosticsSection
+        }
+        .onAppear(perform: primeDisclosureStateIfNeeded)
+        .onChange(of: model.menuPrimaryState) { _, _ in
+            promoteDisclosureStateIfNeeded()
+        }
+        .onChange(of: model.diagnosticsNeedsAttention) { _, _ in
+            promoteDisclosureStateIfNeeded()
         }
     }
 
-    private var restoreControlCards: some View {
-        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 16, verticalSpacing: 16) {
-            autoRestoreCard
-        } secondary: {
-            recommendedActionsCard
-        }
-    }
-
-    private var autoRestoreCard: some View {
-        GlassCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeading(
-                    title: model.automaticRestoreControlTitle,
-                    systemImage: "sparkles"
-                )
-
-                Text(model.dependencySummaryLine)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
-                    .toggleStyle(.switch)
-                    .accessibilityIdentifier("settings.restore.autoRestore")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    private var recommendedActionsCard: some View {
-        GlassCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeading(
-                    title: L10n.t("settings.recommendedActions"),
-                    systemImage: "sparkles.rectangle.stack"
-                )
-
-                Text(recoverySurface.restoreHint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let action = recoverySurface.primaryAction {
-                    actionButton(for: action, role: .primary)
-                }
-
-                if !recoverySurface.quickActions.isEmpty {
-                    AdaptiveActionGroup {
-                        ForEach(recoverySurface.quickActions) { action in
-                            actionButton(for: action, role: .secondary)
-                        }
-                    }
-                }
-
-                if model.shouldOfferDiagnosticsShortcut {
-                    Divider()
-                        .padding(.vertical, 2)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(recoverySurface.diagnosticsShortcutHint)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button(action: openDiagnostics) {
-                            Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
-                        }
-                        .buttonStyle(InlineActionButtonStyle())
-                        .accessibilityIdentifier("settings.restore.diagnostics")
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    private var restoreOverviewCard: some View {
+    private var restoreHeroCard: some View {
         GlassCard(padding: 18) {
-            VStack(alignment: .leading, spacing: 18) {
+            AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 20, verticalSpacing: 18, horizontalPrimaryWidth: 380) {
                 restoreOverviewContent
-                restoreLayoutComparison
+            } secondary: {
+                restoreActionPanel
             }
         }
     }
 
-    private var restoreLayoutComparison: some View {
-        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 14, verticalSpacing: 14) {
-            currentLayoutPreviewCard
-        } secondary: {
-            savedLayoutPreviewCard
+    private var layoutComparisonSection: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeading(
+                    title: L10n.t("settings.restore.comparison.title"),
+                    systemImage: "rectangle.split.2x1"
+                )
+
+                Text(L10n.t("settings.restore.comparison.hint"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                DisclosureGroup(
+                    isExpanded: $isLayoutComparisonExpanded,
+                    content: {
+                        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 14, verticalSpacing: 14) {
+                            currentLayoutPreviewCard
+                        } secondary: {
+                            savedLayoutPreviewCard
+                        }
+                        .padding(.top, 12)
+                    },
+                    label: {
+                        Label(L10n.t("settings.restore.comparison.label"), systemImage: "rectangle.3.group")
+                    }
+                )
+                .font(.subheadline.weight(.semibold))
+                .tint(Color.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -205,11 +166,189 @@ struct SettingsRestorePane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var restoreActionPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeading(
+                title: L10n.t("settings.actions"),
+                systemImage: "sparkles.rectangle.stack"
+            )
+
+            Text(recoverySurface.restoreHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let action = recoverySurface.primaryAction {
+                actionButton(for: action, role: .primary)
+            }
+
+            if !recoverySurface.quickActions.isEmpty {
+                AdaptiveActionGroup {
+                    ForEach(recoverySurface.quickActions) { action in
+                        actionButton(for: action, role: .secondary)
+                    }
+                }
+            }
+
+            if model.shouldOfferDiagnosticsShortcut {
+                Divider()
+                    .padding(.vertical, 2)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(recoverySurface.diagnosticsShortcutHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button(action: openDiagnostics) {
+                        Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
+                    }
+                    .buttonStyle(InlineActionButtonStyle())
+                    .accessibilityIdentifier("settings.restore.diagnostics")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var autoRestoreBinding: Binding<Bool> {
         Binding(
             get: { model.autoRestoreEnabled },
             set: { model.setAutoRestore($0) }
         )
+    }
+
+    private var askBeforeRestoreBinding: Binding<Bool> {
+        Binding(
+            get: { model.askBeforeAutomaticRestoreEnabled },
+            set: { model.setAskBeforeAutomaticRestore($0) }
+        )
+    }
+
+    private var recoverySettingsCard: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeading(
+                    title: L10n.t("settings.restore.behavior.title"),
+                    systemImage: "slider.horizontal.3"
+                )
+
+                Text(L10n.t("settings.restore.behavior.hint"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.automaticRestoreControlTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Toggle(model.automaticRestoreToggleTitle, isOn: autoRestoreBinding)
+                        .toggleStyle(.switch)
+                        .accessibilityIdentifier("settings.restore.autoRestore")
+
+                    SettingsFormHint(text: model.dependencySummaryLine)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.askBeforeRestoreControlTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Toggle(model.askBeforeRestoreToggleTitle, isOn: askBeforeRestoreBinding)
+                        .toggleStyle(.switch)
+                        .disabled(!model.autoRestoreEnabled || model.profiles.isEmpty)
+                        .accessibilityIdentifier("settings.restore.askBeforeRestore")
+
+                    SettingsFormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
+                }
+
+                if model.showsSwapDisplaysControl {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(L10n.t("settings.restore.quickAdjustments.title"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        SettingsFormHint(text: model.swapAvailabilityLine)
+
+                        SettingsActionButton(
+                            title: L10n.t("action.swap"),
+                            systemImage: "arrow.left.and.right.square",
+                            role: .secondary,
+                            isDisabled: !model.canSwapDisplays,
+                            accessibilityIdentifier: "settings.restore.swap"
+                        ) {
+                            model.swapLeftRight()
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var diagnosticsSection: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeading(
+                    title: L10n.t("section.diagnostics"),
+                    systemImage: "stethoscope"
+                )
+
+                Text(L10n.t("settings.restore.diagnostics.hint"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                DisclosureGroup(
+                    isExpanded: $isDiagnosticsSectionExpanded,
+                    content: {
+                        SettingsDiagnosticsPane(model: model)
+                            .padding(.top, 12)
+                    },
+                    label: {
+                        Label(L10n.t("settings.restore.diagnostics.label"), systemImage: "waveform.path.ecg")
+                    }
+                )
+                .font(.subheadline.weight(.semibold))
+                .tint(Color.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var shouldAutoExpandLayoutComparison: Bool {
+        model.menuPrimaryState != .healthy || model.referenceProfile == nil
+    }
+
+    private var shouldAutoExpandDiagnostics: Bool {
+        model.diagnosticsNeedsAttention
+            || model.menuPrimaryState == .lowConfidence
+            || model.menuPrimaryState == .manualRecovery
+    }
+
+    private func primeDisclosureStateIfNeeded() {
+        guard !hasPrimedDisclosureState else { return }
+        hasPrimedDisclosureState = true
+        isLayoutComparisonExpanded = shouldAutoExpandLayoutComparison
+
+        if shouldAutoExpandDiagnostics {
+            isDiagnosticsSectionExpanded = true
+        }
+    }
+
+    private func promoteDisclosureStateIfNeeded() {
+        if shouldAutoExpandLayoutComparison {
+            isLayoutComparisonExpanded = true
+        }
+
+        if shouldAutoExpandDiagnostics {
+            isDiagnosticsSectionExpanded = true
+        }
     }
 
     private func restoreMatchedBaselineSummary(profile: DisplayProfile) -> some View {

@@ -144,8 +144,10 @@ enum SettingsPane: String, CaseIterable, Hashable, Identifiable {
 
     var navigationPane: SettingsPane {
         switch self {
-        case .shortcuts, .diagnostics:
+        case .shortcuts:
             return .general
+        case .diagnostics:
+            return .restore
         case .restore, .profiles, .general:
             return self
         }
