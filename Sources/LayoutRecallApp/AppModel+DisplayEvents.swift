@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func startMonitoring() {
         eventMonitor.start { [weak self] event in
             Task { @MainActor in

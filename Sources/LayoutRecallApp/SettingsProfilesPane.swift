@@ -24,14 +24,14 @@ struct SettingsProfilesPane: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Button {
+                    SettingsActionButton(
+                        title: L10n.t("action.save"),
+                        systemImage: "square.and.arrow.down",
+                        role: .primary,
+                        accessibilityIdentifier: "settings.profiles.save"
+                    ) {
                         model.saveCurrentLayout()
-                    } label: {
-                        Label(L10n.t("action.save"), systemImage: "square.and.arrow.down")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(ActionButtonStyle(role: .primary))
-                    .accessibilityIdentifier("settings.profiles.save")
                 }
             }
 
@@ -69,29 +69,15 @@ struct SettingsProfilesPane: View {
 
         return GlassCard(padding: 18) {
             VStack(alignment: .leading, spacing: 16) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .center, spacing: 10) {
-                        profileNameField(for: profile)
-
-                        if isReferenceProfile {
-                            StatusPill(
-                                text: L10n.t("profiles.badge.reference"),
-                                systemImage: "checkmark.circle.fill",
-                                emphasis: true
-                            )
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        profileNameField(for: profile)
-
-                        if isReferenceProfile {
-                            StatusPill(
-                                text: L10n.t("profiles.badge.reference"),
-                                systemImage: "checkmark.circle.fill",
-                                emphasis: true
-                            )
-                        }
+                AdaptivePairLayout(horizontalAlignment: .center, horizontalSpacing: 10, verticalSpacing: 8) {
+                    profileNameField(for: profile)
+                } secondary: {
+                    if isReferenceProfile {
+                        StatusPill(
+                            text: L10n.t("profiles.badge.reference"),
+                            systemImage: "checkmark.circle.fill",
+                            emphasis: true
+                        )
                     }
                 }
 
@@ -116,26 +102,14 @@ struct SettingsProfilesPane: View {
                 DisclosureGroup(
                     isExpanded: profileExpansionBinding(for: profile),
                     content: {
-                        ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top, spacing: 18) {
-                                DisplayLayoutPreview(
-                                    displays: sortedDisplays,
-                                    primaryDisplayKey: model.primaryDisplayKey(for: profile)
-                                )
-                                .frame(width: 214, height: 132)
-
-                                profileLayoutDetails(for: profile, displays: sortedDisplays)
-                            }
-
-                            VStack(alignment: .leading, spacing: 16) {
-                                DisplayLayoutPreview(
-                                    displays: sortedDisplays,
-                                    primaryDisplayKey: model.primaryDisplayKey(for: profile)
-                                )
-                                .frame(height: 132)
-
-                                profileLayoutDetails(for: profile, displays: sortedDisplays)
-                            }
+                        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 18, verticalSpacing: 16, horizontalPrimaryWidth: 214) {
+                            DisplayLayoutPreview(
+                                displays: sortedDisplays,
+                                primaryDisplayKey: model.primaryDisplayKey(for: profile)
+                            )
+                            .frame(height: 132)
+                        } secondary: {
+                            profileLayoutDetails(for: profile, displays: sortedDisplays)
                         }
                         .padding(.top, 8)
                     },
@@ -268,16 +242,9 @@ struct SettingsProfilesPane: View {
         for profile: DisplayProfile,
         actionState: ProfileCardActionState
     ) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                applyLayoutButton(for: profile, actionState: actionState)
-                identifyDisplaysButton(for: profile, actionState: actionState)
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                applyLayoutButton(for: profile, actionState: actionState)
-                identifyDisplaysButton(for: profile, actionState: actionState)
-            }
+        AdaptiveActionGroup {
+            applyLayoutButton(for: profile, actionState: actionState)
+            identifyDisplaysButton(for: profile, actionState: actionState)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -286,36 +253,32 @@ struct SettingsProfilesPane: View {
         for profile: DisplayProfile,
         actionState: ProfileCardActionState
     ) -> some View {
-        Button {
+        SettingsActionButton(
+            title: actionState.applyTitle,
+            systemImage: "bolt.fill",
+            role: .primary,
+            isDisabled: !actionState.canApplyLayout,
+            accessibilityIdentifier: "settings.profile.apply.\(profile.id.uuidString)",
+            helpText: actionState.applyHelp
+        ) {
             model.restoreProfile(profile.id)
-        } label: {
-            Label(actionState.applyTitle, systemImage: "bolt.fill")
-                .lineLimit(1)
-                .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity)
         }
-        .buttonStyle(ActionButtonStyle(role: .primary))
-        .disabled(!actionState.canApplyLayout)
-        .help(actionState.applyHelp)
-        .accessibilityIdentifier("settings.profile.apply.\(profile.id.uuidString)")
     }
 
     private func identifyDisplaysButton(
         for profile: DisplayProfile,
         actionState: ProfileCardActionState
     ) -> some View {
-        Button {
+        SettingsActionButton(
+            title: actionState.identifyTitle,
+            systemImage: "number.square.fill",
+            role: .secondary,
+            isDisabled: !actionState.canIdentifyDisplays,
+            accessibilityIdentifier: "settings.profile.identify.\(profile.id.uuidString)",
+            helpText: actionState.identifyHelp
+        ) {
             model.identifyDisplays(for: profile.id)
-        } label: {
-            Label(actionState.identifyTitle, systemImage: "number.square.fill")
-                .lineLimit(1)
-                .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity)
         }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!actionState.canIdentifyDisplays)
-        .help(actionState.identifyHelp)
-        .accessibilityIdentifier("settings.profile.identify.\(profile.id.uuidString)")
     }
 
     private func profileControls(for profile: DisplayProfile) -> some View {

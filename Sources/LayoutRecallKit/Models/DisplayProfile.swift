@@ -47,12 +47,26 @@ public struct LayoutDefinition: Codable, Equatable, Sendable {
 }
 
 public struct ProfileSettings: Codable, Equatable, Sendable {
-    public var autoRestore: Bool
     public var confidenceThreshold: Int
 
-    public init(autoRestore: Bool = true, confidenceThreshold: Int = 70) {
-        self.autoRestore = autoRestore
+    enum CodingKeys: String, CodingKey {
+        case autoRestore
+        case confidenceThreshold
+    }
+
+    public init(confidenceThreshold: Int = 70) {
         self.confidenceThreshold = confidenceThreshold
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        confidenceThreshold = try container.decodeIfPresent(Int.self, forKey: .confidenceThreshold) ?? 70
+        _ = try container.decodeIfPresent(Bool.self, forKey: .autoRestore)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(confidenceThreshold, forKey: .confidenceThreshold)
     }
 }
 

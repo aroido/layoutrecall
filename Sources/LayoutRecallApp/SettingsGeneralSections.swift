@@ -112,14 +112,8 @@ struct SettingsUpdateSection: View {
                     }
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        updateActionButtons
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        updateActionButtons
-                    }
+                AdaptiveActionGroup {
+                    updateActionButtons
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -137,35 +131,47 @@ struct SettingsUpdateSection: View {
 
     @ViewBuilder
     private var updateActionButtons: some View {
-        Button(L10n.t("update.action.checkNow")) {
+        SettingsActionButton(
+            title: L10n.t("update.action.checkNow"),
+            systemImage: "arrow.triangle.2.circlepath",
+            role: .secondary,
+            isDisabled: model.updateState.isBusy,
+            accessibilityIdentifier: "settings.general.checkUpdates"
+        ) {
             model.checkForUpdatesNow()
         }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(model.updateState.isBusy)
-        .accessibilityIdentifier("settings.general.checkUpdates")
 
         if model.canInstallAvailableUpdate {
-            Button(L10n.t("update.action.install")) {
+            SettingsActionButton(
+                title: L10n.t("update.action.install"),
+                systemImage: "arrow.down.circle",
+                role: .primary,
+                accessibilityIdentifier: "settings.general.installUpdate"
+            ) {
                 model.installAvailableUpdate()
             }
-            .buttonStyle(ActionButtonStyle(role: .primary))
-            .accessibilityIdentifier("settings.general.installUpdate")
         }
 
         if model.availableUpdate != nil {
-            Button(L10n.t("update.action.skipVersion")) {
+            SettingsActionButton(
+                title: L10n.t("update.action.skipVersion"),
+                systemImage: "arrow.uturn.forward",
+                role: .secondary,
+                isDisabled: model.updateState.isBusy,
+                accessibilityIdentifier: "settings.general.skipVersion"
+            ) {
                 model.skipAvailableUpdateVersion()
             }
-            .buttonStyle(ActionButtonStyle(role: .secondary))
-            .disabled(model.updateState.isBusy)
-            .accessibilityIdentifier("settings.general.skipVersion")
         } else if model.skippedReleaseVersion != nil {
-            Button(L10n.t("update.action.clearSkip")) {
+            SettingsActionButton(
+                title: L10n.t("update.action.clearSkip"),
+                systemImage: "arrow.counterclockwise",
+                role: .secondary,
+                isDisabled: model.updateState.isBusy,
+                accessibilityIdentifier: "settings.general.clearSkip"
+            ) {
                 model.clearSkippedUpdateVersion()
             }
-            .buttonStyle(ActionButtonStyle(role: .secondary))
-            .disabled(model.updateState.isBusy)
-            .accessibilityIdentifier("settings.general.clearSkip")
         }
     }
 }
@@ -275,14 +281,15 @@ struct SettingsAdvancedSection: View {
 
             SettingsFormHint(text: model.swapAvailabilityLine)
 
-            Button {
+            SettingsActionButton(
+                title: L10n.t("action.swap"),
+                systemImage: "arrow.left.and.right.square",
+                role: .secondary,
+                isDisabled: !model.canSwapDisplays,
+                accessibilityIdentifier: "settings.general.swap"
+            ) {
                 model.swapLeftRight()
-            } label: {
-                Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
             }
-            .buttonStyle(ActionButtonStyle(role: .secondary))
-            .disabled(!model.canSwapDisplays)
-            .accessibilityIdentifier("settings.general.swap")
         }
     }
 

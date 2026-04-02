@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func loadProfiles() async {
         await logStartup(
             "loadProfiles begin path=\(profileStorePath) exists=\(FileManager.default.fileExists(atPath: profileStorePath))"
@@ -32,7 +32,6 @@ extension AppSession {
             }
 
             var normalized = profile
-            normalized.settings.autoRestore = true
             normalized.layout = LayoutDefinition(
                 primaryDisplayKey: updatedPlan.primaryDisplayKey,
                 expectedOrigins: updatedPlan.expectedOrigins,

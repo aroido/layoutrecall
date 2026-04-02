@@ -439,12 +439,9 @@ func profileCardActionStateDisablesDirectApplyWhenDependencyIsMissing() async {
 
 @MainActor
 @Test
-func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
-    var profile = DisplayProfile.officeDock
-    profile.settings.autoRestore = false
-
+func bootstrapPreservesLegacyProfilePayloadCompatibilityWithoutRuntimeAutoRestoreState() async {
     let dependencyDetails = L10n.t("restoreExecutor.availableAt", "/usr/local/bin/displayplacer")
-    let profileStore = ProfileStoreStub(profiles: [profile])
+    let profileStore = ProfileStoreStub(profiles: [.officeDock])
     let installer = DependencyInstallerStub()
     let model = AppModel(
         store: profileStore,
@@ -475,8 +472,8 @@ func bootstrapNormalizesLegacyProfileAutoRestoreToGlobalMode() async {
 
     let persistedProfiles = await profileStore.currentProfiles()
 
-    #expect(model.profiles.first?.settings.autoRestore == true)
-    #expect(persistedProfiles.first?.settings.autoRestore == true)
+    #expect(model.profiles.first?.settings.confidenceThreshold == 70)
+    #expect(persistedProfiles.first?.settings.confidenceThreshold == 70)
     #expect(model.menuPrimaryState == .healthy)
     #expect(model.recoverySurfacePresentation.primaryAction?.action == nil)
     #expect(model.restoreModeLine == L10n.t("restore.automatic"))
@@ -519,7 +516,6 @@ func presentationActionsReflectGlobalAutoRestoreDisabledWithoutMutatingProfileSt
     await model.bootstrap()
 
     #expect(model.autoRestoreEnabled == false)
-    #expect(model.profiles.first?.settings.autoRestore == true)
     #expect(model.menuPrimaryState == .autoRestoreDisabled)
     #expect(model.recoverySurfacePresentation.primaryAction?.action == .enableAutoRestore)
     #expect(model.menuStatusTitle == L10n.t("menu.state.globalAutoRestoreDisabled"))
@@ -621,7 +617,6 @@ func enableAutoRestoreActionTargetsGlobalSettingWhenAppSettingIsOff() async {
     }
 
     #expect(model.autoRestoreEnabled == true)
-    #expect(model.profiles.first?.settings.autoRestore == true)
 }
 
 @MainActor
@@ -897,7 +892,6 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
 
     #expect(model.profiles.first?.name == "Desk Alpha")
     #expect(model.profiles.first?.settings.confidenceThreshold == 85)
-    #expect(model.profiles.first?.settings.autoRestore == true)
     #expect(model.autoRestoreEnabled == false)
     #expect((await settingsStore.latestSavedSettings())?.automaticRestoreEnabled == false)
 
@@ -908,7 +902,6 @@ func profileEditsPersistAcrossRenameThresholdAndAutoRestoreChanges() async {
     }
 
     #expect(model.autoRestoreEnabled == true)
-    #expect(model.profiles.first?.settings.autoRestore == true)
 }
 
 @MainActor

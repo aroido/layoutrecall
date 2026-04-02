@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     var recoverySurfacePresentation: RecoverySurfacePresentation {
         let primaryAction: SurfaceActionPresentation? = switch menuPrimaryState {
         case .noProfiles:

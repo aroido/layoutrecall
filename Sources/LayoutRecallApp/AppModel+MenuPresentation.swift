@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     var menuStatePresentation: MenuStatePresentation {
         switch menuPrimaryState {
         case .noProfiles:

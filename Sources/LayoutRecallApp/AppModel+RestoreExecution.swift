@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func executeRestore(
         command: String,
         expectedOrigins: [DisplayOrigin],

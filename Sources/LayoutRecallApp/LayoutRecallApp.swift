@@ -4,7 +4,7 @@ import SwiftUI
 @main
 struct LayoutRecallApp: App {
     @NSApplicationDelegateAdaptor(AppTerminationCoordinator.self) private var terminationCoordinator
-    @State private var model: AppSession
+    @State private var model: AppModel
 
     private let launchMode: AppLaunchMode
     private let bootstrapCoordinator: BootstrapCoordinator

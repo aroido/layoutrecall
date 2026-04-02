@@ -18,16 +18,10 @@ struct SettingsRestorePane: View {
     }
 
     private var restoreControlCards: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 16) {
-                autoRestoreCard
-                recommendedActionsCard
-            }
-
-            VStack(alignment: .leading, spacing: 16) {
-                autoRestoreCard
-                recommendedActionsCard
-            }
+        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 16, verticalSpacing: 16) {
+            autoRestoreCard
+        } secondary: {
+            recommendedActionsCard
         }
     }
 
@@ -111,16 +105,10 @@ struct SettingsRestorePane: View {
     }
 
     private var restoreLayoutComparison: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 14) {
-                currentLayoutPreviewCard
-                savedLayoutPreviewCard
-            }
-
-            VStack(alignment: .leading, spacing: 14) {
-                currentLayoutPreviewCard
-                savedLayoutPreviewCard
-            }
+        AdaptivePairLayout(horizontalAlignment: .top, horizontalSpacing: 14, verticalSpacing: 14) {
+            currentLayoutPreviewCard
+        } secondary: {
+            savedLayoutPreviewCard
         }
     }
 
@@ -253,7 +241,7 @@ struct SettingsRestorePane: View {
 
     @ViewBuilder
     private func actionButton(for action: SurfaceActionPresentation, role: ActionButtonStyle.Role) -> some View {
-        SettingsSurfaceActionButton(
+        SettingsActionButton(
             title: action.title,
             systemImage: action.systemImage,
             role: role,
@@ -311,27 +299,6 @@ private struct SettingsLayoutPreviewCard: View {
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct SettingsSurfaceActionButton: View {
-    let title: String
-    let systemImage: String
-    let role: ActionButtonStyle.Role
-    let isDisabled: Bool
-    let accessibilityIdentifier: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .lineLimit(1)
-                .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(ActionButtonStyle(role: role))
-        .disabled(isDisabled)
-        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

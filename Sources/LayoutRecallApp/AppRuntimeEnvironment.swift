@@ -92,7 +92,7 @@ enum RuntimeLaunchArguments {
 }
 
 @MainActor
-func makeAppModel(for launchMode: AppLaunchMode) -> AppSession {
+func makeAppModel(for launchMode: AppLaunchMode) -> AppModel {
     switch launchMode {
     case .standard:
         return AppModel(

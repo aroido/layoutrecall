@@ -64,6 +64,22 @@ func displayProfilesDecodeFromPersistedAppSchema() throws {
     #expect(profiles.first?.name == "작업공간 1")
     #expect(profiles.first?.displaySet.displays.count == 2)
     #expect(profiles.first?.displaySet.displays.first?.scale == 2)
+    #expect(profiles.first?.settings.confidenceThreshold == 70)
+}
+
+@Test
+func displayProfilesReencodeWithoutLegacyAutoRestoreField() throws {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let profiles = try decoder.decode([DisplayProfile].self, from: persistedAppSchemaFixtureData())
+
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let encoded = try encoder.encode(profiles)
+    let encodedString = String(decoding: encoded, as: UTF8.self)
+
+    #expect(encodedString.contains("\"confidenceThreshold\""))
+    #expect(!encodedString.contains("\"autoRestore\""))
 }
 
 @Test

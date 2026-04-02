@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func performManualRestore() async {
         let dependency = await refreshDependencyState()
         guard dependency.isAvailable else {

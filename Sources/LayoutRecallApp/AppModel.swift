@@ -4,7 +4,7 @@ import Foundation
 import LayoutRecallKit
 import Observation
 
-struct AppSessionServices {
+struct AppModelServices {
     let store: any ProfileStoring
     let settingsStore: any AppSettingsStoring
     let diagnosticsStore: any DiagnosticsStoring
@@ -27,7 +27,7 @@ struct AppSessionServices {
     let shouldBootstrapOnLaunch: Bool
 }
 
-struct AppSessionTaskState {
+struct AppModelTaskState {
     var debounceTask: Task<Void, Never>?
     var restoreCooldownUntil: Date?
     var installationTask: Task<Void, Never>?
@@ -41,7 +41,7 @@ struct AppSessionTaskState {
 
 @MainActor
 @Observable
-final class AppSession {
+final class AppModel {
     var profiles: [DisplayProfile] = []
     var diagnostics: [DiagnosticsEntry] = []
     var statusLine = L10n.t("status.starting")
@@ -67,8 +67,8 @@ final class AppSession {
     var shortcuts = ShortcutSettings()
     var skippedReleaseVersion: String?
 
-    let services: AppSessionServices
-    var taskState = AppSessionTaskState()
+    let services: AppModelServices
+    var taskState = AppModelTaskState()
 
     init(
         store: any ProfileStoring = ProfileStore(),
@@ -92,7 +92,7 @@ final class AppSession {
         restoreCooldown: TimeInterval = 8,
         autoBootstrap: Bool = true
     ) {
-        services = AppSessionServices(
+        services = AppModelServices(
             store: store,
             settingsStore: settingsStore,
             diagnosticsStore: diagnosticsStore,
@@ -170,13 +170,13 @@ final class AppSession {
     }
 }
 
-extension AppSession {
+extension AppModel {
     func shortcutBinding(for action: ShortcutAction) -> ShortcutBinding? {
         shortcuts[action]
     }
 }
 
-extension AppSession {
+extension AppModel {
     var store: any ProfileStoring { services.store }
     var settingsStore: any AppSettingsStoring { services.settingsStore }
     var diagnosticsStore: any DiagnosticsStoring { services.diagnosticsStore }
@@ -243,5 +243,3 @@ extension AppSession {
         set { taskState.manualRestoreActionTaken = newValue }
     }
 }
-
-typealias AppModel = AppSession

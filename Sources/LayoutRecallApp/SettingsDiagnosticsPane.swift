@@ -32,30 +32,7 @@ struct SettingsDiagnosticsPane: View {
                         copyReportButton
                     }
 
-                    Text(latestEntry.displayTitle)
-                        .font(.title3.weight(.semibold))
-
-                    Text(latestEntry.details)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    AdaptiveGroup {
-                        DiagnosticBadge(
-                            text: latestEntry.outcomeSummary,
-                            tone: latestEntry.outcomeTone
-                        )
-
-                        if let profileName = latestEntry.profileName {
-                            DiagnosticBadge(text: profileName)
-                        }
-
-                        if let confidenceSummary = latestEntry.confidenceSummary {
-                            DiagnosticBadge(text: confidenceSummary)
-                        }
-
-                        DiagnosticBadge(text: L10n.eventTypeName(latestEntry.eventType))
-                        DiagnosticBadge(text: latestEntry.timestamp.formatted(date: .abbreviated, time: .shortened))
-                    }
+                    DiagnosticEntrySummaryView(entry: latestEntry, style: .featured)
 
                     if diagnosticsReportCopied {
                         SettingsFormHint(text: L10n.t("diagnostics.copyReportHint"))
@@ -124,40 +101,7 @@ struct SettingsDiagnosticsPane: View {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(model.diagnostics.prefix(5).enumerated()), id: \.element.id) { index, entry in
                         GlassCard(padding: 14) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    Text(entry.displayTitle)
-                                        .font(.headline)
-
-                                    Spacer(minLength: 8)
-
-                                    Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                AdaptiveGroup {
-                                    DiagnosticBadge(
-                                        text: entry.outcomeSummary,
-                                        tone: entry.outcomeTone
-                                    )
-
-                                    if let profileName = entry.profileName {
-                                        DiagnosticBadge(text: profileName)
-                                    }
-
-                                    if let confidenceSummary = entry.confidenceSummary {
-                                        DiagnosticBadge(text: confidenceSummary)
-                                    }
-
-                                    DiagnosticBadge(text: L10n.eventTypeName(entry.eventType))
-                                }
-
-                                Text(entry.details)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                            DiagnosticEntrySummaryView(entry: entry, style: .history)
                         }
 
                         if index < min(model.diagnostics.count, 5) - 1 {

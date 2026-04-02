@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func fixNow() {
         launchTrackedTask {
             await self.performManualRestore()

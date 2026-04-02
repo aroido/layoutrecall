@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     func checkForUpdates(userInitiated: Bool, promptIfAvailable: Bool) async {
         guard !updateState.isBusy else {
             return
@@ -114,7 +114,7 @@ extension AppSession {
     }
 }
 
-extension AppSession {
+extension AppModel {
     var profileStorePath: String {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)

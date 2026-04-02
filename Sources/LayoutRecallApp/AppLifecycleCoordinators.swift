@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 final class AppTerminationCoordinator: NSObject, NSApplicationDelegate {
-    weak var model: AppSession?
+    weak var model: AppModel?
     private var terminationReplyPending = false
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -33,7 +33,7 @@ final class BootstrapCoordinator {
     private var launchObserver: NSObjectProtocol?
     private var didRequestBootstrap = false
 
-    func scheduleIfNeeded(model: AppSession) {
+    func scheduleIfNeeded(model: AppModel) {
         guard model.shouldBootstrapOnLaunch, launchObserver == nil else { return }
 
         launchObserver = NotificationCenter.default.addObserver(
@@ -135,7 +135,7 @@ final class ExistingInstanceCoordinator {
 final class MenuHarnessWindowCoordinator {
     private var windowController: NSWindowController?
 
-    func show(model: AppSession, openSettings: @escaping (SettingsPane) -> Void) {
+    func show(model: AppModel, openSettings: @escaping (SettingsPane) -> Void) {
         let windowController = windowController ?? makeWindowController(model: model, openSettings: openSettings)
         self.windowController = windowController
 
@@ -148,7 +148,7 @@ final class MenuHarnessWindowCoordinator {
         windowController.window?.makeKeyAndOrderFront(nil)
     }
 
-    private func makeWindowController(model: AppSession, openSettings: @escaping (SettingsPane) -> Void) -> NSWindowController {
+    private func makeWindowController(model: AppModel, openSettings: @escaping (SettingsPane) -> Void) -> NSWindowController {
         let hostingController = NSHostingController(rootView: MenuContentView(model: model, openSettings: openSettings))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 336, height: 420),
@@ -173,7 +173,7 @@ final class StartupWindowPresenter {
     func scheduleIfNeeded(
         launchMode: AppLaunchMode,
         openSettingsOnLaunch: Bool,
-        model: AppSession,
+        model: AppModel,
         settingsWindowPresenter: SettingsWindowPresenter,
         menuHarnessWindowCoordinator: MenuHarnessWindowCoordinator
     ) {
@@ -200,7 +200,7 @@ final class StartupWindowPresenter {
     private func presentStartupWindowsIfNeeded(
         launchMode: AppLaunchMode,
         openSettingsOnLaunch: Bool,
-        model: AppSession,
+        model: AppModel,
         settingsWindowPresenter: SettingsWindowPresenter,
         menuHarnessWindowCoordinator: MenuHarnessWindowCoordinator
     ) {

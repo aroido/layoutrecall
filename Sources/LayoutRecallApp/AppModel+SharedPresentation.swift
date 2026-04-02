@@ -1,7 +1,7 @@
 import Foundation
 import LayoutRecallKit
 
-extension AppSession {
+extension AppModel {
     var automaticRestoreControlTitle: String {
         L10n.t("menu.appAutomaticRestore")
     }
