@@ -1,189 +1,228 @@
-# LayoutRecall Menu and Settings Surface Map
+# LayoutRecall Menu + Settings Surface Map
 
-_Date:_ 2026-04-02
+Lab: `feature-definition-20260402T002610Z`
+Updated: 2026-04-02
+Status: proposed definition set for PM + Designer + Engineer signoff before implementation
 
-## Chosen information architecture
+## Audit finding that forces an IA decision
 
-**Chosen canonical settings IA: 3 top-level panes**
+The code and docs currently disagree:
+
+- `README.md`, `docs/PRD.md`, and `docs/SPEC.md` still describe a **five-pane** settings window.
+- `SettingsPane.primaryNavigationPanes` in `Sources/LayoutRecallApp/AppPresentation.swift` currently exposes only **three sidebar destinations**: `Restore`, `Profiles`, and `General`.
+- `Shortcuts` and `Diagnostics` are currently secondary disclosures inside `General`.
+
+## Chosen settings structure
+
+**Choose one canonical settings IA:**
+
+### Top-level navigation: 3 panes only
 
 1. **Restore**
 2. **Profiles**
 3. **General**
-   - Shortcuts (section)
-   - Diagnostics (section)
 
-### Why this is the chosen IA
+### Secondary sections within General
 
-- It matches the implemented sidebar (`SettingsPane.primaryNavigationPanes`).
-- It fits a menu-bar-first utility better than a wider five-pane navigation model.
-- It keeps recovery tasks close together while moving lower-frequency maintenance/admin work under General.
-- It reduces navigation noise without hiding important actions, because Shortcuts and Diagnostics remain directly linkable.
+- Shortcuts
+- Diagnostics
 
-### Rejected alternative
+## Why 3-pane navigation wins over 5-pane navigation
 
-**Rejected:** five equal-weight top-level panes (`Restore / Profiles / Shortcuts / Diagnostics / General`)
+### Accepted rationale
 
-**Reason rejected:** this overstates the importance of maintenance surfaces for a lightweight utility and does not match the current implementation reality.
+- The current code already implements 3-pane primary navigation, so the chosen IA aligns with the shipped product instead of documenting an aspirational split.
+- `Shortcuts` and `Diagnostics` are support utilities, not primary workflow destinations for day-to-day use.
+- The product is menu-bar-first; top-level settings panes should map to the three stable jobs users do there: understand restore status, manage baselines, and configure app behavior.
+- A 5-pane top-level split would add navigation weight without adding new conceptual clarity for this product size.
 
-## Audit: current surface structure
+### Rejected rationale for 5-pane top-level
 
-### Menu bar content model (implemented)
+- It creates artificial parity between operational panes (`Restore`, `Profiles`) and support panes (`Shortcuts`, `Diagnostics`).
+- It increases sidebar noise in a compact utility app.
+- It preserves documentation drift instead of resolving it.
+
+## Canonical surface model
+
+## 1. Menu bar surface
+
+### Purpose
+
+The menu answers immediate runtime questions and exposes recovery actions without becoming the long-term management surface.
+
+### Canonical menu content model
 
 1. **Header**
-   - App name
-   - status symbol
-2. **Status block**
-   - state badge
-   - title
-   - subtitle
-   - reference profile summary when not healthy
-3. **Primary action** (conditional)
-   - Install Dependency / Restore Now / Enable Auto Restore / Save Profile
-4. **Quick controls** (when profiles exist)
-   - Auto Restore toggle
-   - Restore Now secondary button when needed
-   - Swap Positions
-   - More Actions menu
-5. **Advanced actions menu**
-   - Save Profile
-   - quick switch to specific profile
-   - Show Numbers
-   - Open Diagnostics
-6. **Footer**
-   - Settings
-   - Quit
+   - app name
+   - app symbol / overall health accent
 
-### Settings surface model (implemented)
+2. **Runtime status card**
+   - primary state badge
+   - status title
+   - status subtitle
+   - matched/reference profile summary when relevant
 
-#### Restore
-- Current state summary
-- status badges: auto restore, dependency, display count, confidence
-- reference profile summary and Show Numbers
-- live vs saved layout preview comparison
-- Auto Restore card
-- recommended actions card
-- Swap Positions when relevant
-- Open Diagnostics shortcut when needed
+3. **Primary runtime CTA** (shown only when needed)
+   - save current layout as profile
+   - install restore tool
+   - restore matched layout now
+   - enable automatic restore
 
-#### Profiles
-- Save Profile primary action
-- empty state or profile list
-- each profile card contains:
-  - name / rename
-  - reference badge when matched
-  - saved date
-  - display count
-  - confidence threshold
-  - Apply Layout
-  - Show Numbers
-  - disclosure with preview/details
-  - confidence slider
-  - delete action
+4. **Quick controls card**
+   - automatic restore toggle
+   - secondary recovery actions row
+     - restore matched layout now (if not already primary)
+     - swap side displays
+     - overflow menu
 
-#### General
-- summary/status card
-- language selector
-- update controls
-- launch at login
-- advanced section:
-  - Ask Before Restore
-  - Shortcuts disclosure
-  - Diagnostics disclosure
+5. **Overflow / more actions menu**
+   - save current layout as profile
+   - quick switch to another saved profile
+   - manage profiles
+   - identify displays
+   - open diagnostics
 
-## Canonical feature-to-surface ownership
+6. **Footer utility row**
+   - settings
+   - quit
 
-| Feature | Menu | Restore | Profiles | General | Canonical home |
-| --- | --- | --- | --- | --- | --- |
-| Runtime Status & Match Review | Primary | Primary | - | - | Restore |
-| Save Profile | Quick action | Secondary mention only | Primary | - | Profiles |
-| Auto Restore | Quick toggle | Primary control | - | Ask-before-restore support only | Restore |
-| Restore Now | Primary CTA | Primary CTA | - | - | Restore |
-| Apply Layout | Quick-switch submenu only | - | Primary per-profile action | - | Profiles |
-| Show Numbers | Advanced action | Reference-profile action | Per-profile action | - | Profiles |
-| Swap Positions | Secondary quick action | Secondary action | - | - | Restore |
-| Profile Management | quick-switch entry only | - | Primary | - | Profiles |
-| Diagnostics | shortcut when needed | shortcut when needed | - | Primary section | General > Diagnostics |
-| Dependency Setup | Primary CTA when blocked | Primary CTA when blocked | - | - | Restore |
-| Shortcuts | - | - | - | Primary section | General > Shortcuts |
-| Updates / launch / language | - | - | - | Primary | General |
+### Menu action rules
 
-## Canonical menu content order
+- Menu owns runtime intervention, not profile administration.
+- Menu can launch deep actions, but profile editing/deletion belongs in Settings.
+- Healthy state should minimize interruption and emphasize glanceability.
 
-When the menu is in any non-healthy state, content should appear in this order:
+## 2. Restore pane
 
-1. Status summary
-2. Single best next action
-3. Auto Restore control (if profiles exist)
-4. Secondary recovery actions
-5. More Actions / profile switching / diagnostics
-6. Settings / Quit
+### Purpose
 
-### Rule
+Canonical home for trust, readiness, and the “what should happen next?” question.
 
-The menu must answer four questions in under one glance:
-1. What state is the app in?
-2. Which profile, if any, is relevant?
-3. Why did it not auto-restore?
-4. What should I do next?
+### Current/accepted content blocks
 
-## Canonical settings structure
+1. **Current state overview**
+   - status title/subtitle
+   - auto-restore badge
+   - dependency badge
+   - display-count badge
+   - confidence badge (when relevant)
+   - matched baseline summary / identify displays shortcut
 
-### Restore pane
-**Purpose:** runtime trust + immediate recovery.
+2. **Layout comparison**
+   - current layout preview
+   - saved layout preview
 
-Sections:
-1. Current state overview
-2. Live vs saved layout comparison
-3. Auto Restore controls
-4. Recommended actions
-5. Swap Positions (availability-aware)
-6. Diagnostics shortcut when state is not healthy
+3. **Automatic restore control**
+   - app-level toggle
+   - dependency summary line
 
-### Profiles pane
-**Purpose:** create and manage saved layouts.
+4. **Recommended actions**
+   - context-specific primary action
+   - secondary save action in degraded states
+   - swap side displays
+   - diagnostics shortcut
 
-Sections:
-1. Save Profile
-2. Profile list / empty state
-3. For each profile:
-   - metadata
-   - Apply Layout
-   - Show Numbers
-   - details preview
-   - confidence threshold
-   - delete
+### Restore pane owns
 
-### General pane
-**Purpose:** app-wide preferences and maintenance.
+- automatic restore mode
+- review-before-restore mode visibility
+- dependency readiness
+- matched baseline context
+- recommended next action
 
-Sections:
-1. App summary
-2. Language
-3. Updates
-4. Launch at login
-5. Advanced
-   - Ask Before Restore
+### Restore pane must not own
+
+- profile rename/delete
+- threshold tuning
+- shortcut authoring
+- update and language settings
+
+## 3. Profiles pane
+
+### Purpose
+
+Canonical home for baseline creation and profile-specific management.
+
+### Current/accepted content blocks
+
+1. **Save current layout card**
+2. **Saved profile cards** with:
+   - name / rename
+   - saved date
+   - reference badge
+   - display-count badge
+   - confidence threshold badge
+   - apply saved profile
+   - identify displays
+   - disclosure for preview and details
+   - threshold slider
+   - delete action
+
+### Profiles pane owns
+
+- save current layout as profile
+- rename profile
+- delete profile
+- inspect profile layout details
+- tune confidence threshold
+- apply saved profile
+- identify displays for a chosen profile
+
+## 4. General pane
+
+### Purpose
+
+Canonical home for app-level preferences and support utilities.
+
+### Current/accepted content blocks
+
+1. **Updates**
+2. **Language**
+3. **Launch at login**
+4. **Advanced**
+   - ask before automatic restore
    - Shortcuts disclosure
    - Diagnostics disclosure
 
-## 5-pane vs 3-pane rationale
+### General pane owns
 
-| Option | Pros | Cons | Verdict |
-| --- | --- | --- | --- |
-| 5-pane top-level navigation | Easier direct linking to every maintenance area; familiar from larger desktop apps | Too heavy for a menu-bar utility; splits related preferences; disagrees with shipped sidebar | Rejected |
-| 3-pane navigation with nested sections | Matches current implementation; simpler mental model; keeps recovery/admin distinction clear | Diagnostics and Shortcuts are one click deeper | Accepted |
+- launch at login
+- updates
+- preferred language
+- ask-before-restore toggle
+- shortcuts configuration
+- diagnostics review and report copy
 
-## Naming and surface rules
+## Feature-to-home mapping
 
-1. **Restore Now** is the primary recovery verb.
-2. **Apply Layout** is profile-specific and belongs to Profiles.
-3. **Show Numbers** is the user-facing mapping verb.
-4. **Swap Positions** is a supported manual override, not a profile edit.
-5. **Auto Restore** belongs to Restore, not General.
-6. **Diagnostics** and **Shortcuts** are maintenance surfaces and should stay inside General unless future evidence proves otherwise.
+| Feature / content | Menu | Restore | Profiles | General | Canonical home |
+| --- | --- | --- | --- | --- | --- |
+| Runtime status | Yes | Yes | No | No | Restore |
+| Automatic restore toggle | Yes | Yes | No | No | Restore |
+| Ask before automatic restore | No | visibility only | No | Yes | General |
+| Save current layout as profile | Yes | via recommendation only if needed | Yes | No | Profiles |
+| Apply specific saved profile | Quick switch only | No | Yes | No | Profiles |
+| Restore matched layout now | Yes | Yes | No | No | Restore |
+| Identify displays | Yes | Yes | Yes | No | Profiles |
+| Swap side displays | Yes | Yes | No | Optional shortcut only | Restore |
+| Restore tool setup | Yes | Yes | No | No | Restore |
+| Confidence threshold | No | No | Yes | No | Profiles |
+| Profile rename/delete | No | No | Yes | No | Profiles |
+| Launch at login | No | No | No | Yes | General |
+| Updates | No | No | No | Yes | General |
+| Language | No | No | No | Yes | General |
+| Shortcuts | No | No | No | Yes | General |
+| Diagnostics history/report | Shortcut only | Shortcut only | No | Yes | General |
 
-## Phase 2 follow-up (not started here)
+## Decision summary
 
-1. Update docs/marketing that still describe a five-pane settings window.
-2. Consider whether Show Numbers should move fully under Profiles if multi-profile usage becomes dominant.
-3. Revisit direct diagnostics visibility only if support data shows users miss it in General.
+- **Accepted:** 3-pane top-level settings IA (`Restore`, `Profiles`, `General`).
+- **Accepted:** `Shortcuts` and `Diagnostics` remain secondary sections inside `General`.
+- **Accepted:** Menu stays runtime-first, not profile-admin-first.
+- **Rejected:** returning to a 5-pane top-level sidebar as the canonical model.
+
+## Phase 2 follow-up after signoff
+
+1. update README/PRD/SPEC to stop describing the settings window as five-pane
+2. tighten menu healthy-state density so the surface feels calmer
+3. decide whether `Ask Before Restore` should move into Restore or remain an advanced General preference
