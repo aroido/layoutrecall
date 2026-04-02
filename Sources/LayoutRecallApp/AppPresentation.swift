@@ -624,12 +624,7 @@ extension AppModel {
     }
 
     var restoreSecondaryActions: [SurfaceAction] {
-        switch menuPrimaryState {
-        case .lowConfidence, .reviewBeforeRestore, .manualLayoutOverride, .manualRecovery:
-            return [.saveNewProfile]
-        case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .autoRestoreDisabled, .healthy:
-            return []
-        }
+        []
     }
 
     var restoreActionHint: String {

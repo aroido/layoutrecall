@@ -278,19 +278,6 @@ struct SettingsView: View {
                     }
                 }
 
-                if model.showsSwapDisplaysControl {
-                    Button {
-                        model.swapLeftRight()
-                    } label: {
-                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(ActionButtonStyle(role: .secondary))
-                    .disabled(!model.canSwapDisplays)
-                    .help(model.swapAvailabilityLine)
-                    .accessibilityIdentifier("settings.restore.swap")
-                }
-
                 if model.shouldOfferDiagnosticsShortcut {
                     Divider()
                         .padding(.vertical, 2)
@@ -306,9 +293,8 @@ struct SettingsView: View {
                             isDiagnosticsSectionExpanded = true
                         } label: {
                             Label(L10n.t("action.openDiagnostics"), systemImage: "stethoscope")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(ActionButtonStyle(role: .secondary))
+                        .buttonStyle(InlineActionButtonStyle())
                         .accessibilityIdentifier("settings.restore.diagnostics")
                     }
                 }
@@ -461,22 +447,7 @@ struct SettingsView: View {
             }
 
             if let profile = model.referenceProfile {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .center, spacing: 12) {
-                        restoreMatchedBaselineSummary(profile: profile)
-
-                        Spacer(minLength: 0)
-
-                        Button {
-                            model.identifyDisplays(for: profile.id)
-                        } label: {
-                            Label(L10n.t("action.identifyDisplays"), systemImage: "number.square")
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.9)
-                        }
-                        .buttonStyle(ActionButtonStyle(role: .secondary))
-                    }
-                }
+                restoreMatchedBaselineSummary(profile: profile)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.t("settings.referenceProfile"))
@@ -1269,6 +1240,27 @@ struct SettingsView: View {
                             .accessibilityIdentifier("settings.general.askBeforeRestore")
 
                         FormHint(text: L10n.t("settings.restore.askBeforeRestoreHint"))
+                    }
+
+                    if model.showsSwapDisplaysControl {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L10n.t("action.swap"))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+
+                            FormHint(text: model.swapAvailabilityLine)
+
+                            Button {
+                                model.swapLeftRight()
+                            } label: {
+                                Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                            }
+                            .buttonStyle(ActionButtonStyle(role: .secondary))
+                            .disabled(!model.canSwapDisplays)
+                            .accessibilityIdentifier("settings.general.swap")
+                        }
                     }
 
                     DisclosureGroup(

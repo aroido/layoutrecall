@@ -165,16 +165,26 @@ struct MenuContentView: View {
 
     private var shouldShowSecondaryActionsRow: Bool {
         shouldShowInlineFixNowButton
-            || model.showsSwapDisplaysControl
             || shouldShowAdvancedActionsMenu
     }
 
     private var shouldShowInlineFixNowButton: Bool {
-        model.menuPrimaryAction != .fixNow && model.canRestoreSavedProfiles
+        guard model.menuPrimaryAction != .fixNow, model.canRestoreSavedProfiles else {
+            return false
+        }
+
+        switch model.menuPrimaryState {
+        case .lowConfidence, .reviewBeforeRestore, .autoRestoreDisabled, .manualRecovery:
+            return true
+        case .noProfiles, .installingDependency, .dependencyMissing, .noMatch, .manualLayoutOverride, .healthy:
+            return false
+        }
     }
 
     private var shouldShowAdvancedActionsMenu: Bool {
-        !model.menuQuickActions.isEmpty
+        (!shouldShowInlineFixNowButton && model.canRestoreSavedProfiles)
+            || !model.menuQuickActions.isEmpty
+            || model.showsSwapDisplaysControl
             || model.profiles.count > 1
             || model.referenceProfile != nil
             || model.shouldOfferDiagnosticsShortcut
@@ -187,10 +197,6 @@ struct MenuContentView: View {
                     fixNowButton
                 }
 
-                if model.showsSwapDisplaysControl {
-                    swapPositionsButton
-                }
-
                 if shouldShowAdvancedActionsMenu {
                     advancedActionsMenu
                 }
@@ -199,10 +205,6 @@ struct MenuContentView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if shouldShowInlineFixNowButton {
                     fixNowButton
-                }
-
-                if model.showsSwapDisplaysControl {
-                    swapPositionsButton
                 }
 
                 if shouldShowAdvancedActionsMenu {
@@ -247,20 +249,16 @@ struct MenuContentView: View {
         .disabled(model.referenceProfile == nil)
     }
 
-    private var swapPositionsButton: some View {
-        Button {
-            model.swapLeftRight()
-        } label: {
-            actionLabel(L10n.t("menu.swapShortcut"), systemImage: "arrow.left.and.right.square")
-        }
-        .buttonStyle(ActionButtonStyle(role: .secondary))
-        .disabled(!model.canSwapDisplays)
-        .help(model.swapAvailabilityLine)
-        .accessibilityIdentifier("menu.action.swap")
-    }
-
     private var advancedActionsMenu: some View {
         Menu {
+            if !shouldShowInlineFixNowButton && model.canRestoreSavedProfiles {
+                Button {
+                    model.fixNow()
+                } label: {
+                    Label(L10n.t("action.fixNow"), systemImage: "bolt.fill")
+                }
+            }
+
             ForEach(model.menuQuickActions) { action in
                 Button {
                     model.perform(action)
@@ -268,6 +266,23 @@ struct MenuContentView: View {
                     Label(model.menuTitle(for: action), systemImage: action.systemImage)
                 }
                 .disabled(isDisabled(action))
+            }
+
+            if model.showsSwapDisplaysControl {
+                let showsActionGroupAboveSwap =
+                    (!shouldShowInlineFixNowButton && model.canRestoreSavedProfiles)
+                    || !model.menuQuickActions.isEmpty
+
+                if showsActionGroupAboveSwap {
+                    Divider()
+                }
+
+                Button {
+                    model.swapLeftRight()
+                } label: {
+                    Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                }
+                .disabled(!model.canSwapDisplays)
             }
 
             if model.profiles.count > 1 {

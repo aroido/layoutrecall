@@ -338,6 +338,7 @@ func presentationAllowsPositionSwapForThreeDisplayLayouts() async {
 @MainActor
 @Test
 func presentationActionsReflectLowConfidenceMatch() async {
+    L10n.setPreferredLanguageCodeOverride(nil)
     let installer = DependencyInstallerStub()
     let model = AppModel(
         store: ProfileStoreStub(profiles: [.officeDock]),
@@ -364,7 +365,7 @@ func presentationActionsReflectLowConfidenceMatch() async {
     #expect(model.menuPrimaryAction == .fixNow)
     #expect(model.menuQuickActions == [.saveNewProfile])
     #expect(model.restorePrimaryAction == .fixNow)
-    #expect(model.restoreSecondaryActions == [.saveNewProfile])
+    #expect(model.restoreSecondaryActions.isEmpty)
     #expect(model.menuStatusSubtitle == L10n.t("menu.subtitle.lowConfidence"))
     #expect(model.referenceProfile?.name == "Office Dock")
 }
@@ -1480,6 +1481,7 @@ func displayEventsAreIgnoredDuringRestoreCooldown() async {
 @MainActor
 @Test
 func swapLeftRightAutomaticallyReturnsToSavedProfileWhenAutoRestoreIsEnabled() async {
+    L10n.setPreferredLanguageCodeOverride(nil)
     let diagnosticsStore = DiagnosticsStoreStub()
     let eventMonitor = EventMonitorStub()
     let snapshotReader = SnapshotReaderStub(displays: [.sampleLeft, .sampleRight])

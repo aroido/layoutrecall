@@ -12,7 +12,7 @@ LayoutRecall is a macOS menu bar app that restores one known display profile aft
 
 ## Product promise
 
-- save one known-good desk layout as a profile
+- save the current known-good desk layout once
 - restore it automatically only when the current desk clearly matches
 - keep manual recovery one click away when automation is unsafe
 - explain why the app acted or refused to act

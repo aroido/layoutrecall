@@ -26,7 +26,7 @@ Everything in the product should support that job directly or be demoted.
 ## 4. Core product capabilities to keep
 
 ### 4.1 Saved profile
-- Save the current layout as a profile
+- Save the current layout as the known-good recovery profile
 - Rename and delete profiles
 - Tune confidence threshold per profile
 
