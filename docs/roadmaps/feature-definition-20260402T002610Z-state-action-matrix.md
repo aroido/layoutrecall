@@ -41,7 +41,7 @@ This matrix normalizes them into a single user-observable state model and explic
 | Restore Failed | decision context `.restoreFailed` | A restore attempt ran but did not succeed cleanly. In the current UI this collapses into Manual Recovery instead of a first-class top-level state. |
 | No Displays | decision context `.noDisplays` | No active displays were readable. In the current UI this also collapses into Manual Recovery instead of a dedicated state. |
 
-## Allowed and blocked actions by state
+## Core actions
 
 | State | Allowed actions | Blocked / discouraged actions | Notes |
 | --- | --- | --- | --- |
@@ -58,7 +58,7 @@ This matrix normalizes them into a single user-observable state model and explic
 | Restore Failed | Fix Now retry; Apply Layout; Save Current Layout; diagnostics/support actions | Trusting automation until root cause is understood | Should become its own explicit surfaced state in a later implementation pass. |
 | No Displays | Wait for hardware to settle; diagnostics/support review | Save Current Layout; Fix Now; Apply Layout | Currently not distinguished sharply enough from generic manual recovery. |
 
-## Action inventory
+## Demoted actions
 
 | Action | Current labels / entrypoints | Purpose | Canonical classification |
 | --- | --- | --- | --- |
