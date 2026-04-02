@@ -4,9 +4,9 @@ Lab: `feature-definition-20260402T002610Z`
 Updated: 2026-04-02
 Status: Definition-phase consensus artifact (phase 1 only)
 
-## Audit basis
+## Current-state information architecture and review outcome
 
-Reviewed implementation and docs for surface structure using:
+**Current shipped IA:** 3 top-level panes
 
 - `README.md`
 - `docs/PRD.md`
@@ -15,9 +15,24 @@ Reviewed implementation and docs for surface structure using:
 - `Sources/LayoutRecallApp/SettingsView.swift`
 - `Sources/LayoutRecallApp/AppPresentation.swift`
 
-## Current implementation snapshot
+**Review outcome:** long-term canonical IA remains **unresolved** after peer review. Two reviewers support keeping 3-pane as canonical; two reviewers argue the final target should remain a 5-area model so trust/support surfaces stay first-class.
 
-### Menu bar content model (current)
+### Why the current implementation favors 3 panes
+
+- It matches the implemented sidebar (`SettingsPane.primaryNavigationPanes`).
+- It fits a menu-bar-first utility better than a wider five-pane navigation model.
+- It keeps recovery tasks close together while moving lower-frequency maintenance/admin work under General.
+- It reduces navigation noise without hiding important actions, because Shortcuts and Diagnostics remain directly linkable.
+
+### Competing IA candidate still under debate
+
+**Candidate:** five equal-weight conceptual panes (`Restore / Profiles / Shortcuts / Diagnostics / General`)
+
+**Why it remains open:** critics argue that Diagnostics is a trust surface, not only a maintenance detail, and that current 3-pane code should not automatically settle the product model.
+
+## Audit: current surface structure
+
+### Menu bar content model (implemented)
 
 1. **Header**
    - App name
@@ -91,10 +106,20 @@ Reviewed implementation and docs for surface structure using:
 - Keeps the top-level sidebar short and simple.
 - Works well if Shortcuts and Diagnostics are considered secondary/advanced.
 
-**Cons**
-- Diagnostics is too important for trust and support to feel “tucked away.”
-- Shortcuts and Diagnostics are user-visible enough to deserve clearer findability.
-- Conflicts with the current docs and marketing narrative about the product surface.
+| Feature | Menu | Restore | Profiles | General | Canonical home |
+| --- | --- | --- | --- | --- | --- |
+| Runtime Status & Match Review | Primary | Primary | - | - | Restore |
+| Save Profile | Quick action | Secondary mention only | Primary | - | Profiles |
+| Auto Restore | Quick toggle | Primary control | - | Ask-before-restore support only | Restore |
+| Restore Now | Primary CTA | Primary CTA | - | - | Restore |
+| Apply Layout | Quick-switch submenu only | - | Primary per-profile action | - | Profiles |
+| Show Numbers / Identify Displays | Advanced action | Reference-profile action | Per-profile action | - | Profiles |
+| Swap Positions | Secondary quick action | Secondary action | - | - | Restore |
+| Profile Management | quick-switch entry only | - | Primary | - | Profiles |
+| Diagnostics | shortcut when needed | shortcut when needed | - | Primary section today | **Unresolved:** General section vs first-class trust surface |
+| Dependency Setup | Primary CTA when blocked | Primary CTA when blocked | - | - | Restore |
+| Shortcuts | - | - | - | Primary section today | **Unresolved:** General section vs dedicated pane in a future 5-area IA |
+| Updates / launch / language | - | - | - | Primary | General |
 
 ### Candidate B — Use one explicit 5-section settings IA
 
@@ -134,19 +159,12 @@ The menu remains the **runtime trust and recovery surface**.
 
 #### Menu should own
 
-- Current status badge/title/subtitle
-- Reference profile summary when relevant
-- Primary next action for the current state
-- Automatic Restore toggle
-- Fast runtime actions:
-  - Fix Now
-  - Save Current Layout
-  - Swap Positions
-  - Apply Layout (via quick switch)
-  - Show Numbers
-- Fast link to Settings / Diagnostics when attention is needed
+## 5-pane vs 3-pane review split
 
-#### Menu should not own
+| Option | Pros | Cons | Verdict |
+| --- | --- | --- | --- |
+| 5-pane top-level navigation | Trust/support surfaces stay first-class; aligns with older docs and the full SettingsPane enum model | Heavier navigation for a menu-bar utility; does not match shipped sidebar today | **Contested** |
+| 3-pane navigation with nested sections | Matches current implementation; simpler mental model; keeps recovery/admin distinction clear | Diagnostics and Shortcuts are one click deeper and may feel buried | **Contested** |
 
 - Profile renaming/deletion
 - Confidence threshold sliders

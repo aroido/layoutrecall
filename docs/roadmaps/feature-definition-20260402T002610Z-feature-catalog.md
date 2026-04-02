@@ -6,7 +6,7 @@ Status: Definition-phase consensus artifact (phase 1B simplification pass)
 
 ## Core user problem
 
-LayoutRecall exists to solve one narrow macOS desk problem:
+This catalog now reflects an internal multi-worker review pass. Items with clear agreement are normalized below. Items with split review remain explicitly unresolved and are not presented as settled canon.
 
 > After sleep, wake, dock reconnect, or identical-monitor reshuffling, macOS brings back the **wrong physical display arrangement**, and the user wants their **previously saved known-good layout restored safely** without having to rebuild it manually every time.
 
@@ -38,32 +38,144 @@ Anything that does not directly support one of those jobs should be demoted to a
 
 | Feature | Why it stays core | Canonical home |
 | --- | --- | --- |
-| Save Current Layout | The product is useless without creating a baseline. | Both |
-| Automatic Restore | This is the core “recover it for me when safe” value proposition. | Restore policy |
-| Fix Now | The minimum manual fallback when auto-restore does not run. | Menu primary runtime action |
-| Restore Status & Evidence | Trust depends on knowing what the app detected and why it acted or did not act. | Both |
-| Install displayplacer | Real restore execution depends on it; dependency readiness is part of the core experience. | Restore / blocked-state flow |
+| baseline | profile | Use **profile** for the saved layout object everywhere user-facing |
+| known-good layout | saved layout | Use in explanatory copy only, not as the object name |
+| Fix Now / Restore Now | **Unresolved** | Split review: current code/docs center `Fix Now`, while some reviewers prefer `Restore Now` as clearer future-facing copy |
+| Apply Layout / Apply Profile | **Unresolved** | Current code uses `Apply Layout`; some reviewers want the intent model separated more explicitly |
+| Show Numbers / Identify Displays | Show Numbers (user-facing) / Identify Displays (descriptive/internal) | Keep `Show Numbers` as the visible command while acknowledging `identifyDisplays` in implementation and support copy |
+| automatic restore | Auto Restore | Capitalize when used as a named setting |
+| swap left/right / swap displays / Swap Positions | **Unresolved** | Naming is not stable enough to treat as final canon yet |
 
 ### Keep, but demote to supporting features
 
 | Feature | Why it is supporting, not core | Canonical home |
 | --- | --- | --- |
-| Ask Before Restore | Important trust control, but layered on top of the core restore loop. | Settings > General > Advanced |
-| Apply Layout | Useful for explicit profile choice, but secondary to the main “recover the current desk” flow. | Settings > Profiles |
-| Show Numbers | Supports trust and mapping, but not needed on every recovery. | Settings > Profiles, optional menu utility |
-| Profile Management | Needed after the first save, but supporting rather than headline product value. | Settings > Profiles |
-| Confidence Threshold Tuning | Important for advanced users; should not dominate the main spec. | Settings > Profiles |
-| Diagnostics History | Important evidence/support surface, but should not compete with the runtime recovery flow. | Settings > General > Diagnostics |
+| Runtime Status & Match Review | Show whether LayoutRecall is safe, ready, blocked, or waiting for user review | Menu + Restore |
+| Save Profile | Capture the current connected display layout as a reusable profile | Menu + Profiles |
+| Auto Restore | Automatically restore only when the live layout confidently matches a saved profile | Menu + Restore |
+| Manual recovery CTA (`Fix Now` / `Restore Now`) | Run the best available manual recovery immediately when the user wants control | Menu + Restore |
+| Apply Layout | Apply a specific saved profile on demand | Profiles |
+| Show Numbers / Identify Displays | Overlay saved/display numbers on connected monitors to confirm mapping | Menu utility + Profiles + Restore reference context |
+| Swap display positions | Quickly rearrange supported simple layouts without changing saved profiles | Menu + Restore |
+| Profile Management | Rename, delete, inspect, and tune saved profiles | Profiles |
+| Diagnostics & Support Snapshot | Explain recent decisions, outcomes, and support-file state | General > Diagnostics |
+| Dependency Setup | Install and validate `displayplacer` so real restores can run | Menu + Restore |
+| Shortcuts | Bind keyboard shortcuts for the main recovery actions | General > Shortcuts |
+| General Preferences | Control launch at login, updates, language, and restore confirmation behavior | General |
 
 ### Candidate features to demote hard or treat as convenience only
 
-| Feature | Recommendation | Rationale |
+### 1. Runtime Status & Match Review
+- **User goal:** Understand whether the app is ready to restore and why it did or did not act.
+- **Trigger:** App launch, wake, display reconfiguration, or manual refresh through normal runtime flow.
+- **Preconditions:** App is running.
+- **Success result:** Menu/Restore surface clearly communicates the current state, matched profile if any, and the next best action.
+- **Blocked states:** No displays, no profiles, dependency missing, low confidence, auto restore disabled.
+- **Where it appears:** **Both** (menu status card, restore overview card).
+
+### 2. Save Profile
+- **User goal:** Capture the current layout once so it can be restored later.
+- **Trigger:** `Save Profile` from menu quick action or Profiles pane primary action.
+- **Preconditions:** At least one display is currently detected.
+- **Success result:** A new profile exists with stored display metadata, command, and confidence settings.
+- **Blocked states:** No displays detected; save flow fails to read live snapshot.
+- **Where it appears:** **Both**, with Profiles as the clearest canonical management home and menu access retained as a utility shortcut.
+
+### 3. Auto Restore
+- **User goal:** Let the app restore automatically only when it is safe.
+- **Trigger:** Toggle `Auto Restore` on; runtime display-change events.
+- **Preconditions:** At least one saved profile; dependency available; match score clears threshold.
+- **Success result:** Best matching profile restores automatically and verification/diagnostics record the outcome.
+- **Blocked states:** App-level auto restore off, ask-before-restore enabled, dependency missing, below threshold, no confident match.
+- **Where it appears:** **Both**.
+
+### 4. Manual recovery CTA (`Fix Now` / `Restore Now`)
+- **User goal:** Manually recover immediately when the user wants control or the app refuses auto restore.
+- **Trigger:** Primary menu CTA or Restore pane CTA; final user-facing label remains unresolved.
+- **Preconditions:** At least one restorable profile and dependency available.
+- **Success result:** The best available profile is applied and the outcome is logged.
+- **Blocked states:** Dependency missing, no profiles, no displays, restore command already running.
+- **Where it appears:** **Both**.
+
+### 5. Apply Layout
+- **User goal:** Apply one specific saved profile rather than the current best-match choice.
+- **Trigger:** Profile card action or quick-switch submenu.
+- **Preconditions:** Selected profile exists; dependency available.
+- **Success result:** Chosen profile is restored and verified.
+- **Blocked states:** Dependency missing, installation in progress, restore already running.
+- **Where it appears:** **Settings** (Profiles) with menu quick-switch for multi-profile setups.
+
+### 6. Show Numbers / Identify Displays
+- **User goal:** Confirm how saved profile displays map to the currently connected monitors.
+- **Trigger:** Menu advanced action, Restore overview action, or Profile card action.
+- **Preconditions:** Reference or selected profile exists; at least one display can be matched.
+- **Success result:** Number overlays appear for matched displays and a diagnostics entry is recorded.
+- **Blocked states:** No reference profile, no matching connected displays.
+- **Where it appears:** **Both**.
+
+### 7. Swap display positions
+- **User goal:** Quickly change positions in supported simple desk layouts without editing the saved profile.
+- **Trigger:** Menu quick control or Restore pane secondary action.
+- **Preconditions:** `displayplacer` available; no restore command in progress; detected display count is 2 or 3.
+- **Success result:** Main display stays fixed while the secondary displays change position; diagnostics records the manual override.
+- **Blocked states:** Dependency missing, installation in progress, unsupported display count, command already running.
+- **Where it appears:** **Both**.
+
+### 8. Profile Management
+- **User goal:** Maintain a usable set of saved profiles.
+- **Trigger:** Open Profiles pane.
+- **Preconditions:** None beyond app access; individual actions require at least one saved profile.
+- **Success result:** User can rename/delete profiles, inspect layout previews, and tune confidence threshold.
+- **Blocked states:** No profiles (empty state only).
+- **Where it appears:** **Settings**.
+
+### 9. Diagnostics & Support Snapshot
+- **User goal:** Understand what happened recently and collect evidence for troubleshooting.
+- **Trigger:** Open General > Diagnostics or diagnostics shortcut from blocked states.
+- **Preconditions:** App has runtime state; recent history is optional.
+- **Success result:** Latest diagnostic, runtime snapshot, support-file paths, and recent history are visible/copyable.
+- **Blocked states:** None; empty history still shows support information.
+- **Where it appears:** **Settings**.
+
+### 10. Dependency Setup
+- **User goal:** Enable real layout restore by installing `displayplacer` when missing.
+- **Trigger:** Menu/Restore install CTA.
+- **Preconditions:** Dependency not currently available.
+- **Success result:** Installation completes, dependency state flips to ready, restore actions become available.
+- **Blocked states:** Install already in progress, Homebrew/bootstrap failure.
+- **Where it appears:** **Both**.
+
+### 11. Shortcuts
+- **User goal:** Run main recovery actions from the keyboard.
+- **Trigger:** Open General > Shortcuts disclosure.
+- **Preconditions:** App is installed and shortcut manager can register bindings.
+- **Success result:** Bindings exist for Restore Now, Save Profile, and Swap Positions.
+- **Blocked states:** Registration conflict or OS-level shortcut registration failure.
+- **Where it appears:** **Settings**.
+
+### 12. General Preferences
+- **User goal:** Manage app-wide behavior that is not profile-specific.
+- **Trigger:** Open General pane.
+- **Preconditions:** None.
+- **Success result:** User can manage launch at login, updates, language, and ask-before-restore behavior.
+- **Blocked states:** Ask-before-restore is disabled when auto restore is off or no profiles exist.
+- **Where it appears:** **Settings**.
+
+## Reviewed cautions from peer pushback
+
+1. **Do not normalize a degraded desk as the new truth by accident.** If `Save Profile` remains visible in degraded states, the docs must warn that this is an expert escape hatch, not the default recommendation.
+2. **Do not present contested copy as settled canon.** CTA labels and swap terminology remain open.
+3. **Do not claim the current 3-pane implementation resolves the IA debate by itself.** It is current-state evidence, not unanimous design agreement.
+
+## Explicitly hidden or non-canonical items
+
+These exist in code or docs but should **not** be treated as first-class user-facing features in phase 1:
+
+| Item | Status | Reason |
 | --- | --- | --- |
-| Swap Positions | Demote to constrained fallback utility, not a headline feature. | Helps some desks, but it is not the core promise and overlaps with restore/apply flows. |
-| Keyboard Shortcuts | Keep as convenience only. | Speeds usage, but not part of the essential product definition. |
-| Launch at Login | Keep as convenience/platform behavior. | Valuable for always-on use, but not central to feature definition. |
-| Update Management | Keep as app-maintenance surface, not product-defining capability. | Necessary operationally, but unrelated to the core user problem. |
-| Language Selection | Keep as app preference only. | Important for usability/accessibility, but not part of the desk-recovery concept. |
+| Per-profile auto-restore toggle | Hidden / unresolved | Present in model shape, but not surfaced consistently in current UI/decision flow |
+| “five-pane settings window” as already-resolved history | Rejected as a factual claim | The product currently ships a 3-pane sidebar, but reviewers are split on whether the long-term canonical IA should stay 3-pane or return to 5-pane |
+| Any single final manual-recovery CTA label | Unresolved | Review split remains between `Fix Now` and `Restore Now` |
 
 ### Explicit non-goals
 

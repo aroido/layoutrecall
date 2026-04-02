@@ -12,95 +12,39 @@ Rule used in this pass:
 
 > If a feature does not directly help the user save a known-good layout, restore it safely, or understand why restore did or did not happen, it should be demoted or treated as a non-goal.
 
-## Accepted decisions
+## Accepted decisions after peer review
 
-### 1. Narrow the core product problem explicitly
-
-**Accepted.**
-
-Canonical problem statement:
-- LayoutRecall helps a user recover a previously saved multi-display desk layout after macOS sleep, wake, dock reconnect, or identical-monitor shuffling.
-
-Why accepted:
-- It is concrete.
-- It matches the implemented product better than a broad “display management” framing.
-- It reduces pressure to keep unrelated convenience features in the headline spec.
-
-### 2. Define the smallest required jobs only
-
-**Accepted.**
-
-Required jobs:
-1. Save a known-good layout.
-2. Detect when the current arrangement drifted.
-3. Restore safely automatically or with one clear manual action.
-4. Explain why restore did or did not happen.
-
-Why accepted:
-- This is the minimum loop that still delivers the product’s value.
-- It gives a hard test for whether a feature belongs in the core spec.
-
-### 3. Keep only five features in the core product definition
-
-**Accepted core set**
-- Save Current Layout
-- Automatic Restore
-- Fix Now
-- Restore Status & Evidence
-- Install displayplacer
-
-Why accepted:
-- These are the smallest capabilities that still make the product real and trustworthy.
-- Everything else is either supporting, convenience, or out of scope.
-
-### 4. Demote overlapping or secondary recovery features
-
-**Accepted demotions**
-- `Apply Layout` = supporting profile-management action, not a headline feature
-- `Show Numbers` = supporting trust utility, not a headline feature
-- `Swap Positions` = constrained convenience fallback, not a headline feature
-- thresholds / diagnostics / profile management = supporting surfaces, not the product core
-
-Why accepted:
-- The product is sharper when it promises one main recovery loop instead of many near-overlapping “fix” actions.
-- This keeps the PRD/SPEC from reading like a feature buffet.
-
-### 5. Keep the shipped 3-primary-section settings model in the definition
-
-**Accepted IA**
-- Restore
-- Profiles
-- General
-
-Supporting subsections remain nested under General.
-
-Why accepted:
-- It matches the actual current app.
-- It is simpler than promoting every supporting surface to top-level navigation.
-- It avoids inventing a larger IA just to honor legacy docs.
-
-### 6. Make explicit non-goals part of the spec
-
-**Accepted non-goals**
-- full display-management suite
-- broad 4+ display automatic rearrangement promise
-- cloud sync / cross-machine sync
-- per-app window placement
-- complex profile-rule engine
-- native restore engine replacement for `displayplacer` in this phase
-
-Why accepted:
-- Product clarity improves when expansion ideas are stated as non-goals rather than left ambiguous.
+| ID | Topic | Reviewed outcome | Rationale |
+| --- | --- | --- | --- |
+| A1 | Saved-layout object name | **Accepted: use `profile` as the canonical object name** | All reviewers accepted this normalization over `baseline` |
+| A2 | Auto Restore ownership | **Accepted: Auto Restore belongs to Restore** | Clear majority and code evidence align on runtime recovery ownership |
+| A3 | Runtime/menu vs settings ownership | **Accepted: menu owns runtime status and immediate recovery; settings owns persistent management/config** | Strong cross-review agreement |
+| A4 | Profiles ownership | **Accepted: Profiles is the canonical management home for save/manage/apply/tune profile actions** | Even reviewers who differ on wording/IA agreed on Profiles as the management surface |
+| A5 | Per-profile autoRestore baseline status | **Accepted: do not treat per-profile autoRestore as a supported baseline behavior** | Hidden model field exists, but reviewers agreed it is unresolved at best and not current product truth |
+| A6 | Swap action semantics | **Accepted: swap is a manual override and does not edit saved profiles** | Cross-review agreement, matches current behavior |
 
 ## Rejected alternatives
 
-### Rejected: define the product by completeness instead of focus
+| ID | Topic | Rejected option | Why rejected |
+| --- | --- | --- | --- |
+| R1 | Saved-layout object name | Keep `baseline` as the main object name | No reviewer defended it over `profile` |
+| R2 | Auto-restore model | Pretend per-profile and app-level automation are both fully supported baseline behavior | Reviewers rejected that as inaccurate current-state documentation |
 
 Why rejected:
 - It blurs the core user problem.
 - It turns secondary capabilities into false obligations.
 
-### Rejected: promote Diagnostics and Shortcuts to first-class top-level settings sections
+| ID | Topic | Review split / evidence | Open question |
+| --- | --- | --- | --- |
+| U1 | Manual recovery CTA label | Split 2–2 between `Fix Now` and `Restore Now` | Keep current shipped label for now, or define `Restore Now` as phase-2 rename target? |
+| U2 | Settings IA target | Split 2–2 between canonizing shipped 3-pane IA and restoring a 5-area target model | Is current 3-pane navigation the long-term product IA, or just an implementation waypoint? |
+| U3 | Diagnostics / Shortcuts status | Some reviewers accept General nesting; others want first-class trust/utility surfaces | Should these remain nested under General or become top-level in a future IA? |
+| U4 | Show Numbers / Identify naming | Broad agreement on visible `Show Numbers`, but disagreement on what should be canonical/internal | What final naming pair should phase 2 standardize on? |
+| U5 | Apply Layout / Apply Profile wording | Current code says `Apply Layout`; some reviewers want the intent model made more explicit | Should phase 2 rename profile-specific restore to `Apply Profile`? |
+| U6 | Swap naming | `Swap Positions`, `Swap side displays`, and older left/right language all remain in circulation | What final user-facing label is stable enough for canon? |
+| U7 | Degraded-state Save Profile guidance | Multiple reviewers want an explicit warning | How prominently should the product warn against capturing a broken temporary layout as the new truth? |
+| U8 | NoDisplays / RestoreFailed surfacing | Some reviewers want them promoted from generic manual-recovery buckets | Do these deserve first-class surfaced states in future UI/docs? |
+| U9 | ManualLayoutOverride public wording | Reviewers agree the concept exists but not the final public label/CTA model | Does this state need a clearer user-facing title and/or explicit “keep current layout” action? |
 
 Why rejected:
 - They matter, but they support the core loop rather than define it.
@@ -112,7 +56,17 @@ Why rejected:
 - It solves a narrower subset of desks.
 - It overlaps with the main recovery story and should not compete with it in headline docs.
 
-### Rejected: treat update management, login item, language, and shortcuts as product-defining features
+This packet is implementation-ready for **agreed** items only. Contested items remain intentionally unresolved and should not be silently implemented as if decided.
+
+
+| Requirement | Result |
+| --- | --- |
+| Normalized feature catalog completed | Yes |
+| State/action matrix completed | Yes |
+| One chosen settings IA documented | Yes |
+| Accepted / rejected / unresolved items recorded | Yes |
+| PM + Designer + Engineer agreement explicitly required and represented | Yes |
+| Phase 2 separated from phase 1 definitions | Yes |
 
 Why rejected:
 - These are app qualities and conveniences, not the product’s central promise.
