@@ -133,3 +133,78 @@ This matrix normalizes them into a single user-observable state model and explic
 - Promote `Restore Failed` and `No Displays` into first-class visible states instead of collapsing both into generic manual recovery.
 - Rewrite menu/help copy so each runtime state has one unique recommended next action.
 - Align diagnostics labels with the chosen canonical action names.
+
+## Phase 1B usability pruning: keep / merge / remove recommendations
+
+### Core problem reminder
+
+LayoutRecall exists to help a user get back to a known-good monitor layout after macOS scrambles it. Any action that does not directly help the user:
+
+1. understand whether the app can safely help,
+2. restore the intended layout now, or
+3. save/manage the intended layout for later,
+
+should be demoted out of the primary recovery surface.
+
+### Keep as primary actions
+
+| Action | Recommendation | Rationale |
+| --- | --- | --- |
+| Restore Now | **KEEP** | This is the clearest primary recovery verb for the core problem. Keep it short and outcome-oriented. |
+| Save Current Layout | **KEEP** | First-run and changed-desk recovery both need a direct way to define the intended baseline. |
+| Install Restore Tool | **KEEP conditionally** | Keep as the only primary action when dependency is missing, because it directly unblocks the core product promise. |
+| Enable Automatic Restore | **KEEP conditionally** | Keep only in the explicit disabled-policy state, because it restores the app's core operating mode. |
+
+### Merge or rename overlapping actions
+
+| Current overlap | Recommendation | Usability rationale |
+| --- | --- | --- |
+| `Fix Now` vs `Restore Now` | **MERGE** to `Restore Now` | `Fix Now` is vague and sounds like a repair utility, not a layout restore action. `Restore Now` says exactly what will happen. |
+| `Apply Layout` / `Apply Profile` vs manual restore wording | **MERGE conceptually** under `Restore saved profile` in docs; allow shorter UI label `Apply` only inside a profile card | Users should not learn two near-identical restore verbs without context. Runtime surface should say `Restore Now`; profile-management surface should say `Restore saved profile` or short contextual `Apply`. |
+| `Show Numbers` vs `Identify Displays` | **MERGE** into one feature with user-facing label `Show Display Numbers` | `Identify Displays` is internal/technical language. `Show Numbers` is friendly but too terse. `Show Display Numbers` balances clarity and immediacy. |
+| `Swap Positions` vs `Swap` vs `Swap side displays` | **MERGE** to `Swap Side Displays` | This names both the scope and limit. It is clearer than the generic `Swap` and safer than the vague `Swap Positions`. |
+| `Save first baseline` / `Save another baseline` / `Save` | **MERGE** to `Save Current Layout` | Contextual helper copy can explain whether it is first-time or additional, but the button label should stay stable. |
+
+### Remove, hide, or demote from primary surfaces
+
+| Action / surface behavior | Recommendation | Rationale |
+| --- | --- | --- |
+| Save action in the healthy-state primary area | **DEMOTE** | In the calm/healthy state, the product should reassure first. Saving another layout is management, not urgent recovery. |
+| Diagnostics entry in the main recovery cluster | **DEMOTE** to secondary/support link | Diagnostics support trust, but they do not solve the user's immediate problem. Keep accessible, not primary. |
+| Shortcuts as a peer concept in the feature model | **DEMOTE** to support preference only | Shortcuts help power users but are not part of the core product promise. |
+| Update controls in the consensus feature core | **DEMOTE** to maintenance/support | Necessary app plumbing, but not part of the core layout-recall workflow. |
+| Disabled install action shown as if it were still actionable during active install | **REMOVE from action framing**; show progress status instead | During installation, users should see status/progress, not a disabled repeat action. |
+
+### Recommended simplified runtime action set
+
+For usability, the runtime/menu surface should normalize to at most these five user-facing actions:
+
+1. **Restore Now**
+2. **Save Current Layout**
+3. **Show Display Numbers**
+4. **Swap Side Displays**
+5. **Open Settings**
+
+Conditional/system actions:
+
+- **Install Restore Tool** only when dependency is missing
+- **Enable Automatic Restore** only when the app-wide policy is disabled
+
+Everything else should be contextual, nested, or settings-only.
+
+### Recommended documentation language changes
+
+- Replace `Fix Now` with `Restore Now` in PRD/SPEC/README.
+- Replace `Apply Layout` in broad product docs with `Restore saved profile` unless the text is specifically about a profile card.
+- Replace `Show Numbers` / `identify displays` drift with `Show Display Numbers`.
+- Replace `Swap Positions` with `Swap Side Displays`.
+- Reframe diagnostics, shortcuts, and updates as support capabilities rather than core recovery actions.
+
+### Avoidable unresolved items to close in final packet
+
+To keep the spec sharp, these should not remain fuzzy if worker-1 can resolve them now:
+
+1. choose one primary restore verb: `Restore Now`
+2. choose one display-identification label: `Show Display Numbers`
+3. choose one swap label: `Swap Side Displays`
+4. state clearly that healthy-state menu should demote save/diagnostics from the main attention path
