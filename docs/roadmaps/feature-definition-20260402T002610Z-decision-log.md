@@ -196,3 +196,50 @@ Ready for phase 2 planning once the team treats the following as approved inputs
 2. Refactor settings navigation from current 3-section structure to the chosen 5-section IA.
 3. Promote `Restore Failed` and possibly `No Displays` into clearer surfaced states if design review confirms the added complexity is worthwhile.
 4. Re-run full verification after implementation work begins.
+
+
+## Phase 1B spec-hardening resolutions (worker-5)
+
+Simplicity-first review outcome for phase 1B:
+
+### Resolved outcomes pushed from this lane
+
+1. **Manual recovery CTA**
+   - Resolve to **`Fix Now` for the current spec baseline**.
+   - Reason: it is the shipped/menu/tested label today, it is shorter in the menu, and introducing `Restore Now` while `Apply Layout` already exists adds rename debt without solving a user problem in phase 1.
+
+2. **Settings IA target**
+   - Resolve to **3 primary panes in the baseline spec: Restore / Profiles / General**.
+   - Reason: phase 1B explicitly optimizes for product simplicity, not feature completeness. A 5-pane target bakes in more surface area than the current app needs and turns support/admin areas into peers of the core recovery flow.
+
+3. **Diagnostics and Shortcuts status**
+   - Resolve to **supporting sections under General, not first-class primary destinations**.
+   - Reason: they matter, but they do not define the core product promise. The core promise is “recover a known monitor layout safely.” Trust support can remain one click away and context-linked from degraded states.
+
+4. **Per-profile auto-restore field**
+   - Resolve to **non-goal / dead compatibility field for the current spec**.
+   - Reason: the shipped behavior is app-level Auto Restore. Anything else creates inaccurate product language and future implementation ambiguity.
+
+5. **Show Numbers naming**
+   - Resolve to **`Show Numbers` as the user-facing command**.
+   - Reason: it is concrete, fast to understand, and better suited to the menu than the more implementation-flavored “Identify Displays.”
+
+6. **Swap naming and scope**
+   - Resolve to **`Swap Positions` as a secondary/manual utility action**, not a core feature pillar.
+   - Reason: it supports the core problem only for simpler desk setups and should stay clearly subordinate to saved-profile recovery.
+
+7. **Degraded-state Save behavior**
+   - Resolve to **keep Save available, but document it as an expert escape hatch rather than the recommended default in degraded states**.
+   - Reason: it is useful when the current layout is intentionally correct, but the spec should warn against capturing a broken temporary layout as the new truth.
+
+8. **NoDisplays / RestoreFailed surfacing**
+   - Resolve to **keep them as explanatory sub-states for now, not first-class IA drivers**.
+   - Reason: the spec should describe them, but promoting every edge condition to a top-level state would reduce clarity and overcomplicate phase 1.
+
+### Net hardening recommendation sent to editor
+
+The final packet should minimize unresolved items by:
+- choosing the shipped/simple label set unless there is a strong usability failure,
+- choosing the shipped/simple IA unless complexity clearly pays for itself,
+- treating duplicate or overlapping actions as debt to demote or explain,
+- and explicitly marking speculative expansion features as non-goals rather than open invitations.
