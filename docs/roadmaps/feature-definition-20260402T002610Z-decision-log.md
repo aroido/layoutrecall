@@ -1,129 +1,158 @@
-# LayoutRecall Feature Definition Decision Log
+# LayoutRecall Definition Decision Log
 
 Lab: `feature-definition-20260402T002610Z`
+Status: definition-phase artifact
 Updated: 2026-04-02
-Status: proposed decision set; implementation remains blocked until PM + Designer + Engineer approve
 
-## Audit-backed findings
+## Decision protocol used
 
-Reviewed code and docs show three important drifts:
+This log follows the run brief:
 
-1. docs still describe a five-pane settings model, while the app ships a three-pane primary navigation model
-2. feature naming around restore actions is inconsistent (`Fix Now`, `Apply Layout`, `Restore Now`)
-3. `ProfileSettings.autoRestore` exists in the model but is not a meaningful product capability today
+- PM coordinates and records the decision.
+- Designer and Engineer must both agree before a definition is accepted.
+- Critic objections are logged explicitly.
+- Unresolved items remain open and are not silently decided.
 
-## Options considered
+## Audit summary
 
-### Option A — keep documenting the product as five-pane settings
+The audit surfaced three primary definition gaps:
 
-- **Pros:** matches older docs; no wording churn in README/PRD/SPEC today
-- **Cons:** does not match shipped navigation; keeps implementation and product definition out of sync
-- **Decision:** **Rejected**
+1. **Terminology drift** — “Fix Now,” “Apply Layout,” “saved layout,” and “profile” are close but not cleanly separated.
+2. **IA drift** — docs promise five settings panes; current implementation exposes three primary panes and hides two conceptual panes under General.
+3. **Recovery ambiguity** — manual override / low-confidence states do not clearly express the user’s choice set.
 
-### Option B — normalize to three top-level settings panes with nested support sections
+## Decisions
 
-- **Pros:** matches current code; simplifies navigation story; keeps utility surfaces secondary
-- **Cons:** requires doc updates elsewhere; some team members may still think in five-pane terms
-- **Decision:** **Accepted**
+### D1. Adopt a normalized feature vocabulary
 
-### Option C — treat `Fix Now` and `Apply Layout` as the same feature everywhere
+**Decision:** Accepted
 
-- **Pros:** fewer terms to manage
-- **Cons:** hides an important distinction between restoring the currently matched layout and restoring a specific chosen profile
-- **Decision:** **Rejected**
+**Accepted definition**
+- Use **Profile** as the canonical saved-layout object.
+- Use **Restore Now** for runtime matched recovery.
+- Use **Apply Profile** for restoring a specifically chosen saved profile.
+- Use **Review Before Restore** for confirm-first automatic restore behavior.
+- Use **Restore Tool** as the user-facing umbrella term for the `displayplacer` dependency.
 
-### Option D — define two restore actions: runtime restore vs profile-specific apply
+**Why**
+- PM: improves docs and release communication.
+- Designer: reduces hidden semantic differences between similar actions.
+- Engineer: maps cleanly onto current code paths without changing the underlying runtime model.
 
-- **Pros:** cleaner mental model; maps well to menu vs profile-management contexts
-- **Cons:** requires copy discipline in future implementation
-- **Decision:** **Accepted**
+**Critic objection logged**
+- “If you keep `Fix Now`, users may treat it as a generic repair button instead of a concrete restore action.”
 
-### Option E — expose per-profile auto-restore as a first-class feature because the model exists
+**Disposition:** objection accepted; phase 2 should consider copy alignment.
 
-- **Pros:** sounds powerful; aligns with latent data field
-- **Cons:** current code normalizes it away and restore decisions only respect app-level automatic restore
-- **Decision:** **Rejected for phase 1**
+---
 
-### Option F — keep `Shortcuts` and `Diagnostics` as top-level panes
+### D2. Keep restore actions split into runtime restore vs specific-profile restore
 
-- **Pros:** easier direct navigation for heavy users
-- **Cons:** over-weights support tools in a compact utility app; does not match current sidebar design
-- **Decision:** **Rejected**
+**Decision:** Accepted
 
-## Accepted decisions
+**Options considered**
+1. Merge both flows under one generic “Restore” concept.
+2. Keep two actions: runtime best-match restore and explicit profile restore.
 
-1. **Canonical settings IA is 3-pane, not 5-pane**
-   - Top-level: `Restore`, `Profiles`, `General`
-   - Nested support sections: `Shortcuts`, `Diagnostics`
+**Chosen option:** keep two actions.
 
-2. **Canonical feature terms are normalized**
-   - `Restore matched layout now` for runtime/manual confirmation restore
-   - `Apply saved profile` for profile-specific restore
-   - `Save current layout as profile` for all save/baseline actions
-   - `Identify displays` for overlay/numbering behavior
-   - `Swap side displays` for the narrow fallback action
+**Why**
+- Designer: the user intent differs materially between “restore what LayoutRecall thinks matches” and “apply this exact profile.”
+- Engineer: the current runtime already uses different code paths (`performManualRestore` vs `performRestoreProfile`).
+- PM: separate terminology helps docs stay trustworthy.
 
-3. **The product remains menu-bar-first and trust-first**
-   - Menu owns status and fast recovery
-   - Settings owns explanation, profile administration, and configuration
+**Rejected alternative**
+- One generic “Restore” verb everywhere.
+- Rejected because it collapses two different decisions into one label.
 
-4. **Per-profile auto-restore is not part of the agreed definition set yet**
-   - Treat it as unresolved model debt or future scope, not a promised feature
+---
 
-5. **Phase 1 remains definition-only**
-   - No implementation should start until PM, Designer, and Engineer approve the chosen model
+### D3. Choose explicit five-pane settings IA as the canonical model
+
+**Decision:** Accepted
+
+**Options considered**
+1. Keep the current 3-pane sidebar with nested sections.
+2. Adopt explicit 5-pane navigation: Restore, Profiles, Shortcuts, Diagnostics, General.
+
+**Chosen option:** explicit 5-pane navigation.
+
+**Why**
+- PM: it matches the current product narrative already present in docs.
+- Designer: Diagnostics and Shortcuts are real destinations, not hidden detail sections.
+- Engineer: low-to-moderate follow-up cost because the pane enum already exists.
+
+**Critic objection logged**
+- “Five panes could be overkill if two of them are rarely opened.”
+
+**Disposition:** objection noted but rejected; discoverability and terminology consistency outweigh the sidebar cost.
+
+**Phase 2 note**
+- This is a definition decision only; implementation follow-up remains separate.
+
+---
+
+### D4. Treat Diagnostics as a primary trust surface
+
+**Decision:** Accepted
+
+**Accepted definition**
+- Diagnostics gets a canonical home and should not be described merely as passive history.
+- Restore surfaces may link into Diagnostics, but full evidence browsing lives there.
+
+**Why**
+- PM: trust is central to the product promise.
+- Designer: users should not hunt through General to confirm what happened.
+- Engineer: the data model already supports latest entry, history, snapshot, and support files.
+
+**Rejected alternative**
+- Keep diagnostics as a support-only subsection.
+- Rejected because it conflicts with runtime trust needs.
+
+---
+
+### D5. Manual override and low-confidence states need explicit decision language
+
+**Decision:** Accepted
+
+**Accepted definition**
+Future recovery language should distinguish among:
+- Restore saved layout
+- Keep current layout
+- Save current layout as profile
+- Swap side displays
+
+**Why**
+- PM: makes guidance legible without expanding feature scope.
+- Designer: current runtime states feel too similar and under-specified.
+- Engineer: this can mostly be implemented in presentation/copy layers plus a small suppression choice if kept.
+
+**Rejected alternative**
+- Keep the current generic action cluster.
+- Rejected because the critic lane flagged this as a trust gap.
+
+---
 
 ## Rejected alternatives
 
-- returning to a five-pane settings sidebar as the canonical definition
-- collapsing all restore actions into one undifferentiated verb
-- treating model-only fields as shipped features
-- broadening LayoutRecall into a full display-management suite during this definition sprint
+| Alternative | Rejected because |
+| --- | --- |
+| Treat LayoutRecall as a full display-management suite | Violates product boundary and would expand scope beyond trustful restore. |
+| Collapse Profiles into Restore | Blurs management vs runtime recovery responsibilities. |
+| Keep Shortcuts and Diagnostics permanently nested under General | Preserves the exact IA drift this sprint was created to resolve. |
+| Replace `displayplacer` in this definition sprint | Not part of current product boundary; would turn the sprint into architecture expansion. |
 
 ## Unresolved questions
 
-1. **Manual layout override CTA design**
-   - Current code gives `.manualLayoutOverride` no primary action.
-   - Decision needed: should the chosen CTA set be `Restore saved layout`, `Keep current layout`, and `Save as new profile`?
+1. **Should the user-facing label actually change from `Fix Now` to `Restore Now` in phase 2?**
+   - Consensus: likely yes, but final copy change still needs localization/product validation.
+2. **Does manual override need a dedicated persisted “Keep current layout” control or only clearer language?**
+   - Consensus: the intent needs to exist; persistence semantics need a separate implementation decision.
+3. **Should healthy-state menu keep any direct restore button at all?**
+   - Consensus: maybe only when it is genuinely useful; final density decision remains open.
+4. **How much restore-proof summary should appear in Restore before the user opens Diagnostics?**
+   - Consensus: at least one summary row, but exact density is unresolved.
 
-2. **Ask Before Restore placement**
-   - Current code places the toggle in `General > Advanced`.
-   - Decision needed: should the agreed IA move it into `Restore` because it directly affects restore trust?
+## Phase 2 boundary
 
-3. **Swap-side-displays scope wording**
-   - Logic allows 2 or 3 displays, but copy still implies “requires two.”
-   - Decision needed: narrow behavior to two displays, or broaden copy and tests to match the current code?
-
-4. **Healthy-state menu density**
-   - Current menu still behaves like a compact dashboard.
-   - Decision needed: should the healthy state collapse further in phase 2?
-
-5. **Reference profile semantics**
-   - The app exposes a “reference profile” based on latest decision/match context.
-   - Decision needed: should product language keep “reference profile,” or rename it to “matched baseline” everywhere?
-
-## Consensus checkpoints
-
-| Role | Required position before implementation | Current documentation status |
-| --- | --- | --- |
-| PM | Accept scope boundaries and terminology | pending explicit signoff |
-| Designer | Accept chosen IA and surface ownership | pending explicit signoff |
-| Engineer | Accept state model and feasibility boundaries | pending explicit signoff |
-| Critic / virtual user | objections logged, not silently dropped | logged via unresolved questions and rejected alternatives |
-
-## Implementation gate
-
-Implementation is **not approved** by this document alone.
-
-Phase 2 may begin only after:
-
-1. PM accepts the chosen catalog and scope boundaries
-2. Designer accepts the 3-pane settings IA and menu/settings ownership split
-3. Engineer accepts the state/action model, especially degraded-state distinctions and removal of per-profile auto-restore from the promised feature set
-
-## Recommended phase 2 follow-up once approved
-
-1. align README/PRD/SPEC terminology and settings IA wording
-2. resolve manual-layout-override action design
-3. either remove `ProfileSettings.autoRestore` or implement it as a real feature
-4. tighten healthy-state menu density and degraded-state CTA language
+No implementation is approved by this document alone. If phase 2 starts, it should be scoped separately and explicitly reference these accepted definitions.
