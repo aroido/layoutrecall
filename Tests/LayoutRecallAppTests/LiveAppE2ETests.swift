@@ -279,6 +279,134 @@ func liveActionHandlersExercisePersistedRestoreAndUpdateFlows() async throws {
 }
 
 @MainActor
+@Test
+func liveAutoRestoreEnableImmediatelyRestoresSwappedLayout() async throws {
+    guard ProcessInfo.processInfo.environment["LAYOUTRECALL_RUN_LIVE_AUTO_RESTORE_ENABLE_TESTS"] == "1" else {
+        return
+    }
+
+    await wakeDisplaysIfPossible()
+
+    let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+
+    defer {
+        try? FileManager.default.removeItem(at: tempRoot)
+    }
+
+    let profileStore = ProfileStore(fileURL: tempRoot.appendingPathComponent("profiles.json", isDirectory: false))
+    let settingsStore = AppSettingsStore(fileURL: tempRoot.appendingPathComponent("settings.json", isDirectory: false))
+    let diagnosticsStore = DiagnosticsLogger(fileURL: tempRoot.appendingPathComponent("diagnostics.json", isDirectory: false))
+    let snapshotReader = DisplaySnapshotReader()
+    let commandBuilder = DisplayplacerCommandBuilder()
+    let executor = DisplayplacerRestoreExecutor(timeout: 30)
+    let verifier = RestoreVerifier(retryDelays: [250_000_000, 500_000_000, 1_000_000_000])
+
+    try await settingsStore.saveSettings(
+        AppSettings(
+            automaticRestoreEnabled: false,
+            launchAtLogin: false,
+            shortcuts: ShortcutSettings(),
+            automaticallyCheckForUpdates: false,
+            skippedReleaseVersion: nil
+        )
+    )
+
+    let originalDisplays = try await snapshotReader.currentDisplays()
+    guard originalDisplays.count == 2 || originalDisplays.count == 3 else {
+        print(
+            "Skipping live auto restore enable test: requires 2 or 3 enabled displays, found \(originalDisplays.count)."
+        )
+        return
+    }
+
+    let originalPlan = try commandBuilder.restorePlan(for: originalDisplays)
+    let swappedPlan = try commandBuilder.swapLeftRightPlan(for: originalDisplays)
+    var needsRestoreCleanup = false
+
+    let model = AppModel(
+        store: profileStore,
+        settingsStore: settingsStore,
+        diagnosticsStore: diagnosticsStore,
+        snapshotReader: snapshotReader,
+        eventMonitor: NoopDisplayEventMonitor(),
+        commandBuilder: commandBuilder,
+        executor: executor,
+        dependencyInstaller: LiveDependencyInstallerStub(),
+        verifier: verifier,
+        loginItemManager: LiveLoginItemManagerStub(),
+        shortcutManager: LiveShortcutManagerStub(),
+        updateChecker: NoopAppUpdateChecker(),
+        updateInstaller: NoopAppUpdateInstaller(),
+        updatePrompt: NoopAppUpdatePrompt(),
+        debounceNanoseconds: 1_000_000,
+        restoreCooldown: 0,
+        autoBootstrap: false
+    )
+
+    await model.bootstrap()
+
+    model.saveCurrentLayout()
+    await waitForLiveCondition("save live baseline profile") {
+        model.profiles.count == 1
+            && model.diagnostics.first?.actionTaken == "save-profile"
+    }
+
+    model.swapLeftRight()
+    needsRestoreCleanup = true
+
+    await waitForLiveCondition("swap live displays") {
+        await liveDisplaysMatchExpectedOrigins(
+            swappedPlan.expectedOrigins,
+            reader: snapshotReader
+        )
+    }
+
+    model.setAutoRestore(true)
+
+    await waitForLiveCondition("enable auto restore and recover immediately") {
+        guard let settings = try? await settingsStore.loadSettings() else {
+            return false
+        }
+
+        let restored = await liveDisplaysMatchExpectedOrigins(
+            originalPlan.expectedOrigins,
+            reader: snapshotReader
+        )
+
+        return settings.automaticRestoreEnabled
+            && restored
+            && model.diagnostics.first?.actionTaken == "auto-restore"
+            && model.lastCommand == originalPlan.command
+    }
+
+    needsRestoreCleanup = !(
+        await liveDisplaysMatchExpectedOrigins(
+            originalPlan.expectedOrigins,
+            reader: snapshotReader
+        )
+    )
+
+    #expect(model.autoRestoreEnabled == true)
+    #expect(model.diagnostics.first?.actionTaken == "auto-restore")
+    #expect(model.latestMatchedProfileName == model.profiles.first?.name)
+    #expect(
+        await liveDisplaysMatchExpectedOrigins(
+            originalPlan.expectedOrigins,
+            reader: snapshotReader
+        )
+    )
+
+    if needsRestoreCleanup {
+        _ = await executor.execute(command: originalPlan.command)
+        _ = await verifier.verify(
+            expectedOrigins: originalPlan.expectedOrigins,
+            using: snapshotReader
+        )
+    }
+}
+
+@MainActor
 private func waitForLiveCondition(
     _ step: String,
     timeoutNanoseconds: UInt64 = 20_000_000_000,
@@ -312,6 +440,41 @@ private func wakeDisplaysIfPossible() async {
     } catch {
         return
     }
+}
+
+private func liveDisplaysMatchExpectedOrigins(
+    _ expectedOrigins: [DisplayOrigin],
+    reader: DisplaySnapshotReader
+) async -> Bool {
+    guard let currentDisplays = try? await reader.currentDisplays() else {
+        return false
+    }
+
+    let currentOrigins = currentDisplays
+        .sorted(by: DisplaySnapshot.positionComparator)
+        .map {
+            DisplayOrigin(
+                key: currentDisplays.uniqueMatchKey(for: $0),
+                x: $0.bounds.x,
+                y: $0.bounds.y
+            )
+        }
+        .sorted(by: compareDisplayOrigins(lhs:rhs:))
+
+    let normalizedExpectedOrigins = expectedOrigins.sorted(by: compareDisplayOrigins(lhs:rhs:))
+    return currentOrigins == normalizedExpectedOrigins
+}
+
+private func compareDisplayOrigins(lhs: DisplayOrigin, rhs: DisplayOrigin) -> Bool {
+    if lhs.key != rhs.key {
+        return lhs.key < rhs.key
+    }
+
+    if lhs.x != rhs.x {
+        return lhs.x < rhs.x
+    }
+
+    return lhs.y < rhs.y
 }
 
 private final class NoopDisplayEventMonitor: DisplayEventMonitoring {
