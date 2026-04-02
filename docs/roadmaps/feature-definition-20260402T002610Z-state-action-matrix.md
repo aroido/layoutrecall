@@ -1,104 +1,91 @@
-# LayoutRecall Consensus State / Action Matrix
+# LayoutRecall State / Action Matrix
 
-_Date:_ 2026-04-02
+Lab: `feature-definition-20260402T002610Z`
+Updated: 2026-04-02
+Status: proposed definition set for PM + Designer + Engineer signoff before implementation
 
-## Purpose
+## Audit basis
 
-This matrix converts the current runtime behavior into one user-observable state model that design, product, and implementation can share.
+Primary runtime state logic is defined in:
 
-Primary runtime state source audited: `AppPresentation.menuPrimaryState` plus supporting restore/dependency flags in `AppModel` and `RestoreCoordinator`.
+- `Sources/LayoutRecallApp/AppPresentation.swift`
+- `Sources/LayoutRecallKit/Services/RestoreCoordinator.swift`
+- `Sources/LayoutRecallApp/AppModel.swift`
 
-## Canonical runtime states
+## Canonical user-observable states
 
-| Canonical state | Current code anchor | User-facing meaning |
+| Runtime state | Source of truth | What the user should understand |
 | --- | --- | --- |
-| No Profiles | `menuPrimaryState = .noProfiles` | The app cannot restore because nothing has been saved yet |
-| Installing Dependency | `.installingDependency` | The app is setting up `displayplacer`; restores are temporarily unavailable |
-| Dependency Missing | `.dependencyMissing` | A profile may exist, but real restore commands cannot run yet |
-| No Match | `.noMatch` | Profiles exist, but none match the current live display set confidently enough to even review |
-| Needs Review | `.lowConfidence` or `.reviewBeforeRestore` | A candidate profile exists, but the user should manually decide before restore |
-| Auto Restore Off | `.autoRestoreDisabled` | The app is otherwise ready but automation is intentionally disabled |
-| Manual Layout Override | `.manualLayoutOverride` | The current layout differs because the user performed a manual repositioning action |
-| Manual Recovery Available | `.manualRecovery` | The app is not in a healthy auto-ready state, but manual restore controls remain usable |
-| Ready | `.healthy` | A trusted profile is ready or the app is otherwise healthy with current conditions |
-| No Displays (substate) | `RestoreDecisionContext.noDisplays` | No displays are detected; most layout actions are meaningless until hardware returns |
-| Restore In Progress (overlay) | `restoreCommandInProgress == true` | A restore/reposition command is already running; duplicate actions should be blocked |
+| No profiles | `menuPrimaryState == .noProfiles` | LayoutRecall cannot protect the desk until the first baseline is saved. |
+| Installing restore tool | `menuPrimaryState == .installingDependency` | The app is preparing the external dependency and restore is temporarily unavailable. |
+| Restore tool missing | `menuPrimaryState == .dependencyMissing` | Recovery is blocked because the restore engine is unavailable. |
+| No confident match | `menuPrimaryState == .noMatch` | The current display set does not map cleanly to any saved profile. |
+| Low confidence match | `menuPrimaryState == .lowConfidence` | A candidate profile exists, but auto-restore is not trusted enough to run. |
+| Review before restore | `menuPrimaryState == .reviewBeforeRestore` | A confident match exists, but the app is intentionally waiting for confirmation. |
+| Automatic restore off | `menuPrimaryState == .autoRestoreDisabled` | Profiles exist, but app-level automatic restore has been disabled. |
+| Manual layout override | `menuPrimaryState == .manualLayoutOverride` | The current arrangement appears intentionally different from the saved baseline. |
+| Manual recovery needed | fallback `menuPrimaryState == .manualRecovery` | The app has enough context to suggest recovery, but no safer automatic path applies. |
+| Healthy / protected | `menuPrimaryState == .healthy` | Monitoring is ready and a saved baseline is available for safe recovery. |
 
-## Allowed and blocked actions by state
+## State / action matrix
 
-| State | Allowed actions | Blocked actions | Notes |
+| State | Allowed primary action | Allowed secondary actions | Blocked actions | Notes / decision intent |
+| --- | --- | --- | --- | --- |
+| No profiles | Save current layout as profile | Open Settings | Restore matched layout now; Apply saved profile; Identify displays; Swap side displays | First-run setup state. Keep the next step singular and explicit. |
+| Installing restore tool | Show installation progress | Save current layout as profile; Open Settings | Any real restore action; repeat install trigger while already running | Installation is transitional, not a separate steady-state feature. |
+| Restore tool missing | Install restore tool | Save current layout as profile; Open Settings | Restore matched layout now; Apply saved profile; Swap side displays | Save should remain available so users can prepare baselines before enabling restore. |
+| No confident match | Save current layout as profile | Open Profiles; Open Diagnostics | Restore matched layout now from menu context; Identify displays for missing reference; automatic restore | Current menu disables `Fix Now` in this state; definition should keep restore blocked until a real reference exists. |
+| Low confidence match | Restore matched layout now | Save current layout as profile; Identify displays; Open Diagnostics; Swap side displays | Automatic restore | This is the main trust-sensitive manual recovery state. |
+| Review before restore | Restore matched layout now | Save current layout as profile; Identify displays; Open Diagnostics; Swap side displays | Automatic restore until user confirms | This should stay distinct from low-confidence even if both currently share `Fix Now`. |
+| Automatic restore off | Enable automatic restore | Save current layout as profile; Apply saved profile; Identify displays; Open Diagnostics | Automatic restore until re-enabled | Keep manual recovery available while respecting the app-level off state. |
+| Manual layout override | No automatic primary action today; proposed explicit choice set | Save current layout as profile; Apply saved profile; Identify displays; Open Diagnostics; Swap side displays | Automatic restore without user choice | Current code gives this state no primary action; definition should call that ambiguity out. |
+| Manual recovery needed | Restore matched layout now | Save current layout as profile; Identify displays; Open Diagnostics; Swap side displays | Automatic restore | Catch-all degraded state after failure/requested manual action. |
+| Healthy / protected | No interruptive primary action | Save current layout as profile; Apply saved profile; Identify displays; Swap side displays; Open Settings | None beyond dependency/runtime guards | Healthy state should feel calm, not like a dashboard demanding attention. |
+
+## Action definitions
+
+| Action | Purpose | Available in current code | Canonical scope |
 | --- | --- | --- | --- |
-| No Profiles | Save Profile, open Settings | Restore Now, Apply Layout, Show Numbers, Auto Restore enable, Swap Positions | First-run capture state |
-| Installing Dependency | Wait, open Settings, optional Save Profile | Restore Now, Apply Layout, Swap Positions, dependency reinstall | Save remains harmless because it does not require `displayplacer` |
-| Dependency Missing | Install Dependency, Save Profile, open Diagnostics | Restore Now, Apply Layout, Swap Positions, full auto restore | Dependency CTA is primary |
-| No Match | Save Profile, inspect Diagnostics, open Profiles | Restore Now should not be shown as primary, Apply Layout from a specific profile stays user-directed only if dependency exists | Current docs under-explain this distinction |
-| Needs Review | Restore Now, Save Profile, Show Numbers, open Diagnostics | Automatic restore, silent background apply | Combines low-confidence and ask-before-restore review paths into one user model |
-| Auto Restore Off | Enable Auto Restore, Restore Now, Save Profile, Show Numbers | Automatic restore | App is healthy enough for manual recovery |
-| Manual Layout Override | Restore Now, Apply Layout, Show Numbers, inspect Diagnostics | Automatic restore until next qualifying event | Manual override should be explained, not treated as failure |
-| Manual Recovery Available | Restore Now, Save Profile, Apply Layout, Show Numbers, Diagnostics | Automatic restore if readiness conditions are not met | Catch-all recovery state |
-| Ready | Save Profile, Apply Layout, Show Numbers, optional Swap Positions, open Settings | None, except actions blocked by dependency/runtime overlays | “Ready” is healthy, not idle-only |
-| No Displays (substate) | Open Settings, inspect Diagnostics | Save Profile, Restore Now, Apply Layout, Show Numbers, Swap Positions | This should be called out explicitly in later UX copy |
-| Restore In Progress (overlay) | Observe progress, open Diagnostics | Trigger another restore, Apply Layout, Swap Positions | Overlay blocks duplicate execution across base states |
+| Save current layout as profile | Capture live layout as a baseline | Yes | first-run, degraded, and routine maintenance |
+| Restore matched layout now | Run manual restore for the current inferred match | Yes (`Fix Now`) | degraded states and review confirmation |
+| Apply saved profile | Run restore for a specific saved profile | Yes | profile management and multi-profile switching |
+| Identify displays | Show mapping overlays | Yes | degraded states and profile inspection |
+| Swap side displays | Limited fallback rearrangement | Yes | only supported layouts with dependency ready |
+| Install restore tool | Enable restore engine | Yes | dependency-missing states |
+| Enable automatic restore | Re-enable app-level automation | Yes | automatic-restore-off state |
+| Open diagnostics | Review recent evidence | Yes | degraded or support states |
 
-## Action inventory
+## Duplicate / contradictory behaviors found
 
-| Action | Canonical name | Current anchor(s) | Primary owner surface |
-| --- | --- | --- | --- |
-| Save current layout | Save Profile | `saveCurrentLayout()` / `.saveNewProfile` | Menu + Profiles |
-| Restore best match now | Restore Now | `fixNow()` / `.fixNow` | Menu + Restore |
-| Restore a specific profile | Apply Layout | `restoreProfile(_:)` | Profiles |
-| Show overlay mapping | Show Numbers | `identifyDisplays(for:)` | Menu + Restore + Profiles |
-| Reposition simple layouts | Swap Positions | `swapLeftRight()` | Menu + Restore |
-| Turn on automation | Enable Auto Restore | `setAutoRestore(true)` | Menu + Restore |
-| Install dependency | Install Dependency | `installDisplayplacer()` | Menu + Restore |
-| Open diagnostics context | Open Diagnostics | settings-navigation only | Menu shortcut + General > Diagnostics |
+1. **Low confidence vs review-before-restore both map to the same `Fix Now` CTA**
+   - The underlying meanings differ: one is “not trusted enough,” the other is “trusted but waiting for confirmation.”
+   - Definition decision: keep them as separate runtime states even if phase-1 implementation still shares a button.
 
-## Duplicate or contradictory actions to call out
+2. **Manual layout override has no clear primary action**
+   - `menuPrimaryAction` returns `nil` for `.manualLayoutOverride`.
+   - Definition decision: treat this as an unresolved UX gap, not a finished model.
 
-### 1. `Restore Now` vs `Apply Layout`
-- **Why it exists:** `Restore Now` chooses the best manual recovery path from current context, while `Apply Layout` is profile-specific.
-- **Consensus:** Keep both. They solve different user intents.
-- **Implementation rule:** Never label both with the same verb in the same surface.
+3. **Per-profile auto-restore exists in data but not in behavior**
+   - `ProfileSettings.autoRestore` exists, but `AppModel.normalizeProfiles` forces it to `true` and `RestoreCoordinator` only checks app-level automatic restore.
+   - Definition decision: remove it from the agreed feature catalog until a real behavior exists.
 
-### 2. `Fix Now` vs `Restore Now`
-- **Why it exists:** legacy/internal naming drift.
-- **Consensus:** Keep **Restore Now** as the user-facing label and phase out `Fix Now` in docs/copy.
+4. **Swap side displays availability messaging says “requires two” while logic allows 2 or 3 displays**
+   - `canSwapDisplays` allows `detectedDisplayCount == 2 || detectedDisplayCount == 3`, but the runtime string still says “swap requires two.”
+   - Definition decision: document the current inconsistency and resolve copy/behavior in phase 2.
 
-### 3. Save Profile shown in many non-empty states
-- **Why it exists:** current app allows capturing a fresh known-good state almost anywhere.
-- **Consensus:** Keep. It is a valid escape hatch from mismatch/manual-override situations.
+## Proposed canonical state transitions
 
-### 4. Swap Positions visible when unavailable
-- **Why it exists:** `showsSwapDisplaysControl` returns true in many states to explain availability via help text.
-- **Consensus:** Keep the control visible only when it teaches something useful; if later simplified, prefer a visible disabled control in Restore, not a surprise hidden action.
+- `No profiles` -> `Healthy / protected` only after first saved profile exists and dependency is ready.
+- `Restore tool missing` -> `Installing restore tool` -> `Healthy / protected` when dependency setup completes.
+- `Healthy / protected` -> `Low confidence match`, `Review before restore`, `Manual layout override`, or `No confident match` depending on runtime evidence.
+- `Review before restore` -> `Healthy / protected` after confirmed restore and verification.
+- `Low confidence match` -> `Manual recovery needed` after failed manual restore or unresolved mismatch.
+- Any restore-execution failure -> `Manual recovery needed` with diagnostics attention.
 
-### 5. App-level auto restore vs per-profile auto restore
-- **Why it exists:** model shape suggests both, UI/runtime currently expose only app-level automation.
-- **Consensus:** Treat **app-level Auto Restore** as canonical phase-1 behavior. Per-profile automation remains unresolved.
+## Definition call for phase 1
 
-## Consensus state transitions
+The chosen model should preserve all ten runtime states above, but phase-2 implementation should reduce copy/action ambiguity by:
 
-| From | Trigger | To | Guard |
-| --- | --- | --- | --- |
-| No Profiles | Save Profile succeeds | Ready or Manual Recovery Available | Depends on dependency/runtime readiness |
-| Dependency Missing | Install Dependency succeeds | Ready / Needs Review / Auto Restore Off | Re-evaluate current displays after setup |
-| Ready | Display event causes weak match | Needs Review | Score below auto threshold or ask-before-restore enabled |
-| Ready | User toggles Auto Restore off | Auto Restore Off | Profiles still exist |
-| Needs Review | User chooses Restore Now | Ready or Manual Layout Override | Depends on restore success and verification |
-| Any restore-capable state | User chooses Swap Positions | Manual Layout Override | Supported display count + dependency ready |
-| Any | Displays disappear | No Displays | Hardware removed/unreadable |
-| Any executing state | Command completes/fails | Ready / Manual Recovery Available | Based on verification outcome |
-
-## Product rules that must remain explicit
-
-1. **No automatic restore below threshold.**
-2. **No restore action without dependency readiness.**
-3. **Manual actions remain available even when automation is blocked, if dependency is ready.**
-4. **Diagnostics must explain blocked decisions and manual overrides.**
-5. **The same user intent should not appear under multiple conflicting labels.**
-
-## Phase 2 follow-up (not started here)
-
-1. Add explicit UX copy for the `No Displays` substate.
-2. Decide whether `Manual Recovery Available` needs a clearer user-facing name.
-3. Remove or expose per-profile auto-restore so the state model stops implying both scopes.
+1. giving `manualLayoutOverride` an explicit user-choice set
+2. differentiating low-confidence from review-before-restore in CTA language
+3. eliminating dead per-profile auto-restore behavior or fully implementing it
