@@ -1,163 +1,75 @@
-# LayoutRecall Feature Definition Decision Log
+# LayoutRecall Consensus Decision Log
 
-Lab: `feature-definition-20260402T002610Z`  
-Updated: 2026-04-02
+_Date:_ 2026-04-02
 
-## Council lanes used for this definition sprint
+## How to read this log
 
-- PM facilitator
-- Analyst / feature-definition owner
-- macOS UX / IA designer
-- engineer / state-model reviewer
-- critic / skeptical virtual user
-- verifier / implementation-readiness reviewer
+A definition is treated as approved only when **PM, Designer, and Engineer** all agree.  
+Critic objections are recorded explicitly.  
+Verifier notes whether the result is concrete enough for phase-2 implementation.
 
-## Audit findings that forced this run
-
-1. Product docs had drifted from the current shipped UI and behavior.
-2. Settings IA was described as five panes in docs, but shipped as three top-level panes with nested advanced/support sections.
-3. Per-profile auto-restore language remained in docs even though the code now normalizes behavior to a global app-level mode.
-4. Runtime actions (`Fix Now`, `Apply Layout`, `Swap Positions`, `Identify Displays`) existed, but their canonical ownership was not written down in one place.
-
-## Consensus gate
-
-A definition is approved only when PM, Designer, and Engineer all agree.
-
-| Decision | PM | Designer | Engineer | Result |
-| --- | --- | --- | --- | --- |
-| Use global automatic restore as the canonical baseline | Agree | Agree | Agree | **Approved** |
-| Use 3 top-level settings panes with nested Shortcuts/Diagnostics | Agree | Agree | Agree | **Approved** |
-| Keep `Fix Now` and `Apply Layout` as distinct actions with different intent | Agree | Agree | Agree | **Approved** |
-| Keep `Swap Positions` as a constrained manual fallback, not a general restore engine | Agree | Agree | Agree | **Approved** |
-| Separate implementation follow-up from definition approval | Agree | Agree | Agree | **Approved** |
+Legend:
+- **A** = agree
+- **R** = reject
+- **?** = unresolved / needs follow-up
 
 ## Accepted decisions
 
-### 1. Automatic restore is app-level, not profile-level
-
-**Accepted.**
-
-Rationale:
-- The current code already normalizes legacy profile flags to global behavior.
-- A single runtime mode is easier to explain and safer to test.
-- Reintroducing profile-scoped restore rules would be a net-new product feature.
-
-### 2. Chosen settings IA: 3 top-level panes
-
-**Accepted.**
-
-Chosen structure:
-- Restore
-- Profiles
-- General
-  - Shortcuts
-  - Diagnostics
-
-Rationale:
-- Matches the shipped sidebar behavior.
-- Better suits a menu-bar utility with a small number of high-frequency tasks.
-- Avoids a definition sprint turning into an unnecessary UI refactor.
-
-### 3. `Fix Now` and `Apply Layout` remain separate concepts
-
-**Accepted.**
-
-Canonical wording:
-- **Fix Now** = recover the current desk now using the best available runtime match.
-- **Apply Layout** = run a specific saved profile from profile management.
-
-Rationale:
-- The intents are distinct even if both eventually execute restore commands.
-- Keeping the names distinct reduces ambiguity between runtime recovery and profile administration.
-
-### 4. Diagnostics has one canonical home
-
-**Accepted.**
-
-Canonical home:
-- `General > Diagnostics`
-
-Deep-links allowed from:
-- Restore pane
-- Menu utility actions
-
-Rationale:
-- Keeps runtime surfaces lightweight.
-- Preserves a single support/history destination.
-
-### 5. `Swap Positions` stays limited
-
-**Accepted.**
-
-Rationale:
-- Current implementation is intentionally limited to supported 2- and 3-display desks.
-- Expanding it into a general layout editor would change the product promise.
+| ID | Topic | Options considered | Decision | PM | Designer | Engineer | Critic | Verifier | Rationale |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 | Canonical saved-layout term | baseline / profile / saved layout | **Use “profile” as the object name** | A | A | A | Notes users may still understand “saved layout” better in helper copy | A | Matches code and settings structure most closely |
+| A2 | Manual recovery CTA label | Fix Now / Restore Now | **Use “Restore Now”** | A | A | A | Objects that docs and shortcuts still say Fix Now | A | Localization already exposes Restore Now, so this is the lowest-risk normalization |
+| A3 | Settings IA | 5-pane nav / 3-pane nav + nested sections | **Use 3 top-level panes: Restore, Profiles, General** | A | A | A | Warns Diagnostics might become too hidden if support load grows | A | Matches shipped sidebar and menu-bar utility expectations |
+| A4 | Canonical home for Auto Restore | Restore / General | **Restore** | A | A | A | None | A | It is a runtime recovery behavior, not a general app preference |
+| A5 | Canonical home for Apply Layout | Menu primary / Profiles | **Profiles** | A | A | A | None | A | Profile-specific action should live beside the profile itself |
+| A6 | Canonical home for Show Numbers | Restore only / Profiles only / shared | **Shared, with Profiles as primary reference surface** | A | A | A | Notes that menu access is still useful for fast diagnosis | A | Supports both fast recovery and per-profile inspection |
+| A7 | State model simplification | docs-only “auto/manual” / explicit runtime states | **Use explicit runtime state model** | A | A | A | None | A | Current code already exposes richer state; docs should catch up instead of flattening it |
+| A8 | Swap Positions framing | profile edit / manual override tool | **Manual override tool; does not edit saved profiles** | A | A | A | Wants warning copy to remain explicit | A | Matches current command flow and confirmation copy |
+| A9 | Diagnostics placement | separate top-level pane / General section | **General > Diagnostics** | A | A | A | Warns discoverability could drop in failure-heavy flows | A | Current design already shortcuts to diagnostics when attention is needed |
 
 ## Rejected alternatives
 
-### Rejected: restore the old 5-pane settings model as the canonical definition
+| ID | Topic | Rejected option | Why rejected |
+| --- | --- | --- | --- |
+| R1 | Settings IA | Five equal-weight top-level panes | Too heavy for the product shape and inconsistent with the current implementation |
+| R2 | Action label | Keep `Fix Now` as primary copy | Drift with current localization and weakly describes the actual action |
+| R3 | Save-object name | Keep “baseline” as the main object name | Sounds temporary/internal and conflicts with current profile model |
+| R4 | Diagnostics IA | Make Diagnostics a first-class top-level pane again by default | Overweights troubleshooting compared with daily recovery tasks |
+| R5 | Auto-restore model | Pretend per-profile and app-level automation are both fully supported | Not true in the current UI/runtime contract |
 
-Why rejected:
-- Conflicts with current shipped navigation.
-- Adds UI churn without solving the main trust/clarity problem.
+## Unresolved items
 
-### Rejected: revive per-profile auto-restore toggles in this definition set
+| ID | Topic | Current evidence | Open question | PM | Designer | Engineer | Critic | Verifier |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| U1 | Per-profile auto restore | `DisplayProfile.settings.autoRestore` exists, but RestoreCoordinator/UI operate on app-level auto restore | Should per-profile auto restore become a real user-facing feature or be removed from the model? | ? | ? | ? | Objects to hidden behavior | ? |
+| U2 | “No match” manual behavior | Menu primary action becomes Save Profile, while direct profile apply can still exist elsewhere | Should the product explicitly surface Apply Layout in no-match states when dependency is ready? | ? | ? | ? | Wants clearer recovery path for expert users | ? |
+| U3 | Diagnostics discoverability | Diagnostics is nested under General but shortcut-linked from recovery surfaces | Is the current shortcuting enough, or should severe failures pin Diagnostics more aggressively? | ? | ? | ? | Concern about buried support signals | ? |
+| U4 | Manual Recovery naming | Catch-all state is useful internally but not yet polished as a user-facing term | Should this state get a clearer end-user title in future UI copy? | ? | ? | ? | Says “manual recovery” can sound vague | ? |
+| U5 | Save Profile prominence | Save Profile is available in many states | Is this correctly empowering, or does it risk encouraging users to overwrite a broken layout too quickly? | ? | ? | ? | Worries about accidental bad captures | ? |
 
-Why rejected:
-- Current implementation intentionally does not behave this way.
-- Would require fresh rule-precedence UX, persistence semantics, and tests.
+## Explicit critic objections logged
 
-### Rejected: rename everything to one generic “Restore Now” action immediately
+1. **Diagnostics discoverability:** moving Diagnostics under General is acceptable only if blocked states continue to offer a direct shortcut.
+2. **Save Profile overuse:** exposing Save Profile in degraded states can help expert users, but the product must avoid suggesting that every broken state should be captured as a new truth.
+3. **Restore Now wording:** although preferred over Fix Now, the app should make clear whether it restores the best match or a specific profile.
+4. **Hidden per-profile automation:** keeping hidden model fields without product intent creates trust risk.
 
-Why rejected for this run:
-- The shipped split between `Fix Now` and `Apply Layout` is purposeful.
-- A naming rewrite would need user-copy validation and migration review.
+## Implementation-readiness check
 
-### Rejected: start implementation during the definition sprint
+| Requirement | Result |
+| --- | --- |
+| Normalized feature catalog completed | Yes |
+| State/action matrix completed | Yes |
+| One chosen settings IA documented | Yes |
+| Accepted / rejected / unresolved items recorded | Yes |
+| PM + Designer + Engineer agreement explicitly required and represented | Yes |
+| Phase 2 separated from phase 1 definitions | Yes |
 
-Why rejected:
-- The brief requires definition artifacts first.
-- There was enough drift that implementation before alignment would be risky.
+## Phase 2 follow-up (definition complete, implementation not started)
 
-## Critic objections logged explicitly
+These are implementation follow-ups only. They are **not** part of phase 1 execution:
 
-- “If diagnostics, restore controls, and profile controls all compete in the same place, the menu becomes a junk drawer.”
-- “A per-profile auto-restore promise in docs is misleading if the shipped app only supports a global mode.”
-- “Five-pane documentation will create trust debt if the UI keeps showing only three.”
-- “`Fix Now` must not appear when the system has no profile or no dependency, or the app looks confused.”
-
-## Unresolved questions
-
-### 1. Should `Fix Now` stay named `Fix Now` long-term?
-
-Current call: keep it for this baseline.
-
-Open question:
-- Future user research may show that `Restore Now` or `Recover Now` is clearer, but that is not required to approve the feature model.
-
-### 2. Should Diagnostics ever return to a top-level sidebar pane?
-
-Current call: no.
-
-Open question:
-- If diagnostics volume grows substantially, revisit with evidence instead of silently drifting back to the older docs.
-
-### 3. How should manual-layout-override be described to end users?
-
-Current call: keep the behavior, but the public-facing label may need a friendlier phrase in a future copy pass.
-
-## Implementation-readiness verdict
-
-**Verifier verdict: ready for phase 2 planning, not for silent implementation shortcuts.**
-
-What is now concrete enough to build from:
-- canonical feature catalog
-- canonical state/action matrix
-- canonical menu/settings surface map
-- explicit accepted/rejected/unresolved log
-
-## Phase 2 follow-up (separate from this approval)
-
-1. Update PRD/SPEC/README to reflect the chosen 3-pane settings IA and global auto-restore mode.
-2. Review naming/copy consistency for `Fix Now`, `Apply Layout`, `Identify Displays`, and diagnostics hints.
-3. Add or update tests/docs that assert the chosen information architecture and feature ownership rules.
+1. Update docs and localization copy to use **profile** and **Restore Now** consistently.
+2. Remove or fully productize per-profile auto-restore.
+3. Align README / PRD / SPEC wording with the chosen three-pane settings IA.
+4. Audit tests and snapshot names that still encode legacy “Fix Now” or “five-pane” assumptions.
