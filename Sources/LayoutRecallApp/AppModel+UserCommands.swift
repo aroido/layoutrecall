@@ -77,11 +77,20 @@ extension AppModel {
 
     func setAutoRestore(_ enabled: Bool) {
         autoRestoreEnabled = enabled
+        let trigger = DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged"))
 
         launchTrackedTask {
             await self.persistSettings()
+            let didExecuteImmediateRestore = enabled
+                ? await self.attemptImmediateRestoreAfterEnablingAutoRestore(trigger: trigger)
+                : false
+
+            guard !didExecuteImmediateRestore else {
+                return
+            }
+
             await self.refreshCurrentState(
-                trigger: DisplayEvent(type: .manual, details: L10n.t("event.autoRestorePreferenceChanged")),
+                trigger: trigger,
                 allowAutomaticRestore: false,
                 shouldRecordDecision: false
             )
