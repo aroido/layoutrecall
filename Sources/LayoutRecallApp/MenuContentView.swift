@@ -268,23 +268,6 @@ struct MenuContentView: View {
                 .disabled(isDisabled(action))
             }
 
-            if model.showsSwapDisplaysControl {
-                let showsActionGroupAboveSwap =
-                    (!shouldShowInlineFixNowButton && model.canRestoreSavedProfiles)
-                    || !model.menuQuickActions.isEmpty
-
-                if showsActionGroupAboveSwap {
-                    Divider()
-                }
-
-                Button {
-                    model.swapLeftRight()
-                } label: {
-                    Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
-                }
-                .disabled(!model.canSwapDisplays)
-            }
-
             if model.profiles.count > 1 {
                 Divider()
 
@@ -320,6 +303,21 @@ struct MenuContentView: View {
 
             if model.referenceProfile != nil {
                 identifyDisplaysMenuItem
+            }
+
+            if model.showsSwapDisplaysControl {
+                if model.referenceProfile != nil || model.shouldOfferDiagnosticsShortcut {
+                    Divider()
+                }
+
+                Menu(L10n.t("settings.advancedActions")) {
+                    Button {
+                        model.swapLeftRight()
+                    } label: {
+                        Label(L10n.t("action.swap"), systemImage: "arrow.left.and.right.square")
+                    }
+                    .disabled(!model.canSwapDisplays)
+                }
             }
 
             if model.shouldOfferDiagnosticsShortcut {

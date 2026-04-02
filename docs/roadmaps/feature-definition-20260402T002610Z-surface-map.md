@@ -2,7 +2,7 @@
 
 Lab: `feature-definition-20260402T002610Z`
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1 only)
+Status: Simplified implementation-aligned artifact
 
 ## Audit basis
 
@@ -59,14 +59,14 @@ Reviewed implementation and docs for surface structure using:
 - Shortcuts
 - Diagnostics
 
-### Drift between docs and code
+### Drift resolved by the accepted implementation direction
 
 | Surface area | Docs say | Code does |
 | --- | --- | --- |
-| Settings IA | Five panes: Restore / Profiles / Shortcuts / Diagnostics / General | Three sidebar sections with Shortcuts + Diagnostics collapsed into General |
+| Settings IA | Three primary sections: Restore / Profiles / General | Three sidebar sections with Shortcuts + Diagnostics collapsed into General |
 | Diagnostics access | Dedicated settings pane | Nested disclosure under General plus contextual shortcut from Restore |
 | Shortcuts access | Dedicated settings pane | Nested disclosure under General |
-| Menu quick actions | README lists `Fix Now`, `Apply Layout`, `Show Numbers`, `Swap Positions` | Same capabilities exist, but some are top-level buttons while others are buried in the More Actions menu or per-profile settings cards |
+| Menu quick actions | README/PRD/SPEC treat `Fix Now` as the primary manual recovery CTA and demote other utilities | Core recovery action is primary; supporting actions sit behind `More Actions` or in settings/profile flows |
 
 ## IA candidates considered
 
@@ -117,14 +117,14 @@ Reviewed implementation and docs for surface structure using:
 
 ## Chosen IA
 
-**Chosen candidate: Candidate B — explicit 5-section settings IA.**
+**Chosen candidate: Candidate A — shipped 3-section sidebar with supporting sections under General.**
 
 ### Why this is the chosen definition
 
-- The product promise is trust-heavy; **Diagnostics** is too important to bury as a disclosure.
-- **Shortcuts** is a full user-facing capability with three independent action bindings, not just an advanced footnote.
-- The existing docs already teach a 5-section mental model, so choosing it minimizes long-term narrative drift.
-- PM, Designer, and Engineer alignment is easier when every major feature area has one obvious home.
+- It matches the shipped app and the accepted simplified PRD/SPEC.
+- It keeps the product centered on the recovery loop instead of turning support/admin areas into equal-weight navigation peers.
+- Diagnostics and Shortcuts remain available, but as supporting surfaces rather than product-defining panes.
+- It reduces navigation weight and keeps the settings window aligned with the narrower product scope.
 
 ## Chosen canonical surface map
 
@@ -141,10 +141,10 @@ The menu remains the **runtime trust and recovery surface**.
 - Fast runtime actions:
   - Fix Now
   - Save Current Layout
-  - Swap Positions
   - Apply Layout (via quick switch)
   - Show Numbers
 - Fast link to Settings / Diagnostics when attention is needed
+- Advanced fallback utilities only behind `More Actions`
 
 #### Menu should not own
 
@@ -155,7 +155,7 @@ The menu remains the **runtime trust and recovery surface**.
 - Language settings
 - Support-file browsing as a primary workflow
 
-### Settings: chosen 5-section IA
+### Settings: chosen 3-section IA
 
 #### 1. Restore
 
@@ -168,7 +168,6 @@ Owns:
 - recommended restore actions (`Fix Now`, `Install displayplacer`, `Enable Automatic Restore`)
 - current-vs-saved layout comparison
 - contextual diagnostics shortcut
-- Swap Positions action and availability messaging
 
 #### 2. Profiles
 
@@ -183,27 +182,7 @@ Owns:
 - confidence threshold tuning
 - saved-layout preview/details
 
-#### 3. Shortcuts
-
-Purpose: configure hotkeys for high-frequency recovery actions.
-
-Owns:
-- Fix Now shortcut
-- Save Current Layout shortcut
-- Swap Positions shortcut
-
-#### 4. Diagnostics
-
-Purpose: expose evidence, history, and support artifacts.
-
-Owns:
-- latest restore outcome
-- runtime snapshot
-- recent history
-- copy diagnostics report
-- support-folder and support-file links
-
-#### 5. General
+#### 3. General
 
 Purpose: app-level non-recovery preferences and app lifecycle controls.
 
@@ -213,44 +192,46 @@ Owns:
 - update actions (check now / install / skip)
 - launch at login
 - app version/build info
+- diagnostics disclosure
+- shortcuts disclosure
+- advanced/manual fallback utilities such as Swap Positions
 
 ## Feature-to-surface canonical home map
 
-| Feature | Menu | Restore | Profiles | Shortcuts | Diagnostics | General | Canonical home |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Save Current Layout | Yes | No | Yes | Shortcut entry only | No | No | **Profiles** |
-| Automatic Restore | Toggle | Yes | No | No | No | No | **Restore** |
-| Ask Before Restore | No | Yes | No | No | No | No | **Restore** |
-| Fix Now | Yes | Yes | No | Shortcut entry only | Context only | No | **Restore** |
-| Apply Layout | Quick-switch only | No | Yes | No | No | No | **Profiles** |
-| Show Numbers | Utility action | No | Yes | No | No | No | **Profiles** |
-| Swap Positions | Yes | Yes | No | Shortcut entry only | No | No | **Restore** |
-| Profile rename/delete | No | No | Yes | No | No | No | **Profiles** |
-| Confidence threshold | No | No | Yes | No | No | No | **Profiles** |
-| Diagnostics history/report | Shortcut only | Shortcut only | No | No | Yes | No | **Diagnostics** |
-| Shortcut editing | No | No | No | Yes | No | No | **Shortcuts** |
-| Updates | No | No | No | No | No | Yes | **General** |
-| Launch at login | No | No | No | No | No | Yes | **General** |
-| Language | No | No | No | No | No | Yes | **General** |
-| Install displayplacer | Yes when blocked | Yes | No | No | Context only | No | **Restore** |
+| Feature | Menu | Restore | Profiles | General | Canonical home |
+| --- | --- | --- | --- | --- | --- |
+| Save Current Layout | Yes | No | Yes | No | **Profiles** |
+| Automatic Restore | Toggle | Yes | No | No | **Restore** |
+| Ask Before Restore | No | Yes | No | Yes | **Restore** |
+| Fix Now | Yes | Yes | No | No | **Restore** |
+| Apply Layout | Quick-switch only | No | Yes | No | **Profiles** |
+| Show Numbers | Utility action | No | Yes | No | **Profiles** |
+| Swap Positions | Advanced utility only | No | No | Yes | **General** |
+| Profile rename/delete | No | No | Yes | No | **Profiles** |
+| Confidence threshold | No | No | Yes | No | **Profiles** |
+| Diagnostics history/report | Shortcut only | Shortcut only | No | Yes | **General** |
+| Shortcut editing | No | No | No | Yes | **General** |
+| Updates | No | No | No | Yes | **General** |
+| Launch at login | No | No | No | Yes | **General** |
+| Language | No | No | No | Yes | **General** |
+| Install displayplacer | Yes when blocked | Yes | No | No | **Restore** |
 
-## Rationale: 5-pane vs 3-pane
+## Rationale: 3-pane vs 5-pane
 
-### Accepted rationale for 5-pane
+### Accepted rationale for 3-pane
 
-- Trust-heavy apps need **Diagnostics** to be first-class, not buried.
-- The app already has enough surface area that “General” should not become a junk drawer.
-- A dedicated **Shortcuts** pane is justified because shortcut editing is structured, repetitive, and task-specific.
-- The five-pane model better matches the product story in README/PRD/SPEC and reduces future documentation drift.
+- The accepted product frame is a small recovery utility, not a broad management console.
+- Restore and Profiles are the only primary user workflows.
+- Diagnostics, Shortcuts, and other preferences remain important but supporting.
+- The simpler sidebar keeps attention on the core recovery loop.
 
-### Why 3-pane was not chosen
+### Why 5-pane was not chosen
 
-- It optimizes for a shorter sidebar at the cost of clarity.
-- It hides two user-visible capabilities inside an “Advanced” stack that weakens findability.
-- It makes the “canonical home” of diagnostics ambiguous, especially when restore trust is the core product value.
+- It overstates the product breadth.
+- It makes supporting/admin surfaces look equal to the recovery flow.
+- It reintroduces the same documentation drift the simplified implementation already closed.
 
 ## Phase 2 follow-up candidates (not part of definition approval)
 
-- Move Shortcuts and Diagnostics back into first-class sidebar panes in code.
-- Update README/PRD/SPEC copy to match the chosen IA exactly.
-- Rebalance the menu so more-actions density stays manageable after terminology cleanup.
+- Keep roadmap docs aligned with the shipped 3-pane IA.
+- Continue reducing menu density when a utility starts competing with the main recovery CTA.

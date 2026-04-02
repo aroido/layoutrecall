@@ -2,7 +2,7 @@
 
 Lab: `feature-definition-20260402T002610Z`
 Updated: 2026-04-02
-Status: Definition-phase consensus artifact (phase 1 only)
+Status: Simplified implementation-aligned artifact
 
 ## Council composition used for this definition sprint
 
@@ -48,25 +48,23 @@ The product is already materially implemented, but the **definition layer has dr
 - Engineer: Accept
 - Critic: Accept, with request to explain the `Fix Now` vs `Apply Layout` distinction explicitly in docs and UI copy
 
-#### 2. Adopt an explicit 5-section settings IA as the canonical model
+#### 2. Keep the shipped 3-section settings IA as the canonical model
 
 **Accepted IA**
 - Restore
 - Profiles
-- Shortcuts
-- Diagnostics
 - General
 
 **Rationale**
-- Diagnostics and Shortcuts are too important to bury under General.
-- This aligns docs and future implementation around one clear map.
-- It reduces the “General as junk drawer” risk.
+- It matches the shipped app and the simplified PRD/SPEC.
+- It keeps primary navigation focused on the core recovery loop.
+- Diagnostics and Shortcuts still exist, but as supporting sections under General.
 
 **Consensus**
 - PM: Accept
-- Designer: Accept
+- Designer: Accept with discoverability caveat
 - Engineer: Accept
-- Critic: Accept, provided diagnostics remains reachable contextually from Restore too
+- Critic: Accept for the shipped baseline, provided diagnostics remains reachable contextually from Restore too
 
 #### 3. Keep the menu as the runtime trust + recovery surface
 
@@ -125,11 +123,11 @@ The product is already materially implemented, but the **definition layer has dr
 - The brief explicitly forbids PM-only finalization.
 - The current drift exists partly because definitions were not kept cross-functionally aligned.
 
-#### Rejected: keep the current 3-section settings IA as the official long-term model
+#### Rejected: use an explicit 5-section settings IA as the shipped baseline
 
 **Why rejected**
-- It hides Diagnostics and Shortcuts too deeply for a trust-centric utility.
-- It perpetuates drift between docs and implementation.
+- It overstates the size of the product for the current shipped scope.
+- It creates a second source of truth against the actual app.
 
 #### Rejected: collapse `Fix Now` and `Apply Layout` into a single restore label everywhere
 
@@ -186,14 +184,14 @@ The product is already materially implemented, but the **definition layer has dr
 Ready for phase 2 planning once the team treats the following as approved inputs:
 
 1. canonical feature names
-2. chosen 5-section settings IA
+2. chosen 3-section settings IA
 3. canonical feature-home mapping
 4. normalized runtime-state vocabulary
 
 ## Phase 2 follow-up outline (separate from this definition approval)
 
 1. Update menu/settings/docs copy to use the accepted terminology consistently.
-2. Refactor settings navigation from current 3-section structure to the chosen 5-section IA.
+2. Keep support/admin areas clearly subordinate to the recovery loop.
 3. Promote `Restore Failed` and possibly `No Displays` into clearer surfaced states if design review confirms the added complexity is worthwhile.
 4. Re-run full verification after implementation work begins.
 
