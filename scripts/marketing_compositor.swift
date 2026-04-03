@@ -143,7 +143,7 @@ struct MarketingAssetBuilder {
             )
             drawChecklist([
                 "Multiple saved desk profiles",
-                "Fix Now and Apply Layout fallbacks",
+                "Restore Now and Apply Layout fallbacks",
                 "Startup controls for repeat reconnects"
             ], origin: NSPoint(x: 96, y: 176))
 
