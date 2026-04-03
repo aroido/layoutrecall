@@ -140,30 +140,47 @@ private func render<Content: View>(
     to url: URL,
     minimumSize: CGSize
 ) throws -> CGSize {
-    try autoreleasepool {
-        let hostingView = NSHostingView(rootView: view)
-        let contentSize = CGSize(
-            width: max(minimumSize.width, hostingView.fittingSize.width),
-            height: max(minimumSize.height, hostingView.fittingSize.height)
-        )
-        let renderer = ImageRenderer(
-            content: view
-                .frame(width: contentSize.width, height: contentSize.height)
-        )
-        renderer.proposedSize = ProposedViewSize(contentSize)
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+    let hostingView = NSHostingView(rootView: view)
+    let contentSize = CGSize(
+        width: max(minimumSize.width, hostingView.fittingSize.width),
+        height: max(minimumSize.height, hostingView.fittingSize.height)
+    )
+    let window = NSWindow(
+        contentRect: NSRect(origin: .zero, size: contentSize),
+        styleMask: [.titled, .closable],
+        backing: .buffered,
+        defer: false
+    )
+    window.contentView = hostingView
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
+    window.center()
+    window.makeKeyAndOrderFront(nil)
+    SnapshotWindowStore.retainedWindows.append(window)
+    hostingView.frame = NSRect(origin: .zero, size: contentSize)
+    hostingView.layoutSubtreeIfNeeded()
+    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
 
-        guard let image = renderer.nsImage,
-              let tiffData = image.tiffRepresentation,
-              let representation = NSBitmapImageRep(data: tiffData),
-              let pngData = representation.representation(using: .png, properties: [:]) else {
-            Issue.record("Failed to encode the rendered snapshot as PNG data.")
-            return contentSize
-        }
-
-        try pngData.write(to: url, options: .atomic)
+    guard let contentView = window.contentView else {
+        Issue.record("Failed to get the window content view for snapshot rendering.")
         return contentSize
     }
+
+    guard let representation = contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds) else {
+        Issue.record("Failed to create a bitmap representation for the SwiftUI view.")
+        return contentSize
+    }
+
+    contentView.cacheDisplay(in: contentView.bounds, to: representation)
+
+    guard let pngData = representation.representation(using: .png, properties: [:]) else {
+        Issue.record("Failed to encode the rendered snapshot as PNG data.")
+        return contentSize
+    }
+
+    try pngData.write(to: url, options: .atomic)
+    window.orderOut(nil)
+    return contentSize
 }
 
 private func imageSize(at url: URL) throws -> CGSize {
@@ -177,6 +194,11 @@ private func imageSize(at url: URL) throws -> CGSize {
     }
 
     return CGSize(width: width, height: height)
+}
+
+@MainActor
+private enum SnapshotWindowStore {
+    static var retainedWindows: [NSWindow] = []
 }
 
 private actor SnapshotProfileStore: ProfileStoring {
